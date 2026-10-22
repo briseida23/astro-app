@@ -1,7 +1,7 @@
 import { HouseSystem } from '@swisseph/browser';
 import { OBJECTS, EXTRA_OBJECTS, DEFAULT_EXTRAS } from './ephemeris';
 import { DEFAULT_ASPECT_SETTINGS, DEFAULT_TRANSIT_ORB_SETTINGS } from './aspects';
-import { DEFAULT_WEIGHTS } from './balance';
+import { DEFAULT_WEIGHTS, PREVIOUS_DEFAULT_WEIGHTS } from './balance';
 
 export const DEFAULT_ELEMENT_COLORS = {
   fire: '#EF4444',
@@ -49,7 +49,14 @@ function merge(defaults, saved) {
 export function loadSettings() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? merge(DEFAULT_SETTINGS, JSON.parse(raw)) : DEFAULT_SETTINGS;
+    if (!raw) return DEFAULT_SETTINGS;
+    const saved = JSON.parse(raw);
+    // Weights never edited by the user follow the new defaults; edited ones are kept.
+    const w = saved.weights;
+    if (isObject(w) && Object.entries(PREVIOUS_DEFAULT_WEIGHTS).every(([id, v]) => w[id] === v)) {
+      delete saved.weights;
+    }
+    return merge(DEFAULT_SETTINGS, saved);
   } catch {
     return DEFAULT_SETTINGS;
   }
