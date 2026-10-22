@@ -9,6 +9,7 @@ import {
   formatOffset,
   momentAt,
   shiftMoment,
+  pad,
   EXTRA_OBJECTS,
   extrasReady,
 } from './utils/ephemeris';
@@ -26,10 +27,9 @@ import { TransitBar } from './components/TransitBar';
 import { DynamicsPanel } from './components/DynamicsPanel';
 import { SettingsModal } from './components/SettingsModal';
 import { Tabs } from './components/Tabs';
-import { detectCurrentPlace } from './utils/location';
+import { detectCurrentPlace, placeFields, withoutPlace } from './utils/location';
 import { I18nContext, LANGUAGES, loadLanguage, saveLanguage, translate, placeName } from './i18n';
 
-const pad = (n) => String(n).padStart(2, '0');
 
 /** Current local date/time and the browser's UTC offset. */
 function nowLocal() {
@@ -42,8 +42,6 @@ function nowLocal() {
 }
 
 const DEFAULT_TIME_ZONE = 'Europe/Kyiv';
-
-const placeFields = ({ place, placeKey, latitude, longitude, timeZone }) => ({ place, placeKey, latitude, longitude, timeZone });
 
 function defaultBirth() {
   const { date, time } = nowLocal();
@@ -151,10 +149,19 @@ export default function App() {
   }, [lang]);
   useEffect(() => saveSession({ birth, mode, transitMoment }), [birth, mode, transitMoment]);
 
-  // Transits use their own place when one was chosen, else the birth place.
-  const transit = transitMoment.latitude == null ? { ...transitMoment, ...placeFields(birth) } : transitMoment;
-  const transitNow = () => setTransitMoment(momentAt(transit, Date.now()));
-  const stepTransit = (count) => setTransitMoment(shiftMoment(transit, count * dynamics.step, dynamics.unit));
+  // Transits use their own place once one is chosen. Until then they follow the birth place:
+  // the stored instant is shown on the birth place's clock, and edits never store that place,
+  // so changing the birth city later moves the transit place along with it.
+  const hasTransitPlace = transitMoment.latitude != null;
+  const transit = useMemo(() => {
+    if (hasTransitPlace) return transitMoment;
+    const merged = { ...transitMoment, ...placeFields(birth) };
+    const ms = toUtcDate(transitMoment.date, transitMoment.time, transitMoment.utcOffset).getTime();
+    return Number.isNaN(ms) ? merged : momentAt(merged, ms);
+  }, [hasTransitPlace, transitMoment, birth]);
+  const updateTransit = (m) => setTransitMoment(hasTransitPlace ? m : withoutPlace(m));
+  const transitNow = () => updateTransit(momentAt(transit, Date.now()));
+  const stepTransit = (count) => updateTransit(shiftMoment(transit, count * dynamics.step, dynamics.unit));
 
   const { visible, weights, colors } = settings;
 
@@ -332,7 +339,7 @@ export default function App() {
             <div className="text-[11px] uppercase tracking-wider text-slate-400">{houseSystem && t(`houseSystem.${houseSystem.key}`)}</div>
           </div>
 
-          {mode === 'transit' && <TransitBar moment={transit} onChange={setTransitMoment} birth={birth} onNow={transitNow} />}
+          {mode === 'transit' && <TransitBar moment={transit} onChange={updateTransit} onPlaceChange={setTransitMoment} onNow={transitNow} />}
 
           <ChartWheel
             chartData={chartData}

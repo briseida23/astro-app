@@ -1,5 +1,6 @@
 import { STEP_UNITS, formatOffset, formatOrb } from '../utils/ephemeris';
 import { useI18n, placeName } from '../i18n';
+import { glyphClass } from './glyph';
 
 const PRESETS = [
   { step: 1, unit: 'minute' },
@@ -11,7 +12,6 @@ const PRESETS = [
   { step: 1, unit: 'year' },
 ];
 
-const glyphClass = (p) => (p.textGlyph ? 'text-[10px] font-bold' : 'astro');
 
 /** 2026-10-13 + 14:05 → "вт, 13 октября 2026 г., 14:05". */
 const formatMoment = (moment, lang) => {
@@ -140,7 +140,7 @@ export function DynamicsPanel({ moment, dynamics, onDynamicsChange, onStep, onNo
                   title={t(a.applying ? 'aspects.applying' : 'aspects.separating')}
                   className={`w-4 text-xs font-semibold ${a.applying ? 'text-emerald-700' : 'text-slate-400'}`}
                 >
-                  {a.applying ? 'R' : 'S'}
+                  {a.applying ? 'A' : 'S'}
                 </span>
               </li>
             ))}

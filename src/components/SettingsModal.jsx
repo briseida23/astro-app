@@ -6,6 +6,7 @@ import { ORB_METHODS, SEPARATING_MODES } from '../utils/aspects';
 import { ELEMENTS } from '../utils/balance';
 import { DEFAULT_SETTINGS } from '../utils/settings';
 import { useI18n } from '../i18n';
+import { glyphClass } from './glyph';
 
 const TABS = ['params', 'objects', 'extras', 'orbs', 'method', 'colors'];
 
@@ -22,7 +23,6 @@ const TAB_OBJECTS = { objects: OBJECTS, extras: EXTRA_OBJECTS };
 // Point groups that can be switched on for aspects (planets and Chiron always count).
 const INCLUDE_GROUPS = ['angles', 'nodes', 'extras', 'moon'];
 
-const glyphClass = (o) => (o.textGlyph ? 'text-[10px] font-bold' : 'astro text-base');
 
 // Aspects that share one colour.
 const ASPECT_COLOR_GROUPS = [['conjunction'], ['sextile', 'trine'], ['square'], ['opposition']];
@@ -127,7 +127,7 @@ function ExtrasTab({ settings, update }) {
         checked={settings.visible[o.id]}
         onChange={(e) => toggle(o.id, e.target.checked)}
       />
-      <span className={`w-7 shrink-0 text-center ${glyphClass(o)}`}>{o.glyph}</span>
+      <span className={`w-7 shrink-0 text-center ${glyphClass(o, 'astro text-base')}`}>{o.glyph}</span>
       <span>
         <span className="font-medium">{t(`object.${o.id}`)}</span>
         <span className="block text-xs text-slate-500">{t(`extra.${o.id}.hint`)}</span>
@@ -154,7 +154,7 @@ function ExtrasTab({ settings, update }) {
             <div className="flex flex-wrap gap-1.5">
               {added.map((o) => (
                 <span key={o.id} className="flex items-center gap-1.5 rounded-full bg-slate-100 py-1 pl-3 pr-1.5 text-sm">
-                  <span className={glyphClass(o)}>{o.glyph}</span>
+                  <span className={glyphClass(o, 'astro text-base')}>{o.glyph}</span>
                   {t(`object.${o.id}`)}
                   <button
                     type="button"
@@ -315,7 +315,7 @@ function OrbsTab({ settings, update }) {
             {[...OBJECTS, ...EXTRA_OBJECTS.filter((o) => settings.visible[o.id])].map((o) => (
               <tr key={o.id} className="border-t border-slate-100">
                 <td className="whitespace-nowrap px-3 py-1.5">
-                  <span className={`mr-2 inline-block w-6 text-center ${glyphClass(o)}`}>{o.glyph}</span>
+                  <span className={`mr-2 inline-block w-6 text-center ${glyphClass(o, 'astro text-base')}`}>{o.glyph}</span>
                   {t(`object.${o.id}`)}
                 </td>
                 {ASPECTS.map((a) => (

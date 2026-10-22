@@ -2,13 +2,11 @@ import { useState } from 'react';
 import { Modal } from './Modal';
 import { CitySearch, OffsetSelect } from './BirthForm';
 import { offsetForZone, toUtcDate, momentAt } from '../utils/ephemeris';
-import { detectCurrentPlace } from '../utils/location';
+import { detectCurrentPlace, placeFromSearch, withoutPlace } from '../utils/location';
 import { useI18n, placeName } from '../i18n';
 
-/** Place fields of a birth or transit record. */
-const placeOf = ({ place, placeKey, latitude, longitude, timeZone }) => ({ place, placeKey, latitude, longitude, timeZone });
-
-function TransitPlaceModal({ open, onClose, birth, onSelect }) {
+/** Picks the transit place; `onSelect(null)` means "follow the birth place". */
+function TransitPlaceModal({ open, onClose, onSelect }) {
   const { lang, t } = useI18n();
   const [status, setStatus] = useState('idle'); // idle | loading | error
   const choose = (place) => {
@@ -18,19 +16,9 @@ function TransitPlaceModal({ open, onClose, birth, onSelect }) {
   return (
     <Modal open={open} onClose={onClose} title={t('transit.placeTitle')} width="max-w-lg">
       <div className="space-y-4">
-        <CitySearch
-          onSelect={(r) =>
-            choose({
-              place: [r.name, r.country].filter(Boolean).join(', '),
-              placeKey: null,
-              latitude: r.latitude,
-              longitude: r.longitude,
-              timeZone: r.timezone,
-            })
-          }
-        />
+        <CitySearch onSelect={(r) => choose(placeFromSearch(r))} />
         <div className="flex flex-wrap gap-2">
-          <button type="button" className="btn-secondary" onClick={() => choose(placeOf(birth))}>
+          <button type="button" className="btn-secondary" onClick={() => choose(null)}>
             {t('transit.placeBirth')}
           </button>
           <button
@@ -57,8 +45,11 @@ function TransitPlaceModal({ open, onClose, birth, onSelect }) {
   );
 }
 
-/** Date, time, zone and place of the transit moment. */
-export function TransitBar({ moment, onChange, birth, onNow }) {
+/**
+ * Date, time, zone and place of the transit moment. `onChange` gets date/time/zone edits,
+ * `onPlaceChange` a moment with a newly chosen place.
+ */
+export function TransitBar({ moment, onChange, onPlaceChange, onNow }) {
   const { t } = useI18n();
   const [placeOpen, setPlaceOpen] = useState(false);
   // Changing the date or time re-derives the offset from the place's time zone (DST included).
@@ -100,10 +91,13 @@ export function TransitBar({ moment, onChange, birth, onNow }) {
       <TransitPlaceModal
         open={placeOpen}
         onClose={() => setPlaceOpen(false)}
-        birth={birth}
         // Same instant, shown on the new place's clock: the planets stay put, the angles move.
         onSelect={(place) =>
-          onChange(momentAt({ ...moment, ...place }, toUtcDate(moment.date, moment.time, moment.utcOffset).getTime()))
+          onPlaceChange(
+            place
+              ? momentAt({ ...moment, ...place }, toUtcDate(moment.date, moment.time, moment.utcOffset).getTime())
+              : withoutPlace(moment)
+          )
         }
       />
     </div>

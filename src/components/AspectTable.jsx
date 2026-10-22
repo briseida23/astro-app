@@ -1,7 +1,7 @@
 import { formatOrb } from '../utils/ephemeris';
 import { useI18n } from '../i18n';
+import { glyphClass } from './glyph';
 
-const glyphClass = (p) => (p.textGlyph ? 'text-[10px] font-bold' : 'astro');
 
 export function AspectTable({ aspects, aspectColors, isBiWheel, focus, onHover }) {
   const { t } = useI18n();

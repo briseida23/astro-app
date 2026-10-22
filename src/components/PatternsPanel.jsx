@@ -1,7 +1,6 @@
 import { formatOrb } from '../utils/ephemeris';
 import { useI18n } from '../i18n';
-
-const glyphClass = (p) => (p.textGlyph ? 'text-[10px] font-bold' : 'astro');
+import { glyphClass } from './glyph';
 
 /** The transit member of a figure, its widest orb to the natal members and whether it is still closing in. */
 function transitContact(pattern, aspects) {

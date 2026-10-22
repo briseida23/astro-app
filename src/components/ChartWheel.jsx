@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { SIGNS, normalize, formatDegree, formatOrb } from '../utils/ephemeris';
+import { SIGNS, ROMAN, normalize, formatDegree, formatOrb } from '../utils/ephemeris';
 import { useI18n } from '../i18n';
 
 const SIZE = 640;
@@ -7,7 +7,6 @@ const C = SIZE / 2;
 const R_OUTER = 280; // outer edge of the zodiac band
 const R_ZODIAC = 243; // inner edge of the zodiac band
 const MIN_GAP = 7.5; // degrees between planet glyphs before they are spread apart
-const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 const ANGLE_LABELS = { 0: 'ASC', 3: 'IC', 6: 'DSC', 9: 'MC' };
 // The symbol font draws ♂, ♀ and ☿ smaller (shorter or narrower) than the other planets.
 const GLYPH_SCALE = { mars: 1.3, venus: 1.2, mercury: 1.12 };
@@ -22,7 +21,7 @@ function Motion({ applying }) {
       title={t(applying ? 'aspects.applying' : 'aspects.separating')}
       className={`font-semibold ${applying ? 'text-emerald-700' : 'text-slate-500'}`}
     >
-      {applying ? 'R' : 'S'}
+      {applying ? 'A' : 'S'}
     </span>
   );
 }
@@ -55,9 +54,24 @@ function sectorPath(startLon, endLon, rOuter, rInner, ascendant) {
 }
 
 function spreadPlanets(planets) {
-  const display = [...planets]
-    .sort((a, b) => a.longitude - b.longitude)
-    .map((p) => ({ ...p, displayLon: p.longitude }));
+  const sorted = [...planets].sort((a, b) => a.longitude - b.longitude);
+  if (sorted.length < 2) return sorted.map((p) => ({ ...p, displayLon: p.longitude }));
+  // Start after the widest empty arc, so a cluster around 0° Aries is spread as one group.
+  let start = 0;
+  let widest = -1;
+  sorted.forEach((p, i) => {
+    const next = sorted[(i + 1) % sorted.length];
+    const gap = normalize(next.longitude - p.longitude);
+    if (gap > widest) {
+      widest = gap;
+      start = (i + 1) % sorted.length;
+    }
+  });
+  const base = sorted[start].longitude;
+  const display = [...sorted.slice(start), ...sorted.slice(0, start)].map((p) => ({
+    ...p,
+    displayLon: base + normalize(p.longitude - base),
+  }));
   for (let i = 1; i < display.length; i++) {
     const gap = display[i].displayLon - display[i - 1].displayLon;
     if (gap < MIN_GAP) display[i].displayLon = display[i - 1].displayLon + MIN_GAP;
@@ -65,7 +79,7 @@ function spreadPlanets(planets) {
   return display;
 }
 
-function TooltipBody({ hover, aspects, points, houses, isBiWheel }) {
+function TooltipBody({ hover, aspects, points, houses, angleCusps, isBiWheel }) {
   const { t } = useI18n();
   const ringLabel = (p) => (isBiWheel ? t(p.ring === 'transit' ? 'wheel.transitPrefix' : 'wheel.natalPrefix') : '');
   const name = (p) => t(`object.${p.id}`);
@@ -138,7 +152,7 @@ function TooltipBody({ hover, aspects, points, houses, isBiWheel }) {
     return (
       <>
         <div className="font-semibold">
-          {t('wheel.house', { house: ROMAN[hover.index] })}{ANGLE_LABELS[hover.index] ? ` · ${ANGLE_LABELS[hover.index]}` : ''}
+          {t('wheel.house', { house: ROMAN[hover.index] })}{angleCusps.has(hover.index) ? ` · ${ANGLE_LABELS[hover.index]}` : ''}
         </div>
         <div>
           {t('wheel.cusp')} <span className="astro">{sign.glyph}</span> {t(`sign.${sign.id}`)} {formatDegree(cusp)}
@@ -152,7 +166,17 @@ function TooltipBody({ hover, aspects, points, houses, isBiWheel }) {
 export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects, elementColors, aspectColors, hover, focus, onHover }) {
   const [pointer, setPointer] = useState(null);
   const { t } = useI18n();
-  const { ascendant, houses } = chartData;
+  const { ascendant, mc, houses } = chartData;
+  // Cusps 1, 4, 7 and 10 are the angles in quadrant systems; with Equal or Whole Sign houses
+  // they need not be, and the real axes are drawn separately.
+  const axes = [
+    { label: 'ASC', lon: ascendant, cusp: 0 },
+    { label: 'IC', lon: normalize(mc + 180), cusp: 3 },
+    { label: 'DSC', lon: normalize(ascendant + 180), cusp: 6 },
+    { label: 'MC', lon: mc, cusp: 9 },
+  ];
+  const onCusp = (axis) => Math.abs(normalize(houses[axis.cusp] - axis.lon + 180) - 180) < 0.01;
+  const angleCusps = new Set(axes.filter(onCusp).map((a) => a.cusp));
   const isBiWheel = Boolean(transitPlanets);
   const layout = isBiWheel ? LAYOUT.transit : LAYOUT.natal;
   const allPoints = [...planets, ...angles, ...(transitPlanets ?? [])];
@@ -253,7 +277,7 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
 
         {/* House cusps: extended through the zodiac band, angles emphasised */}
         {houses.map((cusp, i) => {
-          const isAngle = i % 3 === 0;
+          const isAngle = angleCusps.has(i);
           const active = focus?.house === i;
           const inner = point(cusp, layout.aspects, ascendant);
           const outer = point(cusp, isAngle ? R_OUTER + 9 : R_OUTER, ascendant);
@@ -304,6 +328,27 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
           );
         })}
 
+        {/* Angles that do not fall on a cusp (Equal, Whole Sign houses): their own axis lines */}
+        {axes
+          .filter((axis) => !angleCusps.has(axis.cusp))
+          .map((axis) => {
+            const inner = point(axis.lon, layout.aspects, ascendant);
+            const outer = point(axis.lon, R_OUTER + 9, ascendant);
+            const label = point(axis.lon, R_OUTER + 13, ascendant);
+            const anchor = label.x < C - 12 ? 'end' : label.x > C + 12 ? 'start' : 'middle';
+            const sign = SIGNS[Math.floor(axis.lon / 30)];
+            return (
+              <g key={axis.label}>
+                <line x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y} stroke={LINE_STRONG} strokeWidth={1.4} strokeOpacity={0.9} />
+                <text x={label.x} y={label.y - 5} textAnchor={anchor} fontSize="9.5" fill={LINE_STRONG}>
+                  <tspan fontWeight={700} letterSpacing="0.5">{axis.label}</tspan>
+                  <tspan x={label.x} dy="11" fontSize="8.5" className="tabular-nums">{Math.floor(axis.lon % 30)}°</tspan>
+                  <tspan className="astro" fontSize="8.5" fill={elementColors[sign.element]}>{sign.glyph}</tspan>
+                </text>
+              </g>
+            );
+          })}
+
         {/* Aspect lines; exact aspects (within the set % of the orb) are drawn heavier */}
         {aspects.map((aspect) => {
           const a = point(aspect.a.longitude, layout.aspects, ascendant);
@@ -342,7 +387,7 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
           className="pointer-events-none absolute z-10 w-max max-w-64 rounded-xl border border-slate-200 bg-white/95 px-3 py-2 text-xs leading-relaxed text-slate-900 shadow-xl backdrop-blur"
           style={{ left: pointer.x, top: pointer.y, transform: `translate(${flipX ? 'calc(-100% - 14px)' : '14px'}, 14px)` }}
         >
-          <TooltipBody hover={hover} aspects={aspects} points={allPoints} houses={houses} isBiWheel={isBiWheel} />
+          <TooltipBody hover={hover} aspects={aspects} points={allPoints} houses={houses} angleCusps={angleCusps} isBiWheel={isBiWheel} />
         </div>
       )}
     </div>

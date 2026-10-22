@@ -1,3 +1,25 @@
+/** Place fields of a birth or transit record. */
+export const placeFields = ({ place, placeKey, latitude, longitude, timeZone }) => ({ place, placeKey, latitude, longitude, timeZone });
+
+/** A record without its place fields. */
+// eslint-disable-next-line no-unused-vars
+export const withoutPlace = ({ place, placeKey, latitude, longitude, timeZone, ...rest }) => rest;
+
+/**
+ * Place fields from an Open-Meteo search result. Without a time zone the offset is estimated
+ * from the longitude (15° per hour) and `timeZone` is null, so the form asks to check it.
+ */
+export function placeFromSearch(r) {
+  return {
+    place: [r.name, r.country].filter(Boolean).join(', '),
+    placeKey: null,
+    latitude: r.latitude,
+    longitude: r.longitude,
+    timeZone: r.timezone ?? null,
+    ...(r.timezone ? {} : { utcOffset: Math.round(r.longitude / 15) }),
+  };
+}
+
 /** Browser position as { latitude, longitude }; rejects if denied or unavailable. */
 function currentPosition() {
   return new Promise((resolve, reject) => {

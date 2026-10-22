@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Modal } from './Modal';
 import { offsetForZone, formatOffset } from '../utils/ephemeris';
+import { placeFromSearch } from '../utils/location';
 import { useI18n, placeName } from '../i18n';
 
 const OFFSETS = [
@@ -9,9 +10,12 @@ const OFFSETS = [
 ].sort((a, b) => a - b);
 
 export function OffsetSelect({ value, onChange, id, className = "input" }) {
+  // Historical local mean time (e.g. Kyiv +2:02 before 1924) matches no standard offset:
+  // list it too, so the select shows it instead of falling back to the first option.
+  const options = OFFSETS.includes(value) ? OFFSETS : [...OFFSETS, value].sort((a, b) => a - b);
   return (
     <select id={id} className={className} value={value} onChange={(e) => onChange(Number(e.target.value))}>
-      {OFFSETS.map((o) => (
+      {options.map((o) => (
         <option key={o} value={o}>
           {formatOffset(o)}
         </option>
@@ -153,22 +157,15 @@ function BirthForm({ birth, onSubmit }) {
 
       <div className="field">
         <span>{t('field.place')}</span>
-        <CitySearch
-          onSelect={(r) =>
-            set({
-              place: [r.name, r.country].filter(Boolean).join(', '),
-              latitude: r.latitude,
-              longitude: r.longitude,
-              timeZone: r.timezone,
-              placeKey: null,
-            })
-          }
-        />
+        <CitySearch onSelect={(r) => set(placeFromSearch(r))} />
         {draft.place && (
           <span className="normal-case tracking-normal text-slate-500">
             {placeName(draft, t)}
             {draft.timeZone && ` · ${draft.timeZone}`}
           </span>
+        )}
+        {draft.place && !draft.timeZone && (
+          <span className="normal-case tracking-normal text-amber-700">{t('city.noZone')}</span>
         )}
       </div>
 

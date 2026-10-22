@@ -121,6 +121,10 @@ export const HOUSE_SYSTEMS = [
 
 export const normalize = (deg) => ((deg % 360) + 360) % 360;
 
+export const pad = (n) => String(n).padStart(2, '0');
+
+export const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+
 export function formatDegree(longitude) {
   const inSign = normalize(longitude) % 30;
   const deg = Math.floor(inSign);
@@ -141,14 +145,23 @@ export function toUtcDate(date, time, utcOffset) {
   return new Date(Date.UTC(y, m - 1, d, hh, mm) - utcOffset * 3600000);
 }
 
-/** UTC offset (hours) of an IANA time zone at the given local date/time, DST included. */
-export function offsetForZone(timeZone, date, time) {
-  const instant = new Date(`${date}T${time || '12:00'}:00Z`);
-  if (Number.isNaN(instant.getTime())) return 0;
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'longOffset' }).formatToParts(instant);
+/** UTC offset (hours) of an IANA time zone at the UTC instant `ms`. */
+function zoneOffsetAt(timeZone, ms) {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'longOffset' }).formatToParts(new Date(ms));
   const match = parts.find((p) => p.type === 'timeZoneName')?.value.match(/GMT([+-])(\d{2}):(\d{2})/);
   if (!match) return 0;
   return (match[1] === '-' ? -1 : 1) * (Number(match[2]) + Number(match[3]) / 60);
+}
+
+/** UTC offset (hours) of an IANA time zone at the given local date/time, DST included. */
+export function offsetForZone(timeZone, date, time) {
+  // The wall-clock time read as UTC is off by the offset itself, which matters within a few
+  // hours of a DST change: guess, then look again at the instant that guess implies.
+  const wall = new Date(`${date}T${time || '12:00'}:00Z`).getTime();
+  if (Number.isNaN(wall)) return 0;
+  const guess = zoneOffsetAt(timeZone, wall);
+  const offset = zoneOffsetAt(timeZone, wall - guess * 3600000);
+  return offset === guess ? offset : zoneOffsetAt(timeZone, wall - offset * 3600000);
 }
 
 export function formatOffset(offset) {
@@ -217,10 +230,11 @@ export function calculateNatal(birthData, houseSystem = HouseSystem.Placidus, ex
   const jd = swe.dateToJulianDay(date);
   const houseData = swe.calculateHouses(jd, latitude, longitude, houseSystem);
   const houses = houseData.cusps.slice(1, 13);
-  // Angles are treated as fixed points (speed 0) for applying/separating.
+  // Angles are treated as fixed points (speed 0) for applying/separating. Their house is
+  // looked up: with Equal or Whole Sign houses the MC need not be in the 10th.
   const angles = [
-    makePoint('natal', ANGLES[0], houseData.ascendant, 0, 1),
-    makePoint('natal', ANGLES[1], houseData.mc, 0, 10),
+    makePoint('natal', ANGLES[0], houseData.ascendant, 0, houseOf(normalize(houseData.ascendant), houses)),
+    makePoint('natal', ANGLES[1], houseData.mc, 0, houseOf(normalize(houseData.mc), houses)),
   ];
   return {
     date,
@@ -254,7 +268,6 @@ export function calculateTransitPlanets(date, natalHouses, place = null, houseSy
   ];
 }
 
-const pad = (n) => String(n).padStart(2, '0');
 
 /** Wall-clock { date, time } in `timeZone` at the UTC instant `ms`. */
 function wallClock(ms, timeZone) {

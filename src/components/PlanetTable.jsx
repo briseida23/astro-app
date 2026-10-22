@@ -1,6 +1,6 @@
+import { ROMAN } from '../utils/ephemeris';
 import { useI18n } from '../i18n';
-
-const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+import { glyphClass } from './glyph';
 
 export function PlanetTable({ points, transitPlanets, weights, focus, onHover }) {
   const { t } = useI18n();
@@ -31,7 +31,7 @@ export function PlanetTable({ points, transitPlanets, weights, focus, onHover })
             return (
               <tr key={p.key} className={`border-t border-slate-100 transition-colors ${rowActive ? 'bg-slate-100' : ''}`}>
                 <td className="px-3 py-2" {...hoverProps(p.key)}>
-                  <span className={`mr-2 inline-block w-7 text-center ${p.textGlyph ? 'text-[10px] font-bold' : 'astro text-base'}`}>
+                  <span className={`mr-2 inline-block w-7 text-center ${glyphClass(p, 'astro text-base')}`}>
                     {p.glyph}
                   </span>
                   {t(`object.${p.id}`)}
