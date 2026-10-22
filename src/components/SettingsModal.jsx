@@ -6,14 +6,14 @@ import { ORB_METHODS, SEPARATING_MODES } from '../utils/aspects';
 import { ELEMENTS } from '../utils/balance';
 import { DEFAULT_SETTINGS } from '../utils/settings';
 import { useI18n } from '../i18n';
-import { glyphClass } from './glyph';
+import { Glyph } from './Glyph';
 
 const TABS = ['params', 'objects', 'extras', 'orbs', 'method', 'colors'];
 
 // Which settings keys each tab owns, for "reset tab". Objects and extras share `visible`
 // and each resets only its own entries (see resetTab).
 const TAB_KEYS = {
-  params: ['houseSystem'],
+  params: ['houseSystem', 'highContrast'],
   orbs: ['aspects', 'transitOrbPreset'],
   method: ['weights'],
   colors: ['colors'],
@@ -66,6 +66,18 @@ function ParamsTab({ settings, update }) {
             <option key={h.id} value={h.id}>{t(`houseSystem.${h.key}`)}</option>
           ))}
         </select>
+      </Row>
+      <Row label={t('settings.highContrast')} hint={t('settings.highContrastHint')}>
+        <label className="relative inline-flex cursor-pointer items-center">
+          <input
+            type="checkbox"
+            className="peer sr-only"
+            checked={settings.highContrast}
+            onChange={(e) => update({ highContrast: e.target.checked })}
+          />
+          <span className="h-6 w-11 rounded-full bg-slate-200 transition peer-checked:bg-slate-900 peer-focus-visible:ring-4 peer-focus-visible:ring-slate-200" />
+          <span className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition peer-checked:translate-x-5" />
+        </label>
       </Row>
       <Row label={t('settings.zodiac')} hint={t('settings.zodiacHint')}>
         <select className="input" disabled value="tropical">
@@ -127,7 +139,7 @@ function ExtrasTab({ settings, update }) {
         checked={settings.visible[o.id]}
         onChange={(e) => toggle(o.id, e.target.checked)}
       />
-      <span className={`w-7 shrink-0 text-center ${glyphClass(o, 'astro text-base')}`}>{o.glyph}</span>
+      <Glyph of={o} className="w-7 shrink-0 text-center" symbolClass="astro text-base" />
       <span>
         <span className="font-medium">{t(`object.${o.id}`)}</span>
         <span className="block text-xs text-slate-500">{t(`extra.${o.id}.hint`)}</span>
@@ -154,7 +166,7 @@ function ExtrasTab({ settings, update }) {
             <div className="flex flex-wrap gap-1.5">
               {added.map((o) => (
                 <span key={o.id} className="flex items-center gap-1.5 rounded-full bg-slate-100 py-1 pl-3 pr-1.5 text-sm">
-                  <span className={glyphClass(o, 'astro text-base')}>{o.glyph}</span>
+                  <Glyph of={o} symbolClass="astro text-base" />
                   {t(`object.${o.id}`)}
                   <button
                     type="button"
@@ -315,7 +327,7 @@ function OrbsTab({ settings, update }) {
             {[...OBJECTS, ...EXTRA_OBJECTS.filter((o) => settings.visible[o.id])].map((o) => (
               <tr key={o.id} className="border-t border-slate-100">
                 <td className="whitespace-nowrap px-3 py-1.5">
-                  <span className={`mr-2 inline-block w-6 text-center ${glyphClass(o, 'astro text-base')}`}>{o.glyph}</span>
+                  <Glyph of={o} className="mr-2 inline-block w-6 text-center" symbolClass="astro text-base" />
                   {t(`object.${o.id}`)}
                 </td>
                 {ASPECTS.map((a) => (

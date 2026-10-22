@@ -1,6 +1,6 @@
 import { STEP_UNITS, formatOffset, formatOrb } from '../utils/ephemeris';
 import { useI18n, placeName } from '../i18n';
-import { glyphClass } from './glyph';
+import { Glyph } from './Glyph';
 
 const PRESETS = [
   { step: 1, unit: 'minute' },
@@ -127,11 +127,11 @@ export function DynamicsPanel({ moment, dynamics, onDynamicsChange, onStep, onNo
           <ul className="space-y-1 text-sm">
             {exact.map((a) => (
               <li key={a.id} className="flex items-center gap-1.5">
-                <span className={`inline-block w-6 text-center ${glyphClass(a.a)}`}>{a.a.glyph}</span>
+                <Glyph of={a.a} className="inline-block w-6 text-center" />
                 <span className="astro text-base" style={{ color: a.type === 'opposition' ? undefined : aspectColors[a.type] }}>
                   {a.glyph}
                 </span>
-                <span className={`inline-block w-6 text-center ${glyphClass(a.b)}`}>{a.b.glyph}</span>
+                <Glyph of={a.b} className="inline-block w-6 text-center" />
                 <span className="text-slate-600">
                   {t('wheel.transitPrefix')}{t(`object.${a.a.id}`)} — {t(`aspect.${a.type}`)} — {t('wheel.natalPrefix')}{t(`object.${a.b.id}`)}
                 </span>

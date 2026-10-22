@@ -1,6 +1,6 @@
 import { formatOrb } from '../utils/ephemeris';
 import { useI18n } from '../i18n';
-import { glyphClass } from './glyph';
+import { Glyph } from './Glyph';
 
 /** The transit member of a figure, its widest orb to the natal members and whether it is still closing in. */
 function transitContact(pattern, aspects) {
@@ -39,14 +39,14 @@ export function TransitEvents({ patterns, aspects, hover, onHover }) {
             <div>
               <span className="font-semibold">
                 {t('wheel.transitPrefix')}
-                <span className={glyphClass(transit)}>{transit.glyph}</span> {t(`object.${transit.id}`)}
+                <Glyph of={transit} /> {t(`object.${transit.id}`)}
               </span>{' '}
               {t('events.completes')} <span className="font-semibold">{t(`pattern.${pattern.type}`)}</span>{' '}
               {t('events.withNatal')}{' '}
               {natal.map((m, j) => (
                 <span key={m.key}>
                   {j > 0 && ', '}
-                  <span className={glyphClass(m)}>{m.glyph}</span> {t(`object.${m.id}`)}
+                  <Glyph of={m} /> {t(`object.${m.id}`)}
                 </span>
               ))}
               <div className="mt-0.5 text-xs text-slate-500">

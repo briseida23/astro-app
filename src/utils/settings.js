@@ -20,6 +20,8 @@ export const DEFAULT_ASPECT_COLORS = {
 
 export const DEFAULT_SETTINGS = {
   houseSystem: HouseSystem.Placidus,
+  // Darker, thicker, larger chart for low vision.
+  highContrast: false,
   visible: Object.fromEntries([
     ...OBJECTS.map((o) => [o.id, true]),
     ...EXTRA_OBJECTS.map((o) => [o.id, DEFAULT_EXTRAS.has(o.id)]),

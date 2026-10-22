@@ -67,7 +67,8 @@ export const EXTRA_OBJECTS = [
   { id: 'pallas', body: Asteroid.Pallas, glyph: '⚴', group: 'asteroid' },
   { id: 'juno', body: Asteroid.Juno, glyph: '⚵', group: 'asteroid' },
   { id: 'vesta', body: Asteroid.Vesta, glyph: '⚶', group: 'asteroid' },
-  { id: 'selena', body: FictitiousPlanet.WhiteMoon, glyph: '☾', group: 'lunar' },
+  // Drawn as Lilith's glyph made hollow: white crescent over a cross, dark outline (see SelenaShape).
+  { id: 'selena', body: FictitiousPlanet.WhiteMoon, glyph: '☾', group: 'lunar', hollow: true, ink: '#111827' },
   { id: 'trueLilith', body: LunarPoint.OsculatingApogee, glyph: 'Lt', textGlyph: true, group: 'lunar' },
   { id: 'priapus', body: LunarPoint.InterpolatedPerigee, glyph: 'Pri', textGlyph: true, group: 'lunar' },
   { id: 'waldemath', body: FictitiousPlanet.Waldemath, glyph: 'Wal', textGlyph: true, group: 'lunar' },
@@ -191,6 +192,8 @@ function makePoint(ring, def, longitude, speed, house) {
     id: def.id,
     glyph: def.glyph,
     textGlyph: Boolean(def.textGlyph),
+    hollow: Boolean(def.hollow),
+    ink: def.ink ?? null,
     longitude: lon,
     speed,
     // The node moves backwards almost all the time, so its "R" carries no information.

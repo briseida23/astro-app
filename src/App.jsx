@@ -352,6 +352,7 @@ export default function App() {
             hover={hover}
             focus={focus}
             onHover={setHover}
+            highContrast={settings.highContrast}
           />
           <Legend aspectColors={colors.aspects} t={t} />
           {isBiWheel && <TransitEvents patterns={patterns} aspects={patternAspects} hover={hover} onHover={setHover} />}

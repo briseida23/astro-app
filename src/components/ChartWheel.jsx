@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { SIGNS, ROMAN, normalize, formatDegree, formatOrb } from '../utils/ephemeris';
 import { useI18n } from '../i18n';
+import { Glyph, SelenaShape } from './Glyph';
 
 const SIZE = 640;
 const C = SIZE / 2;
@@ -26,9 +27,20 @@ function Motion({ applying }) {
   );
 }
 
-const LINE = '#CBD5E1';
 const LINE_STRONG = '#0F172A';
-const MUTED = '#94A3B8';
+
+/** `hex` mixed with black by `amount` (0–1): element colours darkened enough to read on white. */
+function darken(hex, amount) {
+  const n = parseInt(hex.slice(1), 16);
+  const channel = (shift) => Math.round(((n >> shift) & 255) * (1 - amount));
+  return `rgb(${channel(16)}, ${channel(8)}, ${channel(0)})`;
+}
+
+/** Line colours, text scale and glyph ink; high contrast is darker, thicker and larger. */
+const theme = (highContrast) =>
+  highContrast
+    ? { LINE: '#334155', MUTED: '#0F172A', LABEL: '#000000', fs: 1.3, glyphScale: 1.2, ink: (hex) => darken(hex, 0.55), aspectWidth: 2.4, cuspWidth: 1.3, glyphStroke: 0.7 }
+    : { LINE: '#94A3B8', MUTED: '#475569', LABEL: '#1E293B', fs: 1.1, glyphScale: 1, ink: (hex) => darken(hex, 0.25), aspectWidth: 1.4, cuspWidth: 0.8, glyphStroke: 0 };
 
 // Ring radii. The bi-wheel adds a transit ring inside the zodiac band.
 const LAYOUT = {
@@ -110,7 +122,7 @@ function TooltipBody({ hover, aspects, points, houses, angleCusps, isBiWheel }) 
     return (
       <>
         <div className="font-semibold">
-          <span className="astro">{planet.glyph}</span> {ringLabel(planet)}{name(planet)}
+          <Glyph of={planet} /> {ringLabel(planet)}{name(planet)}
           {planet.retrograde && <span className="ml-1 text-red-600">R</span>}
         </div>
         <div>
@@ -163,7 +175,8 @@ function TooltipBody({ hover, aspects, points, houses, angleCusps, isBiWheel }) 
   return null;
 }
 
-export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects, elementColors, aspectColors, hover, focus, onHover }) {
+export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects, elementColors, aspectColors, hover, focus, onHover, highContrast = false }) {
+  const { LINE, MUTED, LABEL, fs, glyphScale, ink, aspectWidth, cuspWidth, glyphStroke } = theme(highContrast);
   const [pointer, setPointer] = useState(null);
   const { t } = useI18n();
   const { ascendant, mc, houses } = chartData;
@@ -207,12 +220,12 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
       const leader = point(planet.displayLon, glyphRadius + 12, ascendant);
       const active = focus?.planets.has(planet.key);
       const dimmed = focus && !active;
-      const color = elementColors[planet.element];
+      const color = planet.ink ?? ink(elementColors[planet.element]);
       const isTransit = planet.ring === 'transit';
       return (
         <g key={planet.key} {...hoverProps({ type: 'planet', key: planet.key })} opacity={dimmed ? 0.45 : 1}>
           <line x1={tickA.x} y1={tickA.y} x2={tickB.x} y2={tickB.y} stroke={color} strokeWidth={1.5} />
-          <line x1={tickB.x} y1={tickB.y} x2={leader.x} y2={leader.y} stroke={color} strokeOpacity={0.35} strokeWidth={0.6} />
+          <line x1={tickB.x} y1={tickB.y} x2={leader.x} y2={leader.y} stroke={color} strokeOpacity={0.5} strokeWidth={0.7} />
           <circle
             cx={glyph.x}
             cy={glyph.y}
@@ -224,14 +237,32 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
             strokeWidth={0.75}
             strokeDasharray={isTransit ? '2 2' : undefined}
           />
-          <text x={glyph.x} y={glyph.y} textAnchor="middle" dominantBaseline="central" fontSize={glyphSize(planet)} fontWeight={planet.textGlyph ? 700 : undefined} fill={color} className={planet.textGlyph ? undefined : 'astro'}>
-            {planet.glyph}
-          </text>
+          {planet.hollow ? (
+            <g transform={`translate(${glyph.x},${glyph.y}) scale(${glyphScale})`}>
+              <SelenaShape color={color} strokeWidth={highContrast ? 1.9 : 1.5} />
+            </g>
+          ) : (
+            <text
+              x={glyph.x}
+              y={glyph.y}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fontSize={glyphSize(planet) * glyphScale}
+              fontWeight={planet.textGlyph ? 700 : undefined}
+              fill={color}
+              // Symbol fonts have no bold: a thin outline in the same colour thickens the strokes.
+              stroke={glyphStroke ? color : undefined}
+              strokeWidth={glyphStroke || undefined}
+              className={planet.textGlyph ? undefined : 'astro'}
+            >
+              {planet.glyph}
+            </text>
+          )}
           {planet.retrograde && (
-            <text x={glyph.x + 10} y={glyph.y + 10} fontSize="8" fontWeight="600" fill="#DC2626">R</text>
+            <text x={glyph.x + 10} y={glyph.y + 10} fontSize={9 * fs} fontWeight="700" fill="#B91C1C">R</text>
           )}
           {degreeRadius && (
-            <text x={degree.x} y={degree.y} textAnchor="middle" dominantBaseline="central" fontSize="8.5" fill={MUTED} className="tabular-nums">
+            <text x={degree.x} y={degree.y} textAnchor="middle" dominantBaseline="central" fontSize={9.5 * fs} fontWeight={600} fill={LABEL} className="tabular-nums">
               {Math.floor(planet.longitude % 30)}°
             </text>
           )}
@@ -252,9 +283,9 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
           const boundaryB = point(start, R_ZODIAC, ascendant);
           return (
             <g key={sign.name} {...hoverProps({ type: 'sign', index: i })}>
-              <path d={sectorPath(start, start + 30, R_OUTER, R_ZODIAC, ascendant)} fill={elementColors[sign.element]} fillOpacity={0.07} />
+              <path d={sectorPath(start, start + 30, R_OUTER, R_ZODIAC, ascendant)} fill={elementColors[sign.element]} fillOpacity={highContrast ? 0.14 : 0.1} />
               <line x1={boundaryA.x} y1={boundaryA.y} x2={boundaryB.x} y2={boundaryB.y} stroke={LINE} strokeWidth={0.75} />
-              <text x={mid.x} y={mid.y} textAnchor="middle" dominantBaseline="central" fontSize="19" fill={elementColors[sign.element]} className="astro">
+              <text x={mid.x} y={mid.y} textAnchor="middle" dominantBaseline="central" fontSize={19 * glyphScale} fill={ink(elementColors[sign.element])} className="astro">
                 {sign.glyph}
               </text>
             </g>
@@ -296,32 +327,32 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
                 x2={outer.x}
                 y2={outer.y}
                 stroke={isAngle || active ? LINE_STRONG : MUTED}
-                strokeWidth={active ? 2 : isAngle ? 1.4 : 0.6}
-                strokeOpacity={isAngle || active ? 0.9 : 0.6}
+                strokeWidth={active ? 2 : isAngle ? 1.6 : cuspWidth}
+                strokeOpacity={isAngle || active ? 0.9 : 0.8}
               />
               <text
                 x={number.x}
                 y={number.y}
                 textAnchor="middle"
                 dominantBaseline="central"
-                fontSize="9.5"
+                fontSize={11 * fs}
                 letterSpacing="0.5"
-                fontWeight={active ? 700 : 500}
-                fill={active ? LINE_STRONG : MUTED}
+                fontWeight={active ? 800 : 600}
+                fill={active ? LINE_STRONG : LABEL}
                 className="font-display"
               >
                 {ROMAN[i]}
               </text>
               {isAngle ? (
-                <text x={label.x} y={label.y - 5} textAnchor={anchor} fontSize="9.5" fill={LINE_STRONG}>
+                <text x={label.x} y={label.y - 5} textAnchor={anchor} fontSize={9.5 * fs} fill={LINE_STRONG}>
                   <tspan fontWeight={700} letterSpacing="0.5">{ANGLE_LABELS[i]}</tspan>
-                  <tspan x={label.x} dy="11" fontSize="8.5" className="tabular-nums">{Math.floor(cusp % 30)}°</tspan>
-                  <tspan className="astro" fontSize="8.5" fill={elementColors[sign.element]}>{sign.glyph}</tspan>
+                  <tspan x={label.x} dy="11" fontSize={8.5 * fs} className="tabular-nums">{Math.floor(cusp % 30)}°</tspan>
+                  <tspan className="astro" fontSize={8.5 * fs} fill={ink(elementColors[sign.element])}>{sign.glyph}</tspan>
                 </text>
               ) : (
-                <text x={label.x} y={label.y} textAnchor={anchor} dominantBaseline="central" fontSize="8" fill={MUTED}>
+                <text x={label.x} y={label.y} textAnchor={anchor} dominantBaseline="central" fontSize={9 * fs} fontWeight={600} fill={LABEL}>
                   <tspan className="tabular-nums">{Math.floor(cusp % 30)}°</tspan>
-                  <tspan className="astro" fill={elementColors[sign.element]}>{sign.glyph}</tspan>
+                  <tspan className="astro" fill={ink(elementColors[sign.element])}>{sign.glyph}</tspan>
                 </text>
               )}
             </g>
@@ -340,10 +371,10 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
             return (
               <g key={axis.label}>
                 <line x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y} stroke={LINE_STRONG} strokeWidth={1.4} strokeOpacity={0.9} />
-                <text x={label.x} y={label.y - 5} textAnchor={anchor} fontSize="9.5" fill={LINE_STRONG}>
+                <text x={label.x} y={label.y - 5} textAnchor={anchor} fontSize={9.5 * fs} fill={LINE_STRONG}>
                   <tspan fontWeight={700} letterSpacing="0.5">{axis.label}</tspan>
-                  <tspan x={label.x} dy="11" fontSize="8.5" className="tabular-nums">{Math.floor(axis.lon % 30)}°</tspan>
-                  <tspan className="astro" fontSize="8.5" fill={elementColors[sign.element]}>{sign.glyph}</tspan>
+                  <tspan x={label.x} dy="11" fontSize={8.5 * fs} className="tabular-nums">{Math.floor(axis.lon % 30)}°</tspan>
+                  <tspan className="astro" fontSize={8.5 * fs} fill={ink(elementColors[sign.element])}>{sign.glyph}</tspan>
                 </text>
               </g>
             );
@@ -367,8 +398,8 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
                 x2={b.x}
                 y2={b.y}
                 stroke={aspectColors[aspect.type]}
-                strokeWidth={active ? (aspect.exact ? 3.5 : 2.5) : aspect.exact ? 2.5 : 1}
-                strokeOpacity={dimmed ? 0.15 : active ? 1 : aspect.faded ? 0.3 : 0.75}
+                strokeWidth={(active ? 1.5 : 0) + (aspect.exact ? aspectWidth + 1.2 : aspectWidth)}
+                strokeOpacity={dimmed ? 0.15 : active ? 1 : aspect.faded ? 0.35 : highContrast ? 1 : 0.9}
                 strokeDasharray={aspect.applying ? undefined : '4 3'}
                 strokeLinecap="round"
               />
