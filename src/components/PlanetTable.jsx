@@ -2,7 +2,7 @@ import { ROMAN } from '../utils/ephemeris';
 import { useI18n } from '../i18n';
 import { Glyph } from './Glyph';
 
-export function PlanetTable({ points, transitPlanets, weights, focus, onHover }) {
+export function PlanetTable({ points, transitPlanets, focus, onHover }) {
   const { t } = useI18n();
   const transitById = Object.fromEntries((transitPlanets ?? []).map((p) => [p.id, p]));
   const hoverProps = (key) => ({
@@ -19,7 +19,6 @@ export function PlanetTable({ points, transitPlanets, weights, focus, onHover })
             <th className="px-3 py-2 font-medium">{t('table.sign')}</th>
             <th className="px-3 py-2 font-medium">{t('table.degree')}</th>
             <th className="px-3 py-2 font-medium">{t('table.house')}</th>
-            <th className="px-3 py-2 text-right font-medium">{t('table.weight')}</th>
             {transitPlanets && <th className="px-3 py-2 font-medium">{t('table.transit')}</th>}
           </tr>
         </thead>
@@ -41,9 +40,6 @@ export function PlanetTable({ points, transitPlanets, weights, focus, onHover })
                 </td>
                 <td className="px-3 py-2 tabular-nums" {...hoverProps(p.key)}>{p.degree}</td>
                 <td className="px-3 py-2 font-display text-base" {...hoverProps(p.key)}>{ROMAN[p.house - 1]}</td>
-                <td className="px-3 py-2 text-right tabular-nums text-slate-400" {...hoverProps(p.key)}>
-                  {weights[p.id] ?? 0}
-                </td>
                 {transitPlanets && (
                   <td
                     className={`px-3 py-2 text-slate-600 ${transitActive ? 'bg-slate-100' : ''}`}

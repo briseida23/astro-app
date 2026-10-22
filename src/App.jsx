@@ -374,7 +374,7 @@ export default function App() {
             />
           )}
           {activeTab === 'planets' && (
-            <PlanetTable points={natalPoints} transitPlanets={transitPlanets} weights={weights} focus={focus} onHover={setHover} />
+            <PlanetTable points={natalPoints} transitPlanets={transitPlanets} focus={focus} onHover={setHover} />
           )}
           {activeTab === 'aspects' && (
             <AspectTable aspects={visibleAspects} aspectColors={colors.aspects} isBiWheel={isBiWheel} focus={focus} onHover={setHover} />

@@ -65,6 +65,29 @@ function sectorPath(startLon, endLon, rOuter, rInner, ascendant) {
   return `M${a.x},${a.y} A${rOuter},${rOuter} 0 0 0 ${b.x},${b.y} L${c.x},${c.y} A${rInner},${rInner} 0 0 1 ${d.x},${d.y} Z`;
 }
 
+// Conjunction loop: how far it reaches into the chart (px) and how wide it opens (degrees).
+const LOOP_DEPTH = 28;
+const LOOP_SPREAD = 5;
+
+/**
+ * Path of an aspect line on the aspect circle of radius `r`. A conjunction joins two nearly
+ * coinciding points, so a straight line would be invisible: it is drawn as a teardrop loop
+ * reaching into the chart instead.
+ */
+function aspectPath(aspect, r, ascendant) {
+  const a = point(aspect.a.longitude, r, ascendant);
+  const b = point(aspect.b.longitude, r, ascendant);
+  if (aspect.type !== 'conjunction') return `M${a.x},${a.y} L${b.x},${b.y}`;
+  // Order the ends along the zodiac so the loop opens the same way whatever their order.
+  const delta = normalize(aspect.b.longitude - aspect.a.longitude);
+  const [from, to] = delta <= 180 ? [aspect.a.longitude, aspect.b.longitude] : [aspect.b.longitude, aspect.a.longitude];
+  const start = point(from, r, ascendant);
+  const end = point(to, r, ascendant);
+  const c1 = point(from - LOOP_SPREAD, r - LOOP_DEPTH, ascendant);
+  const c2 = point(to + LOOP_SPREAD, r - LOOP_DEPTH, ascendant);
+  return `M${start.x},${start.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${end.x},${end.y}`;
+}
+
 function spreadPlanets(planets) {
   const sorted = [...planets].sort((a, b) => a.longitude - b.longitude);
   if (sorted.length < 2) return sorted.map((p) => ({ ...p, displayLon: p.longitude }));
@@ -382,21 +405,18 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
 
         {/* Aspect lines; exact aspects (within the set % of the orb) are drawn heavier */}
         {aspects.map((aspect) => {
-          const a = point(aspect.a.longitude, layout.aspects, ascendant);
-          const b = point(aspect.b.longitude, layout.aspects, ascendant);
+          const d = aspectPath(aspect, layout.aspects, ascendant);
           const active = focus?.aspects.has(aspect.id);
           const dimmed = focus && !active;
           return (
             <g key={aspect.id} {...hoverProps({ type: 'aspect', id: aspect.id })}>
               {/* Soft halo behind highlighted lines so they stand out from the rest. */}
               {active && (
-                <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={aspectColors[aspect.type]} strokeWidth={7} strokeOpacity={0.15} strokeLinecap="round" />
+                <path d={d} fill="none" stroke={aspectColors[aspect.type]} strokeWidth={7} strokeOpacity={0.15} strokeLinecap="round" />
               )}
-              <line
-                x1={a.x}
-                y1={a.y}
-                x2={b.x}
-                y2={b.y}
+              <path
+                d={d}
+                fill="none"
                 stroke={aspectColors[aspect.type]}
                 strokeWidth={(active ? 1.5 : 0) + (aspect.exact ? aspectWidth + 1.2 : aspectWidth)}
                 strokeOpacity={dimmed ? 0.15 : active ? 1 : aspect.faded ? 0.35 : highContrast ? 1 : 0.9}
@@ -404,7 +424,7 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
                 strokeLinecap="round"
               />
               {/* Wider invisible stroke so thin lines are easy to hover. */}
-              <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="transparent" strokeWidth={9} />
+              <path d={d} fill="none" stroke="transparent" strokeWidth={9} />
             </g>
           );
         })}
