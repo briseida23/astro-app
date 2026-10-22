@@ -1,0 +1,350 @@
+import { useState } from 'react';
+import { SIGNS, normalize, formatDegree, formatOrb } from '../utils/ephemeris';
+import { useI18n } from '../i18n';
+
+const SIZE = 640;
+const C = SIZE / 2;
+const R_OUTER = 280; // outer edge of the zodiac band
+const R_ZODIAC = 243; // inner edge of the zodiac band
+const MIN_GAP = 7.5; // degrees between planet glyphs before they are spread apart
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+const ANGLE_LABELS = { 0: 'ASC', 3: 'IC', 6: 'DSC', 9: 'MC' };
+// The symbol font draws ♂, ♀ and ☿ smaller (shorter or narrower) than the other planets.
+const GLYPH_SCALE = { mars: 1.3, venus: 1.2, mercury: 1.12 };
+// Text labels (ASC, Cup, Pho…) need a smaller size to fit the planet circle.
+const glyphSize = (planet) => (planet.textGlyph ? (planet.glyph.length > 2 ? 10 : 11.5) : 20 * (GLYPH_SCALE[planet.id] ?? 1));
+
+/** Standard notation after the orb: A — applying, S — separating. */
+function Motion({ applying }) {
+  const { t } = useI18n();
+  return (
+    <span
+      title={t(applying ? 'aspects.applying' : 'aspects.separating')}
+      className={`font-semibold ${applying ? 'text-emerald-700' : 'text-slate-500'}`}
+    >
+      {applying ? 'R' : 'S'}
+    </span>
+  );
+}
+
+const LINE = '#CBD5E1';
+const LINE_STRONG = '#0F172A';
+const MUTED = '#94A3B8';
+
+// Ring radii. The bi-wheel adds a transit ring inside the zodiac band.
+const LAYOUT = {
+  natal: { natalGlyph: 224, natalDegree: 204, houseOuter: 188, houseNumber: 176, aspects: 164 },
+  transit: {
+    transitGlyph: 233, transitDegree: 213, transitInner: 203,
+    natalGlyph: 188, natalDegree: 171, houseOuter: 160, houseNumber: 149, aspects: 138,
+  },
+};
+
+// Ascendant on the left, zodiac running counter-clockwise.
+function point(longitude, radius, ascendant) {
+  const theta = ((normalize(longitude - ascendant) + 180) * Math.PI) / 180;
+  return { x: C + radius * Math.cos(theta), y: C - radius * Math.sin(theta) };
+}
+
+function sectorPath(startLon, endLon, rOuter, rInner, ascendant) {
+  const a = point(startLon, rOuter, ascendant);
+  const b = point(endLon, rOuter, ascendant);
+  const c = point(endLon, rInner, ascendant);
+  const d = point(startLon, rInner, ascendant);
+  return `M${a.x},${a.y} A${rOuter},${rOuter} 0 0 0 ${b.x},${b.y} L${c.x},${c.y} A${rInner},${rInner} 0 0 1 ${d.x},${d.y} Z`;
+}
+
+function spreadPlanets(planets) {
+  const display = [...planets]
+    .sort((a, b) => a.longitude - b.longitude)
+    .map((p) => ({ ...p, displayLon: p.longitude }));
+  for (let i = 1; i < display.length; i++) {
+    const gap = display[i].displayLon - display[i - 1].displayLon;
+    if (gap < MIN_GAP) display[i].displayLon = display[i - 1].displayLon + MIN_GAP;
+  }
+  return display;
+}
+
+function TooltipBody({ hover, aspects, points, houses, isBiWheel }) {
+  const { t } = useI18n();
+  const ringLabel = (p) => (isBiWheel ? t(p.ring === 'transit' ? 'wheel.transitPrefix' : 'wheel.natalPrefix') : '');
+  const name = (p) => t(`object.${p.id}`);
+  if (hover.type === 'aspect') {
+    const aspect = aspects.find((a) => a.id === hover.id);
+    if (!aspect) return null;
+    return (
+      <>
+        <div className="font-semibold">
+          <span className="astro">{aspect.glyph}</span> {t(`aspect.${aspect.type}`)} {aspect.angle}°
+          {aspect.exact && <span className="ml-1.5 rounded bg-slate-900 px-1 text-[10px] text-white">{t('legend.exact')}</span>}
+        </div>
+        <div>
+          {ringLabel(aspect.a)}{name(aspect.a)} <span className="astro">{aspect.glyph}</span>{' '}
+          {ringLabel(aspect.b)}{name(aspect.b)}
+        </div>
+        <div className="tabular-nums">
+          {t('wheel.orb', { orb: formatOrb(aspect.orb) })} <Motion applying={aspect.applying} />{' '}
+          <span className="text-slate-400">{t('wheel.orbOf', { allowed: formatOrb(aspect.allowed) })}</span>
+        </div>
+      </>
+    );
+  }
+  if (hover.type === 'planet') {
+    const planet = points.find((p) => p.key === hover.key);
+    if (!planet) return null;
+    const own = aspects.filter((a) => a.a.key === hover.key || a.b.key === hover.key);
+    return (
+      <>
+        <div className="font-semibold">
+          <span className="astro">{planet.glyph}</span> {ringLabel(planet)}{name(planet)}
+          {planet.retrograde && <span className="ml-1 text-red-600">R</span>}
+        </div>
+        <div>
+          <span className="astro">{planet.sign.glyph}</span> {t(`sign.${planet.sign.id}`)} {planet.degree} ·{' '}
+          {t('wheel.house', { house: ROMAN[planet.house - 1] })}
+        </div>
+        {own.length > 0 && (
+          <ul className="mt-1.5 space-y-0.5 border-t border-slate-100 pt-1.5">
+            {own.map((a) => {
+              const other = a.a.key === hover.key ? a.b : a.a;
+              return (
+                <li key={a.id} className="tabular-nums">
+                  <span className="astro">{a.glyph}</span> {ringLabel(other)}{name(other)} — {formatOrb(a.orb)}{' '}
+                  <Motion applying={a.applying} />
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </>
+    );
+  }
+  if (hover.type === 'sign') {
+    const sign = SIGNS[hover.index];
+    return (
+      <>
+        <div className="font-semibold">
+          <span className="astro">{sign.glyph}</span> {t(`sign.${sign.id}`)}
+        </div>
+        <div>
+          {t(`element.${sign.element}`)} · {t('balance.cross', { modality: t(`modality.${sign.modality}`) })}
+        </div>
+      </>
+    );
+  }
+  if (hover.type === 'house') {
+    const cusp = houses[hover.index];
+    const sign = SIGNS[Math.floor(cusp / 30)];
+    return (
+      <>
+        <div className="font-semibold">
+          {t('wheel.house', { house: ROMAN[hover.index] })}{ANGLE_LABELS[hover.index] ? ` · ${ANGLE_LABELS[hover.index]}` : ''}
+        </div>
+        <div>
+          {t('wheel.cusp')} <span className="astro">{sign.glyph}</span> {t(`sign.${sign.id}`)} {formatDegree(cusp)}
+        </div>
+      </>
+    );
+  }
+  return null;
+}
+
+export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects, elementColors, aspectColors, hover, focus, onHover }) {
+  const [pointer, setPointer] = useState(null);
+  const { t } = useI18n();
+  const { ascendant, houses } = chartData;
+  const isBiWheel = Boolean(transitPlanets);
+  const layout = isBiWheel ? LAYOUT.transit : LAYOUT.natal;
+  const allPoints = [...planets, ...angles, ...(transitPlanets ?? [])];
+
+  const trackPointer = (e) => {
+    const rect = e.currentTarget.closest('[data-wheel]').getBoundingClientRect();
+    setPointer({ x: e.clientX - rect.left, y: e.clientY - rect.top, width: rect.width });
+  };
+  const hoverProps = (h) => ({
+    onMouseEnter: (e) => {
+      trackPointer(e);
+      onHover(h);
+    },
+    onMouseMove: trackPointer,
+    onMouseLeave: () => {
+      setPointer(null);
+      onHover(null);
+    },
+    className: 'cursor-pointer',
+  });
+
+  const renderPlanets = (list, glyphRadius, degreeRadius) =>
+    spreadPlanets(list).map((planet) => {
+      const glyph = point(planet.displayLon, glyphRadius, ascendant);
+      const degree = point(planet.displayLon, degreeRadius, ascendant);
+      const tickA = point(planet.longitude, R_ZODIAC, ascendant);
+      const tickB = point(planet.longitude, R_ZODIAC - 7, ascendant);
+      const leader = point(planet.displayLon, glyphRadius + 12, ascendant);
+      const active = focus?.planets.has(planet.key);
+      const dimmed = focus && !active;
+      const color = elementColors[planet.element];
+      const isTransit = planet.ring === 'transit';
+      return (
+        <g key={planet.key} {...hoverProps({ type: 'planet', key: planet.key })} opacity={dimmed ? 0.45 : 1}>
+          <line x1={tickA.x} y1={tickA.y} x2={tickB.x} y2={tickB.y} stroke={color} strokeWidth={1.5} />
+          <line x1={tickB.x} y1={tickB.y} x2={leader.x} y2={leader.y} stroke={color} strokeOpacity={0.35} strokeWidth={0.6} />
+          <circle
+            cx={glyph.x}
+            cy={glyph.y}
+            r={13.5}
+            fill={active ? color : '#ffffff'}
+            fillOpacity={active ? 0.14 : 0}
+            stroke={isTransit ? color : 'none'}
+            strokeOpacity={0.5}
+            strokeWidth={0.75}
+            strokeDasharray={isTransit ? '2 2' : undefined}
+          />
+          <text x={glyph.x} y={glyph.y} textAnchor="middle" dominantBaseline="central" fontSize={glyphSize(planet)} fontWeight={planet.textGlyph ? 700 : undefined} fill={color} className={planet.textGlyph ? undefined : 'astro'}>
+            {planet.glyph}
+          </text>
+          {planet.retrograde && (
+            <text x={glyph.x + 10} y={glyph.y + 10} fontSize="8" fontWeight="600" fill="#DC2626">R</text>
+          )}
+          {degreeRadius && (
+            <text x={degree.x} y={degree.y} textAnchor="middle" dominantBaseline="central" fontSize="8.5" fill={MUTED} className="tabular-nums">
+              {Math.floor(planet.longitude % 30)}°
+            </text>
+          )}
+        </g>
+      );
+    });
+
+  const flipX = pointer && pointer.x > pointer.width * 0.58;
+
+  return (
+    <div data-wheel className="relative mx-auto w-full max-w-[680px]">
+      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="w-full select-none" role="img" aria-label={t('wheel.label')}>
+        {/* Zodiac band */}
+        {SIGNS.map((sign, i) => {
+          const start = i * 30;
+          const mid = point(start + 15, (R_OUTER + R_ZODIAC) / 2, ascendant);
+          const boundaryA = point(start, R_OUTER, ascendant);
+          const boundaryB = point(start, R_ZODIAC, ascendant);
+          return (
+            <g key={sign.name} {...hoverProps({ type: 'sign', index: i })}>
+              <path d={sectorPath(start, start + 30, R_OUTER, R_ZODIAC, ascendant)} fill={elementColors[sign.element]} fillOpacity={0.07} />
+              <line x1={boundaryA.x} y1={boundaryA.y} x2={boundaryB.x} y2={boundaryB.y} stroke={LINE} strokeWidth={0.75} />
+              <text x={mid.x} y={mid.y} textAnchor="middle" dominantBaseline="central" fontSize="19" fill={elementColors[sign.element]} className="astro">
+                {sign.glyph}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Degree scale on the inner edge of the zodiac */}
+        {Array.from({ length: 360 }, (_, deg) => {
+          const len = deg % 10 === 0 ? 7 : deg % 5 === 0 ? 4.5 : 2.5;
+          const a = point(deg, R_ZODIAC, ascendant);
+          const b = point(deg, R_ZODIAC + len, ascendant);
+          return <line key={deg} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={MUTED} strokeWidth={deg % 5 === 0 ? 0.6 : 0.4} />;
+        })}
+
+        <circle cx={C} cy={C} r={R_OUTER} fill="none" stroke={LINE} strokeWidth={0.9} />
+        <circle cx={C} cy={C} r={R_ZODIAC} fill="none" stroke={LINE} strokeWidth={0.9} />
+        {isBiWheel && <circle cx={C} cy={C} r={layout.transitInner} fill="none" stroke={LINE} strokeWidth={0.6} strokeDasharray="1.5 3" />}
+        <circle cx={C} cy={C} r={layout.houseOuter} fill="none" stroke={LINE} strokeWidth={0.6} />
+        <circle cx={C} cy={C} r={layout.aspects} fill="#FCFCFD" stroke={LINE} strokeWidth={0.9} />
+
+        {/* House cusps: extended through the zodiac band, angles emphasised */}
+        {houses.map((cusp, i) => {
+          const isAngle = i % 3 === 0;
+          const active = focus?.house === i;
+          const inner = point(cusp, layout.aspects, ascendant);
+          const outer = point(cusp, isAngle ? R_OUTER + 9 : R_OUTER, ascendant);
+          const next = houses[(i + 1) % 12];
+          const number = point(cusp + normalize(next - cusp) / 2, layout.houseNumber, ascendant);
+          const label = point(cusp, isAngle ? R_OUTER + 13 : R_OUTER + 7, ascendant);
+          // Anchor labels away from the circle so they never overlap the ring.
+          const anchor = label.x < C - 12 ? 'end' : label.x > C + 12 ? 'start' : 'middle';
+          const sign = SIGNS[Math.floor(cusp / 30)];
+          return (
+            <g key={i} {...hoverProps({ type: 'house', index: i })}>
+              <line x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y} stroke="transparent" strokeWidth={8} />
+              <line
+                x1={inner.x}
+                y1={inner.y}
+                x2={outer.x}
+                y2={outer.y}
+                stroke={isAngle || active ? LINE_STRONG : MUTED}
+                strokeWidth={active ? 2 : isAngle ? 1.4 : 0.6}
+                strokeOpacity={isAngle || active ? 0.9 : 0.6}
+              />
+              <text
+                x={number.x}
+                y={number.y}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize="9.5"
+                letterSpacing="0.5"
+                fontWeight={active ? 700 : 500}
+                fill={active ? LINE_STRONG : MUTED}
+                className="font-display"
+              >
+                {ROMAN[i]}
+              </text>
+              {isAngle ? (
+                <text x={label.x} y={label.y - 5} textAnchor={anchor} fontSize="9.5" fill={LINE_STRONG}>
+                  <tspan fontWeight={700} letterSpacing="0.5">{ANGLE_LABELS[i]}</tspan>
+                  <tspan x={label.x} dy="11" fontSize="8.5" className="tabular-nums">{Math.floor(cusp % 30)}°</tspan>
+                  <tspan className="astro" fontSize="8.5" fill={elementColors[sign.element]}>{sign.glyph}</tspan>
+                </text>
+              ) : (
+                <text x={label.x} y={label.y} textAnchor={anchor} dominantBaseline="central" fontSize="8" fill={MUTED}>
+                  <tspan className="tabular-nums">{Math.floor(cusp % 30)}°</tspan>
+                  <tspan className="astro" fill={elementColors[sign.element]}>{sign.glyph}</tspan>
+                </text>
+              )}
+            </g>
+          );
+        })}
+
+        {/* Aspect lines; exact aspects (within the set % of the orb) are drawn heavier */}
+        {aspects.map((aspect) => {
+          const a = point(aspect.a.longitude, layout.aspects, ascendant);
+          const b = point(aspect.b.longitude, layout.aspects, ascendant);
+          const active = focus?.aspects.has(aspect.id);
+          const dimmed = focus && !active;
+          return (
+            <g key={aspect.id} {...hoverProps({ type: 'aspect', id: aspect.id })}>
+              {/* Soft halo behind highlighted lines so they stand out from the rest. */}
+              {active && (
+                <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={aspectColors[aspect.type]} strokeWidth={7} strokeOpacity={0.15} strokeLinecap="round" />
+              )}
+              <line
+                x1={a.x}
+                y1={a.y}
+                x2={b.x}
+                y2={b.y}
+                stroke={aspectColors[aspect.type]}
+                strokeWidth={active ? (aspect.exact ? 3.5 : 2.5) : aspect.exact ? 2.5 : 1}
+                strokeOpacity={dimmed ? 0.15 : active ? 1 : aspect.faded ? 0.3 : 0.75}
+                strokeDasharray={aspect.applying ? undefined : '4 3'}
+                strokeLinecap="round"
+              />
+              {/* Wider invisible stroke so thin lines are easy to hover. */}
+              <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="transparent" strokeWidth={9} />
+            </g>
+          );
+        })}
+
+        {renderPlanets(planets, layout.natalGlyph, layout.natalDegree)}
+        {isBiWheel && renderPlanets(transitPlanets, layout.transitGlyph, layout.transitDegree)}
+      </svg>
+
+      {pointer && hover && hover.type !== 'pattern' && (
+        <div
+          className="pointer-events-none absolute z-10 w-max max-w-64 rounded-xl border border-slate-200 bg-white/95 px-3 py-2 text-xs leading-relaxed text-slate-900 shadow-xl backdrop-blur"
+          style={{ left: pointer.x, top: pointer.y, transform: `translate(${flipX ? 'calc(-100% - 14px)' : '14px'}, 14px)` }}
+        >
+          <TooltipBody hover={hover} aspects={aspects} points={allPoints} houses={houses} isBiWheel={isBiWheel} />
+        </div>
+      )}
+    </div>
+  );
+}

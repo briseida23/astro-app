@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+/* Light theme only: `dark:` utilities never match, and native controls stay light. */
+@custom-variant dark (&:where(.force-dark-never));
+
+@theme {
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Cormorant Garamond", ui-serif, Georgia, serif;
+  --font-astro: "Noto Sans Symbols", "Noto Sans Symbols 2", "Segoe UI Symbol", "Apple Symbols", sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: #f8fafc;
+  color: #0f172a;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.08)];
+  }
+  .field {
+    @apply flex flex-col gap-1.5 text-[11px] font-medium tracking-wide text-slate-500 uppercase;
+  }
+  .input {
+    @apply rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal tracking-normal text-slate-900 normal-case outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100;
+  }
+  .input-sm {
+    @apply rounded-md border border-slate-200 bg-white px-2 py-1 text-sm tabular-nums text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100;
+  }
+  .btn-primary {
+    @apply rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300;
+  }
+  .btn-secondary {
+    @apply rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply rounded-lg px-2 py-1 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-900;
+  }
+  .astro {
+    font-family: var(--font-astro);
+    font-variant-emoji: text;
+  }
+}
