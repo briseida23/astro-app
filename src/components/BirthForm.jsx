@@ -24,7 +24,7 @@ export function OffsetSelect({ value, onChange, id, className = "input" }) {
   );
 }
 
-async function geocode(query, lang) {
+async function geocodeIn(query, lang) {
   const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=6&language=${lang}&format=json`;
   const response = await fetch(url);
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -32,8 +32,32 @@ async function geocode(query, lang) {
   return data.results ?? [];
 }
 
+/**
+ * Language(s) of a city query, judged by its letters: Open-Meteo matches names only in the
+ * requested language ("Горішні Плавні" is found with language=uk, not ru or en).
+ * Cyrillic without Ukrainian- or Russian-only letters ("Полтава") could be either.
+ */
+function queryLanguages(query) {
+  if (/[іїєґ]/i.test(query)) return ['uk'];
+  if (/[ыэъё]/i.test(query)) return ['ru'];
+  if (/[а-я]/i.test(query)) return ['uk', 'ru'];
+  return ['en'];
+}
+
+/** Places matching the query in the language(s) it is typed in; the most populous first. */
+async function geocode(query) {
+  const settled = await Promise.allSettled(queryLanguages(query).map((l) => geocodeIn(query, l)));
+  if (settled.every((r) => r.status === 'rejected')) throw settled[0].reason;
+  const byId = new Map();
+  for (const r of settled) {
+    if (r.status !== 'fulfilled') continue;
+    for (const place of r.value) if (!byId.has(place.id)) byId.set(place.id, place);
+  }
+  return [...byId.values()].sort((a, b) => (b.population ?? 0) - (a.population ?? 0)).slice(0, 8);
+}
+
 export function CitySearch({ onSelect }) {
-  const { lang, t } = useI18n();
+  const { t } = useI18n();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [status, setStatus] = useState('idle'); // idle | loading | empty | error
@@ -42,7 +66,7 @@ export function CitySearch({ onSelect }) {
     if (!query.trim()) return;
     setStatus('loading');
     try {
-      const found = await geocode(query.trim(), lang);
+      const found = await geocode(query.trim());
       setResults(found);
       setStatus(found.length ? 'idle' : 'empty');
     } catch {
