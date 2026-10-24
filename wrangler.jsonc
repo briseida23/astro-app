@@ -21,6 +21,9 @@
     { "name": "AUTH_LIMITER", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } },
     { "name": "API_LIMITER", "namespace_id": "1002", "simple": { "limit": 120, "period": 60 } }
   ],
+  // Feedback notifications by email (see notifyFeedback in worker/index.js); the recipient is the
+  // FEEDBACK_TO secret, so the address stays out of the repository. Main site only.
+  "send_email": [{ "name": "FEEDBACK_EMAIL" }],
   "d1_databases": [
     {
       "binding": "DB",

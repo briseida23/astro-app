@@ -4,6 +4,7 @@
 import { betterAuth } from 'better-auth';
 import { getMigrations } from 'better-auth/db/migration';
 import { captcha } from 'better-auth/plugins/captcha';
+import { EmailMessage } from 'cloudflare:email';
 
 // Tables of our own, next to Better Auth's user/session/account/verification.
 const APP_TABLES = [
@@ -190,8 +191,51 @@ async function turnstilePassed(token, env, request) {
   return Boolean(result?.success);
 }
 
+// Sender of feedback notifications: any address on duoastro.app works once Email Routing is on.
+const FEEDBACK_FROM = 'feedback@duoastro.app';
+const FEEDBACK_SUBJECTS = { idea: 'Idea', bug: 'Bug', other: 'Other' };
+
+const base64 = (text) => {
+  const bytes = new TextEncoder().encode(text);
+  let binary = '';
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary);
+};
+// Also keeps visitor input out of mail headers unless it is a plain address (no line breaks).
+const looksLikeEmail = (text) => /^[^\s@<>",;]+@[^\s@<>",;]+\.[^\s@<>",;]+$/.test(text);
+
+/**
+ * Emails a new feedback message to the owner: FEEDBACK_EMAIL is the send_email binding, FEEDBACK_TO
+ * a secret with the recipient (a verified Email Routing destination). Sites without them skip it.
+ */
+async function notifyFeedback(env, { kind, message, email, lang, signedIn }) {
+  if (!env.FEEDBACK_EMAIL || !env.FEEDBACK_TO) return;
+  const subject = `DuoAstro feedback: ${FEEDBACK_SUBJECTS[kind]}`;
+  const body = [
+    `Type: ${FEEDBACK_SUBJECTS[kind]}`,
+    `From: ${email ?? 'no email'}${signedIn ? ' (signed in)' : ''}`,
+    `Language: ${lang ?? '-'}`,
+    '',
+    message,
+  ].join('\n');
+  const headers = [
+    `From: DuoAstro <${FEEDBACK_FROM}>`,
+    `To: <${env.FEEDBACK_TO}>`,
+    `Subject: =?UTF-8?B?${base64(subject)}?=`,
+    `Date: ${new Date().toUTCString()}`,
+    `Message-ID: <${crypto.randomUUID()}@duoastro.app>`,
+    // "Reply" in the mail app then answers the visitor directly.
+    ...(email && looksLikeEmail(email) ? [`Reply-To: ${email}`] : []),
+    'MIME-Version: 1.0',
+    'Content-Type: text/plain; charset=utf-8',
+    'Content-Transfer-Encoding: base64',
+  ];
+  const raw = `${headers.join('\r\n')}\r\n\r\n${base64(body).replace(/.{76}/g, '$&\r\n')}`;
+  await env.FEEDBACK_EMAIL.send(new EmailMessage(FEEDBACK_FROM, env.FEEDBACK_TO, raw));
+}
+
 /** POST /api/feedback: anyone may write; guests pass Turnstile, signed-in users are linked to the message. */
-async function handleFeedback(request, env, url, auth) {
+async function handleFeedback(request, env, url, auth, ctx) {
   if (request.headers.get('origin') !== url.origin) return json({ error: 'forbidden' }, 403);
   const body = await readJson(request, 2 * MAX_MESSAGE);
   const message = String(body?.message ?? '').trim().slice(0, MAX_MESSAGE);
@@ -207,6 +251,12 @@ async function handleFeedback(request, env, url, auth) {
   await env.DB.prepare('INSERT INTO feedback (id, user_id, email, kind, message, lang, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
     .bind(crypto.randomUUID(), session?.user.id ?? null, email, kind, message, lang, Date.now())
     .run();
+  // After the response: the message is already saved, so a mail failure must not fail the request.
+  ctx.waitUntil(
+    notifyFeedback(env, { kind, message, email, lang, signedIn: Boolean(session) }).catch((err) =>
+      console.error('feedback email failed', err),
+    ),
+  );
   return json({ ok: true }, 201);
 }
 
@@ -226,7 +276,7 @@ async function rateLimited(request, env, url) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
 
@@ -253,7 +303,7 @@ export default {
     }
 
     if (url.pathname.startsWith('/api/auth/')) return auth.handler(request);
-    if (url.pathname === '/api/feedback' && request.method === 'POST') return handleFeedback(request, env, url, auth);
+    if (url.pathname === '/api/feedback' && request.method === 'POST') return handleFeedback(request, env, url, auth, ctx);
 
     // Our own endpoints: signed-in users only. Changes must come from this site (the session
     // cookie would otherwise be sent along with requests forged by other sites).
