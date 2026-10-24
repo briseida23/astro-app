@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   ASPECTS,
   HOUSE_SYSTEMS,
@@ -16,7 +16,8 @@ import {
 import { findAspects } from './utils/aspects';
 import { calculateBalance } from './utils/balance';
 import { findAspectPatterns, findTransitPatterns } from './utils/aspectPatterns';
-import { loadSettings, saveSettings, loadSession, saveSession } from './utils/settings';
+import { loadSettings, saveSettings, loadSession, saveSession, normalizeSettings } from './utils/settings';
+import * as api from './utils/api';
 import { ChartWheel } from './components/ChartWheel';
 import { PlanetTable } from './components/PlanetTable';
 import { AspectTable } from './components/AspectTable';
@@ -26,6 +27,9 @@ import { BirthModal } from './components/BirthForm';
 import { TransitBar } from './components/TransitBar';
 import { DynamicsPanel } from './components/DynamicsPanel';
 import { SettingsModal } from './components/SettingsModal';
+import { AuthModal } from './components/AuthModal';
+import { AccountMenu } from './components/AccountMenu';
+import { ChartsModal } from './components/ChartsModal';
 import { Tabs } from './components/Tabs';
 import { detectCurrentPlace, placeFields, withoutPlace } from './utils/location';
 import { I18nContext, LANGUAGES, loadLanguage, saveLanguage, translate, placeName } from './i18n';
@@ -115,12 +119,69 @@ export default function App() {
   const [birthOpen, setBirthOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [lang, setLang] = useState(loadLanguage);
+  // Accounts: available only when the site runs with the Worker API (config is null otherwise).
+  const [authConfig, setAuthConfig] = useState(null);
+  const [user, setUser] = useState(null);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [chartsOpen, setChartsOpen] = useState(false);
+  // Id of the user whose account settings have been loaded: only then are changes saved back,
+  // so local values never overwrite the account's before it has been read.
+  const [syncedUserId, setSyncedUserId] = useState(null);
+  const syncReady = Boolean(user) && syncedUserId === user.id;
   // Asteroids and Selena need data files that load after the first render.
   const [extrasLoaded, setExtrasLoaded] = useState(false);
   const t = (key, vars) => translate(lang, key, vars);
   const i18n = useMemo(() => ({ lang, setLang }), [lang]);
 
   useEffect(() => saveSettings(settings), [settings]);
+
+  useEffect(() => {
+    api.getConfig().then((config) => {
+      setAuthConfig(config);
+      if (config) api.getSession().then(setUser);
+    });
+  }, []);
+
+  // On sign-in: take the account's settings and language, or store the current ones in a new
+  // account. Afterwards every change is saved to the account (debounced).
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    api
+      .loadSettings()
+      .then((data) => {
+        if (cancelled) return;
+        if (data?.settings) setSettings(normalizeSettings(data.settings));
+        if (data?.lang && LANGUAGES.some((l) => l.id === data.lang)) setLang(data.lang);
+        setSyncedUserId(user.id);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const syncTimer = useRef(null);
+  useEffect(() => {
+    if (!user || !syncReady) return;
+    clearTimeout(syncTimer.current);
+    syncTimer.current = setTimeout(() => api.saveSettings({ settings, lang }).catch(() => {}), 800);
+    return () => clearTimeout(syncTimer.current);
+  }, [user, syncReady, settings, lang]);
+
+  const signOut = async () => {
+    await api.signOut().catch(() => {});
+    setUser(null);
+  };
+  const deleteAccount = async () => {
+    if (!window.confirm(t('account.deleteConfirm'))) return;
+    try {
+      await api.deleteAccount();
+      setUser(null);
+    } catch {
+      window.alert(t('auth.error.generic'));
+    }
+  };
   useEffect(() => {
     extrasReady.then(setExtrasLoaded);
   }, []);
@@ -322,6 +383,15 @@ export default function App() {
                 <option key={l.id} value={l.id}>{l.label}</option>
               ))}
             </select>
+            {authConfig && (
+              <AccountMenu
+                user={user}
+                onSignIn={() => setAuthOpen(true)}
+                onCharts={() => setChartsOpen(true)}
+                onSignOut={signOut}
+                onDelete={deleteAccount}
+              />
+            )}
           </div>
         </div>
       </header>
@@ -393,6 +463,8 @@ export default function App() {
 
       <BirthModal open={birthOpen} onClose={() => setBirthOpen(false)} birth={birth} onSubmit={setBirth} />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} settings={settings} onChange={setSettings} />
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} google={Boolean(authConfig?.google)} onSignedIn={setUser} />
+      <ChartsModal open={chartsOpen} onClose={() => setChartsOpen(false)} birth={birth} onOpen={setBirth} />
     </div>
     </I18nContext.Provider>
   );

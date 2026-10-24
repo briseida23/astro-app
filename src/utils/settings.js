@@ -46,17 +46,22 @@ function merge(defaults, saved) {
   );
 }
 
+/** Saved settings (from this browser or the account) completed with defaults for new keys. */
+export function normalizeSettings(saved) {
+  if (!isObject(saved)) return DEFAULT_SETTINGS;
+  const copy = { ...saved };
+  // Weights never edited by the user follow the new defaults; edited ones are kept.
+  const w = copy.weights;
+  if (isObject(w) && Object.entries(PREVIOUS_DEFAULT_WEIGHTS).every(([id, v]) => w[id] === v)) {
+    delete copy.weights;
+  }
+  return merge(DEFAULT_SETTINGS, copy);
+}
+
 export function loadSettings() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_SETTINGS;
-    const saved = JSON.parse(raw);
-    // Weights never edited by the user follow the new defaults; edited ones are kept.
-    const w = saved.weights;
-    if (isObject(w) && Object.entries(PREVIOUS_DEFAULT_WEIGHTS).every(([id, v]) => w[id] === v)) {
-      delete saved.weights;
-    }
-    return merge(DEFAULT_SETTINGS, saved);
+    return raw ? normalizeSettings(JSON.parse(raw)) : DEFAULT_SETTINGS;
   } catch {
     return DEFAULT_SETTINGS;
   }
