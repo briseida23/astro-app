@@ -16,6 +16,18 @@ function errorKey(error) {
   return 'auth.error.generic';
 }
 
+// Google's multicolour "G" mark.
+function GoogleMark() {
+  return (
+    <svg aria-hidden viewBox="0 0 48 48" className="h-5 w-5">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+    </svg>
+  );
+}
+
 function AuthForm({ google, turnstile, onSignedIn }) {
   const { lang, t } = useI18n();
   const [tab, setTab] = useState('signIn');
@@ -27,6 +39,8 @@ function AuthForm({ google, turnstile, onSignedIn }) {
   // Turnstile token for the next submit; every attempt uses it up and gets a fresh widget.
   const [captcha, setCaptcha] = useState(null);
   const [captchaRound, setCaptchaRound] = useState(0);
+  // With Google available it is the main way in; email and password are one click away.
+  const [emailOpen, setEmailOpen] = useState(!google);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -50,63 +64,83 @@ function AuthForm({ google, turnstile, onSignedIn }) {
 
   return (
     <div className="space-y-5">
-      <Tabs
-        tabs={['signIn', 'signUp'].map((id) => ({ id, label: t(`auth.tab.${id}`) }))}
-        active={tab}
-        onChange={(id) => {
-          setTab(id);
-          setError(null);
-        }}
-        className="-mt-2"
-      />
-
       {google && (
-        <>
+        <div className="space-y-2">
           <button
             type="button"
-            className="btn-secondary flex w-full items-center justify-center gap-2"
+            className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3 font-medium shadow-sm transition hover:bg-slate-50"
             onClick={() => signInWithGoogle().catch(() => setError('auth.error.generic'))}
           >
-            <span aria-hidden className="font-bold text-[#4285F4]">G</span> {t('auth.google')}
+            <GoogleMark /> {t('auth.google')}
           </button>
-          <div className="flex items-center gap-3 text-xs text-slate-400">
-            <span className="h-px flex-1 bg-slate-200" />
-            {t('auth.or')}
-            <span className="h-px flex-1 bg-slate-200" />
-          </div>
+          <p className="text-center text-xs text-slate-500">{t('auth.googleHint')}</p>
+        </div>
+      )}
+
+      {google && !emailOpen && (
+        <>
+          {error && <p className="text-sm text-red-600">{t(error)}</p>}
+          <button
+            type="button"
+            className="w-full text-sm text-slate-600 underline hover:text-slate-900"
+            onClick={() => setEmailOpen(true)}
+          >
+            {t('auth.emailToggle')}
+          </button>
         </>
       )}
 
-      <form className="space-y-3" onSubmit={submit}>
-        {tab === 'signUp' && (
-          <label className="field">
-            <span>{t('auth.name')}</span>
-            <input className="input" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
-          </label>
-        )}
-        <label className="field">
-          <span>{t('auth.email')}</span>
-          <input type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
-        </label>
-        <label className="field">
-          <span>{t('auth.password')}</span>
-          <input
-            type="password"
-            className="input"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete={tab === 'signIn' ? 'current-password' : 'new-password'}
-            minLength={8}
-            required
+      {emailOpen && google && (
+        <div className="flex items-center gap-3 text-xs text-slate-400">
+          <span className="h-px flex-1 bg-slate-200" />
+          {t('auth.or')}
+          <span className="h-px flex-1 bg-slate-200" />
+        </div>
+      )}
+
+      {emailOpen && (
+        <>
+          <Tabs
+            tabs={['signIn', 'signUp'].map((id) => ({ id, label: t(`auth.tab.${id}`) }))}
+            active={tab}
+            onChange={(id) => {
+              setTab(id);
+              setError(null);
+            }}
           />
-          {tab === 'signUp' && <span className="normal-case tracking-normal text-slate-400">{t('auth.passwordHint')}</span>}
-        </label>
-        {turnstile && <Turnstile siteKey={turnstile} lang={lang} round={captchaRound} onToken={setCaptcha} />}
-        {error && <p className="text-sm text-red-600">{t(error)}</p>}
-        <button type="submit" className="btn-primary w-full" disabled={busy}>
-          {busy ? '…' : t(tab === 'signIn' ? 'auth.submit.signIn' : 'auth.submit.signUp')}
-        </button>
-      </form>
+
+          <form className="space-y-3" onSubmit={submit}>
+            {tab === 'signUp' && (
+              <label className="field">
+                <span>{t('auth.name')}</span>
+                <input className="input" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+              </label>
+            )}
+            <label className="field">
+              <span>{t('auth.email')}</span>
+              <input type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
+            </label>
+            <label className="field">
+              <span>{t('auth.password')}</span>
+              <input
+                type="password"
+                className="input"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={tab === 'signIn' ? 'current-password' : 'new-password'}
+                minLength={8}
+                required
+              />
+              {tab === 'signUp' && <span className="normal-case tracking-normal text-slate-400">{t('auth.passwordHint')}</span>}
+            </label>
+            {turnstile && <Turnstile siteKey={turnstile} lang={lang} round={captchaRound} onToken={setCaptcha} />}
+            {error && <p className="text-sm text-red-600">{t(error)}</p>}
+            <button type="submit" className="btn-primary w-full" disabled={busy}>
+              {busy ? '…' : t(tab === 'signIn' ? 'auth.submit.signIn' : 'auth.submit.signUp')}
+            </button>
+          </form>
+        </>
+      )}
       <p className="text-xs text-slate-500">
         {t('auth.note')}{' '}
         <a href={`/privacy?lang=${lang}`} target="_blank" rel="noreferrer" className="underline hover:text-slate-700">
