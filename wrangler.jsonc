@@ -1,4 +1,5 @@
 // Cloudflare Workers deploy config: the Worker handles /api/*, the static Vite build is served from dist/.
+// `npx wrangler deploy` deploys the main site; `npx wrangler deploy --env test` the test site.
 {
   "name": "astro-app",
   "main": "worker/index.js",
@@ -21,9 +22,26 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "astro-app-test",
-      // Test database (wrangler d1 create astro-app-test).
-      "database_id": "76d97685-14e0-468a-818d-df687949482c"
+      "database_name": "astro-app",
+      "database_id": "d1184168-5a72-40be-b58c-870dad9e929b"
     }
-  ]
+  ],
+  "env": {
+    // Test site with its own database: astro-app-auth-test.<account>.workers.dev.
+    // Bindings are not inherited by environments, so they are repeated here.
+    "test": {
+      "name": "astro-app-auth-test",
+      "ratelimits": [
+        { "name": "AUTH_LIMITER", "namespace_id": "1003", "simple": { "limit": 10, "period": 60 } },
+        { "name": "API_LIMITER", "namespace_id": "1004", "simple": { "limit": 120, "period": 60 } }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "astro-app-test",
+          "database_id": "76d97685-14e0-468a-818d-df687949482c"
+        }
+      ]
+    }
+  }
 }
