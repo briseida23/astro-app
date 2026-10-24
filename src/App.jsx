@@ -382,7 +382,7 @@ export default function App() {
   return (
     <I18nContext.Provider value={i18n}>
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A]">
-      <header className="border-b border-slate-200/70 bg-white/80 backdrop-blur">
+      <header className="relative z-40 border-b border-slate-200/70 bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <div>
             <h1 className="font-display text-3xl font-semibold leading-none tracking-tight">{APP_NAME}</h1>
