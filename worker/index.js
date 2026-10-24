@@ -43,6 +43,8 @@ const MAX_MESSAGE = 4000;
 const FEEDBACK_KINDS = ['idea', 'bug', 'other'];
 // Feedback is also emailed to the owner, so the database copy is kept only this long.
 const FEEDBACK_DAYS = 30;
+// Signed-in users skip Turnstile, so their messages per day are capped (each one is also an email).
+const FEEDBACK_PER_DAY = 10;
 
 const googleEnabled = (env) => Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
 // Cloudflare Turnstile on sign-in and sign-up, so bots cannot mass-register or guess passwords.
@@ -73,14 +75,35 @@ function createAuth(env, origin) {
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
 
-/** Request body as parsed JSON, or null when larger than `max` bytes or not JSON. */
+/**
+ * Request body as parsed JSON, or null when larger than `max` bytes or not JSON. The body is read
+ * in chunks and dropped as soon as it passes `max`, so a huge upload without Content-Length
+ * cannot fill the Worker's memory.
+ */
 async function readJson(request, max) {
   const declared = Number(request.headers.get('content-length'));
-  if (declared > max) return null;
-  const text = await request.text();
-  if (text.length > max) return null;
+  if (declared > max || !request.body) return null;
+  const reader = request.body.getReader();
+  const chunks = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
   try {
-    return JSON.parse(text);
+    return JSON.parse(new TextDecoder().decode(bytes));
   } catch {
     return null;
   }
@@ -249,6 +272,12 @@ async function handleFeedback(request, env, url, auth, ctx) {
   if (!session && turnstileEnabled(env) && !(await turnstilePassed(request.headers.get('x-captcha-response'), env, request))) {
     return json({ error: 'captcha', code: 'VERIFICATION_FAILED' }, 403);
   }
+  if (session) {
+    const { count } = await env.DB.prepare('SELECT COUNT(*) AS count FROM feedback WHERE user_id = ? AND created_at > ?')
+      .bind(session.user.id, Date.now() - 24 * 60 * 60 * 1000)
+      .first();
+    if (count >= FEEDBACK_PER_DAY) return json({ error: 'too many requests' }, 429);
+  }
   const email = session ? session.user.email : String(body?.email ?? '').trim().slice(0, 200) || null;
   const lang = String(body?.lang ?? '').slice(0, 5) || null;
   await env.DB.prepare('INSERT INTO feedback (id, user_id, email, kind, message, lang, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
@@ -270,12 +299,26 @@ async function handleFeedback(request, env, url, auth, ctx) {
  */
 async function rateLimited(request, env, url) {
   const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
-  // Password checks and feedback (open to guests) get the strict limit.
-  const strict = /^\/api\/auth\/sign-(in|up)\//.test(url.pathname) || url.pathname === '/api/feedback';
-  const limiter = strict ? env.AUTH_LIMITER : env.API_LIMITER;
+  const limiter = limiterFor(request, env, url);
   if (!limiter) return null;
   const { success } = await limiter.limit({ key: ip });
   return success ? null : json({ error: 'too many requests' }, 429);
+}
+
+/**
+ * The free D1 plan allows 100k row writes and 5M row reads a day for the whole site, so the
+ * expensive calls get their own, lower limits: one client looping on them must not use up the
+ * day's quota for everyone.
+ */
+function limiterFor(request, env, url) {
+  // Password checks and feedback (open to guests).
+  if (/^\/api\/auth\/sign-(in|up)\//.test(url.pathname) || url.pathname === '/api/feedback') return env.AUTH_LIMITER;
+  // The client list reads up to MAX_CHARTS rows; the app loads it once per sign-in or on opening the list.
+  if (url.pathname === '/api/charts' && request.method === 'GET') return env.HEAVY_LIMITER;
+  // Writes: settings are saved at most every 800 ms while being changed.
+  const ownData = url.pathname === '/api/settings' || url.pathname.startsWith('/api/charts');
+  if (ownData && request.method !== 'GET') return env.WRITE_LIMITER;
+  return env.API_LIMITER;
 }
 
 /**
