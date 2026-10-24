@@ -10,10 +10,55 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Manrope:wght@300;400;500;600;700&family=Noto+Sans+Symbols:wght@400&family=Noto+Sans+Symbols+2&display=swap"
     />
-    <title>DuoAstro</title>
+    <title>DuoAstro — натальная карта и транзиты онлайн</title>
+    <meta
+      name="description"
+      content="Бесплатная натальная карта онлайн: тропический гороскоп, транзиты с пошаговой динамикой, аспекты, аспектные фигуры, баланс стихий, астероиды и фиктивные точки. На русском, украинском и английском."
+    />
+    <link rel="canonical" href="https://duoastro.app/" />
+    <!-- Link previews in messengers and social networks. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="DuoAstro" />
+    <meta property="og:url" content="https://duoastro.app/" />
+    <meta property="og:title" content="DuoAstro — натальная карта и транзиты онлайн" />
+    <meta
+      property="og:description"
+      content="Бесплатная натальная карта, транзиты, аспекты и аспектные фигуры в браузере."
+    />
+    <meta name="twitter:card" content="summary" />
+    <!-- Lets search engines show the site as a free web application. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "DuoAstro",
+        "url": "https://duoastro.app/",
+        "applicationCategory": "LifestyleApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript",
+        "inLanguage": ["ru", "uk", "en"],
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "description": "Тропическая астрология в браузере: натальная карта, транзиты, аспекты, аспектные фигуры, баланс стихий и крестов."
+      }
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- The text below is for search engines and visitors without JavaScript; React replaces it on start. -->
+    <div id="root">
+      <main style="max-width: 720px; margin: 0 auto; padding: 32px 16px; font-family: system-ui, sans-serif; color: #0f172a">
+        <h1>DuoAstro — натальная карта и транзиты онлайн</h1>
+        <p>
+          Бесплатное астрологическое приложение в браузере: тропический гороскоп, натальная карта с домами
+          (Плацидус и другие системы), транзиты с пошаговой динамикой, таблицы аспектов, аспектные фигуры —
+          в том числе те, что транзиты замыкают с натальными планетами, — баланс стихий и крестов,
+          астероиды и фиктивные точки. Можно сохранять карты клиентов.
+        </p>
+        <p lang="uk">Натальна карта і транзити онлайн безкоштовно — українською мовою.</p>
+        <p lang="en">Free online natal chart and transits — tropical astrology in English, Ukrainian and Russian.</p>
+        <p><a href="/privacy">Политика конфиденциальности</a></p>
+      </main>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
