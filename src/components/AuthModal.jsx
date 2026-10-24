@@ -107,7 +107,12 @@ function AuthForm({ google, turnstile, onSignedIn }) {
           {busy ? '…' : t(tab === 'signIn' ? 'auth.submit.signIn' : 'auth.submit.signUp')}
         </button>
       </form>
-      <p className="text-xs text-slate-500">{t('auth.note')}</p>
+      <p className="text-xs text-slate-500">
+        {t('auth.note')}{' '}
+        <a href={`/privacy?lang=${lang}`} target="_blank" rel="noreferrer" className="underline hover:text-slate-700">
+          {t('auth.privacy')}
+        </a>
+      </p>
     </div>
   );
 }
