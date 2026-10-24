@@ -1,11 +1,11 @@
 // Client for the Worker API: Better Auth endpoints under /api/auth and our own data endpoints.
 // On a deployment without the Worker API every call fails and the app stays local-only.
 
-async function request(path, { method = 'GET', body } = {}) {
+async function request(path, { method = 'GET', body, headers = {} } = {}) {
   const response = await fetch(path, {
     method,
     credentials: 'same-origin',
-    headers: body === undefined ? {} : { 'content-type': 'application/json' },
+    headers: body === undefined ? headers : { 'content-type': 'application/json', ...headers },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const type = response.headers.get('content-type') ?? '';
@@ -29,11 +29,14 @@ export const getSession = () =>
     .then((data) => data?.user ?? null)
     .catch(() => null);
 
-export const signIn = (email, password) =>
-  request('/api/auth/sign-in/email', { method: 'POST', body: { email, password } });
+// `captcha` is the Turnstile token when the server asks for one.
+const captchaHeaders = (captcha) => (captcha ? { 'x-captcha-response': captcha } : {});
 
-export const signUp = (name, email, password) =>
-  request('/api/auth/sign-up/email', { method: 'POST', body: { name, email, password } });
+export const signIn = (email, password, captcha) =>
+  request('/api/auth/sign-in/email', { method: 'POST', body: { email, password }, headers: captchaHeaders(captcha) });
+
+export const signUp = (name, email, password, captcha) =>
+  request('/api/auth/sign-up/email', { method: 'POST', body: { name, email, password }, headers: captchaHeaders(captcha) });
 
 /** Starts Google sign-in: the browser leaves for Google and comes back to the app. */
 export async function signInWithGoogle() {

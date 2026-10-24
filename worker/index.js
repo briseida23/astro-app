@@ -3,6 +3,7 @@
 // of settings and saved charts.
 import { betterAuth } from 'better-auth';
 import { getMigrations } from 'better-auth/db/migration';
+import { captcha } from 'better-auth/plugins/captcha';
 
 // Tables of our own, next to Better Auth's user/session/account/verification.
 const APP_TABLES = [
@@ -29,6 +30,8 @@ const MAX_CHARTS = 500;
 const MAX_NAME = 120;
 
 const googleEnabled = (env) => Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+// Cloudflare Turnstile on sign-in and sign-up, so bots cannot mass-register or guess passwords.
+const turnstileEnabled = (env) => Boolean(env.TURNSTILE_SITE_KEY && env.TURNSTILE_SECRET_KEY);
 
 function createAuth(env, origin) {
   return betterAuth({
@@ -39,6 +42,15 @@ function createAuth(env, origin) {
     socialProviders: googleEnabled(env)
       ? { google: { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET } }
       : {},
+    plugins: turnstileEnabled(env)
+      ? [
+          captcha({
+            provider: 'cloudflare-turnstile',
+            secretKey: env.TURNSTILE_SECRET_KEY,
+            endpoints: ['/sign-up/email', '/sign-in/email'],
+          }),
+        ]
+      : [],
   });
 }
 
@@ -174,7 +186,9 @@ export default {
 
     if (url.pathname === '/api/health') return json({ ok: true });
     // Which sign-in methods the client may offer.
-    if (url.pathname === '/api/config') return json({ google: googleEnabled(env) });
+    if (url.pathname === '/api/config') {
+      return json({ google: googleEnabled(env), turnstile: turnstileEnabled(env) ? env.TURNSTILE_SITE_KEY : null });
+    }
 
     const auth = createAuth(env, url.origin);
 

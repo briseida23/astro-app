@@ -463,7 +463,7 @@ export default function App() {
 
       <BirthModal open={birthOpen} onClose={() => setBirthOpen(false)} birth={birth} onSubmit={setBirth} />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} settings={settings} onChange={setSettings} />
-      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} google={Boolean(authConfig?.google)} onSignedIn={setUser} />
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} google={Boolean(authConfig?.google)} turnstile={authConfig?.turnstile ?? null} onSignedIn={setUser} />
       <ChartsModal open={chartsOpen} onClose={() => setChartsOpen(false)} birth={birth} onOpen={setBirth} />
     </div>
     </I18nContext.Provider>

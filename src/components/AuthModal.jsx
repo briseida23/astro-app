@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Modal } from './Modal';
 import { Tabs } from './Tabs';
+import { Turnstile } from './Turnstile';
 import { signIn, signUp, signInWithGoogle } from '../utils/api';
 import { useI18n } from '../i18n';
 
@@ -11,27 +12,37 @@ function errorKey(error) {
   if (code.includes('ALREADY_EXISTS')) return 'auth.error.exists';
   if (code.includes('PASSWORD_TOO_SHORT')) return 'auth.error.short';
   if (code.includes('INVALID_EMAIL')) return 'auth.error.email';
+  if (code.includes('CAPTCHA') || code === 'VERIFICATION_FAILED' || code === 'MISSING_RESPONSE') return 'auth.error.captcha';
   return 'auth.error.generic';
 }
 
-function AuthForm({ google, onSignedIn }) {
-  const { t } = useI18n();
+function AuthForm({ google, turnstile, onSignedIn }) {
+  const { lang, t } = useI18n();
   const [tab, setTab] = useState('signIn');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  // Turnstile token for the next submit; every attempt uses it up and gets a fresh widget.
+  const [captcha, setCaptcha] = useState(null);
+  const [captchaRound, setCaptchaRound] = useState(0);
 
   const submit = async (e) => {
     e.preventDefault();
+    if (turnstile && !captcha) {
+      setError('auth.error.captcha');
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
-      const result = tab === 'signIn' ? await signIn(email, password) : await signUp(name || email.split('@')[0], email, password);
+      const result = tab === 'signIn' ? await signIn(email, password, captcha) : await signUp(name || email.split('@')[0], email, password, captcha);
       onSignedIn(result.user);
     } catch (err) {
       setError(errorKey(err));
+      setCaptcha(null);
+      setCaptchaRound((r) => r + 1);
     } finally {
       setBusy(false);
     }
@@ -90,6 +101,7 @@ function AuthForm({ google, onSignedIn }) {
           />
           {tab === 'signUp' && <span className="normal-case tracking-normal text-slate-400">{t('auth.passwordHint')}</span>}
         </label>
+        {turnstile && <Turnstile siteKey={turnstile} lang={lang} round={captchaRound} onToken={setCaptcha} />}
         {error && <p className="text-sm text-red-600">{t(error)}</p>}
         <button type="submit" className="btn-primary w-full" disabled={busy}>
           {busy ? '…' : t(tab === 'signIn' ? 'auth.submit.signIn' : 'auth.submit.signUp')}
@@ -100,7 +112,7 @@ function AuthForm({ google, onSignedIn }) {
   );
 }
 
-export function AuthModal({ open, onClose, google, onSignedIn }) {
+export function AuthModal({ open, onClose, google, turnstile, onSignedIn }) {
   const { t } = useI18n();
   return (
     <Modal open={open} onClose={onClose} title={t('auth.title')} width="max-w-md">
@@ -108,6 +120,7 @@ export function AuthModal({ open, onClose, google, onSignedIn }) {
       {open && (
         <AuthForm
           google={google}
+          turnstile={turnstile}
           onSignedIn={(user) => {
             onSignedIn(user);
             onClose();
