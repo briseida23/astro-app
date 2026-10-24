@@ -29,6 +29,7 @@ import { DynamicsPanel } from './components/DynamicsPanel';
 import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
 import { AccountMenu } from './components/AccountMenu';
+import { MobileMenu } from './components/MobileMenu';
 import { ClientsModal } from './components/ClientsModal';
 import { AboutModal } from './components/AboutModal';
 import { APP_NAME } from './appInfo';
@@ -101,6 +102,9 @@ function Legend({ aspectColors, t }) {
     </div>
   );
 }
+
+// Natal chart alone, or with the transit ring; labels are `mode.<id>`.
+const MODES = ['natal', 'transit'];
 
 function IconButton({ onClick, children, label }) {
   return (
@@ -203,6 +207,11 @@ export default function App() {
     syncTimer.current = setTimeout(() => api.saveSettings({ settings, lang }).catch(() => {}), 800);
     return () => clearTimeout(syncTimer.current);
   }, [user, syncReady, settings, lang]);
+
+  const changeMode = (id) => {
+    setMode(id);
+    setHover(null);
+  };
 
   const signOut = async () => {
     await api.signOut().catch(() => {});
@@ -384,36 +393,49 @@ export default function App() {
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A]">
       <header className="relative z-40 border-b border-slate-200/70 bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <div>
-            <h1 className="font-display text-3xl font-semibold leading-none tracking-tight">{APP_NAME}</h1>
-            <p className="mt-1 flex flex-wrap gap-x-2 text-xs tracking-wide text-slate-500">
-              <span>{t('app.subtitle')}</span>
-              <span aria-hidden>·</span>
-              <button type="button" className="underline decoration-slate-300 underline-offset-2 hover:text-slate-900" onClick={() => setAboutOpen(true)}>
-                {t('app.about')}
-              </button>
-              <span aria-hidden>·</span>
-              <a href={`/privacy?lang=${lang}`} target="_blank" rel="noreferrer" className="underline decoration-slate-300 underline-offset-2 hover:text-slate-900">
-                {t('auth.privacy')}
-              </a>
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="lg:hidden">
+              <MobileMenu
+                modes={MODES}
+                mode={mode}
+                onModeChange={changeMode}
+                user={user}
+                accountsEnabled={Boolean(authConfig)}
+                onData={() => setBirthOpen(true)}
+                onCharts={() => setChartsOpen(true)}
+                onSettings={() => setSettingsOpen(true)}
+                onAbout={() => setAboutOpen(true)}
+                onSignIn={() => setAuthOpen(true)}
+                onSignOut={signOut}
+                onDelete={deleteAccount}
+              />
+            </div>
+            <div>
+              <h1 className="font-display text-3xl font-semibold leading-none tracking-tight">{APP_NAME}</h1>
+              <p className="mt-1 flex flex-wrap gap-x-2 text-xs tracking-wide text-slate-500">
+                <span>{t('app.subtitle')}</span>
+                {/* On phones About and Privacy live in the slide-out menu. */}
+                <span aria-hidden className="hidden lg:inline">·</span>
+                <button type="button" className="hidden underline lg:inline decoration-slate-300 underline-offset-2 hover:text-slate-900" onClick={() => setAboutOpen(true)}>
+                  {t('app.about')}
+                </button>
+                <span aria-hidden className="hidden lg:inline">·</span>
+                <a href={`/privacy?lang=${lang}`} target="_blank" rel="noreferrer" className="hidden underline lg:inline decoration-slate-300 underline-offset-2 hover:text-slate-900">
+                  {t('auth.privacy')}
+                </a>
+              </p>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="hidden flex-wrap items-center gap-2 lg:flex">
             <div className="flex rounded-lg bg-slate-100 p-0.5 text-sm">
-              {[
-                { id: 'natal', label: t('mode.natal') },
-                { id: 'transit', label: t('mode.transit') },
-              ].map((m) => (
+              {MODES.map((id) => (
                 <button
-                  key={m.id}
+                  key={id}
                   type="button"
-                  onClick={() => {
-                    setMode(m.id);
-                    setHover(null);
-                  }}
-                  className={`rounded-md px-3 py-1.5 transition ${mode === m.id ? 'bg-white font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                  onClick={() => changeMode(id)}
+                  className={`rounded-md px-3 py-1.5 transition ${mode === id ? 'bg-white font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
                 >
-                  {m.label}
+                  {t(`mode.${id}`)}
                 </button>
               ))}
             </div>

@@ -47,3 +47,15 @@ body {
     font-variant-emoji: text;
   }
 }
+
+/* Mobile menu (MobileMenu.jsx): the drawer slides in from the left over a fading backdrop. */
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
