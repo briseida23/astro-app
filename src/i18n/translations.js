@@ -136,8 +136,7 @@ const ru = {
   'balance.levelsNote': 'При сумме 26 баллов. Стихии: 0–1 — нет, до 3 — дефицит, 5–8 — норма, от 9 — избыток. Кресты: до 5 — дефицит, 6–10 — норма, от 11 — избыток. Дефицит — «слепое пятно»: качества, которые нужно осознанно нарабатывать.',
 
   'table.object': 'Объект',
-  'table.sign': 'Знак',
-  'table.degree': 'Градус',
+  'table.position': 'Положение',
   'table.house': 'Дом',
   'table.transit': 'Транзит',
   'table.natal': 'Натал',
@@ -501,8 +500,7 @@ const uk = {
   'balance.levelsNote': 'За суми 26 балів. Стихії: 0–1 — немає, до 3 — дефіцит, 5–8 — норма, від 9 — надлишок. Хрести: до 5 — дефіцит, 6–10 — норма, від 11 — надлишок. Дефіцит — «сліпа пляма»: якості, які треба свідомо напрацьовувати.',
 
   'table.object': "Об'єкт",
-  'table.sign': 'Знак',
-  'table.degree': 'Градус',
+  'table.position': 'Положення',
   'table.house': 'Дім',
   'table.transit': 'Транзит',
   'table.natal': 'Натал',
@@ -866,8 +864,7 @@ const en = {
   'balance.levelsNote': 'For a total of 26 points. Elements: 0–1 none, up to 3 deficit, 5–8 norm, 9+ excess. Crosses: up to 5 deficit, 6–10 norm, 11+ excess. A deficit is a “blind spot”: qualities to be developed consciously.',
 
   'table.object': 'Object',
-  'table.sign': 'Sign',
-  'table.degree': 'Degree',
+  'table.position': 'Position',
   'table.house': 'House',
   'table.transit': 'Transit',
   'table.natal': 'Natal',

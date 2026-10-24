@@ -18,10 +18,9 @@ export function AspectTable({ aspects, aspectColors, isBiWheel, focus, onHover }
       <table className="w-full text-sm">
         <thead className="text-left text-[11px] uppercase tracking-wider text-slate-400">
           <tr>
-            <th className="px-3 py-2 font-medium">{t(isBiWheel ? 'table.transit' : 'table.object')}</th>
-            <th className="px-3 py-2 font-medium">{t('table.aspect')}</th>
-            <th className="px-3 py-2 font-medium">{t(isBiWheel ? 'table.natal' : 'table.object')}</th>
-            <th className="px-3 py-2 text-right font-medium">{t('table.orb')}</th>
+            {/* Columns hug their content (w-px); the last one takes the spare width. */}
+            <th className="w-px px-3 py-2 font-medium">{t('table.aspect')}</th>
+            <th className="w-px px-3 py-2 text-right font-medium">{t('table.orb')}</th>
             <th className="px-3 py-2 font-medium">{t('table.motion')}</th>
           </tr>
         </thead>
@@ -33,25 +32,24 @@ export function AspectTable({ aspects, aspectColors, isBiWheel, focus, onHover }
               onMouseLeave={() => onHover(null)}
               className={`border-t border-slate-100 transition-colors ${focus?.aspects.has(a.id) ? 'bg-slate-100' : ''} ${a.faded ? 'text-slate-400' : ''}`}
             >
-              <td className="px-3 py-2">
-                <Hint label={t(`object.${a.a.id}`)}>
-                  <Glyph of={a.a} className="inline-block w-6 text-center" symbolClass="astro text-base" />
-                </Hint>
-              </td>
+              {/* "☉ ☌ ☽": first object (the transit one under transits), aspect, second object. */}
               <td className="px-3 py-2 whitespace-nowrap">
-                <Hint label={t(`aspect.${a.type}`)}>
-                  <span className="astro w-6 text-center text-base" style={{ color: a.type === 'opposition' ? undefined : aspectColors[a.type] }}>
-                    {a.glyph}
-                  </span>
-                </Hint>
-                {a.exact && <span className="ml-1.5 rounded bg-slate-900 px-1 py-px text-[9px] font-semibold uppercase text-white">{t('aspects.exactShort')}</span>}
+                <span className="inline-flex items-center">
+                  <Hint label={`${isBiWheel ? t('wheel.transitPrefix') : ''}${t(`object.${a.a.id}`)}`}>
+                    <Glyph of={a.a} className="inline-block w-6 text-center" symbolClass="astro text-base" />
+                  </Hint>
+                  <Hint label={t(`aspect.${a.type}`)}>
+                    <span className="astro w-6 text-center text-base" style={{ color: a.type === 'opposition' ? undefined : aspectColors[a.type] }}>
+                      {a.glyph}
+                    </span>
+                  </Hint>
+                  <Hint label={`${isBiWheel ? t('wheel.natalPrefix') : ''}${t(`object.${a.b.id}`)}`}>
+                    <Glyph of={a.b} className="inline-block w-6 text-center" symbolClass="astro text-base" />
+                  </Hint>
+                  {a.exact && <span className="ml-1.5 rounded bg-slate-900 px-1 py-px text-[9px] font-semibold uppercase text-white">{t('aspects.exactShort')}</span>}
+                </span>
               </td>
-              <td className="px-3 py-2">
-                <Hint label={t(`object.${a.b.id}`)}>
-                  <Glyph of={a.b} className="inline-block w-6 text-center" symbolClass="astro text-base" />
-                </Hint>
-              </td>
-              <td className="px-3 py-2 text-right tabular-nums">{formatOrb(a.orb)}</td>
+              <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">{formatOrb(a.orb)}</td>
               <td className={`px-3 py-2 text-xs ${a.applying ? 'text-emerald-700' : 'text-slate-400'}`}>
                 {t(a.applying ? 'aspects.applying' : 'aspects.separating')}
               </td>
