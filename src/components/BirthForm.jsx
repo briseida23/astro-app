@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Modal } from './Modal';
 import { offsetForZone, formatOffset } from '../utils/ephemeris';
 import { placeFromSearch, withoutClient } from '../utils/location';
+import { clientMatches } from '../utils/clients';
 import { useI18n, placeName, formatShortDate } from '../i18n';
 
 const OFFSETS = [
@@ -127,8 +128,7 @@ function ClientPicker({ clients, onPick }) {
   const { lang, t } = useI18n();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
-  const q = query.trim().toLowerCase();
-  const found = clients.filter((c) => !q || c.name.toLowerCase().includes(q)).slice(0, 8);
+  const found = clients.filter((c) => clientMatches(c, query, lang, t));
 
   return (
     <div className="relative">

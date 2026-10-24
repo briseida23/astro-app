@@ -29,7 +29,7 @@ import { DynamicsPanel } from './components/DynamicsPanel';
 import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
 import { AccountMenu } from './components/AccountMenu';
-import { ChartsModal } from './components/ChartsModal';
+import { ClientsModal } from './components/ClientsModal';
 import { Tabs } from './components/Tabs';
 import { detectCurrentPlace, placeFields, withoutPlace, withoutClient } from './utils/location';
 import { I18nContext, LANGUAGES, loadLanguage, saveLanguage, translate, placeName } from './i18n';
@@ -407,6 +407,11 @@ export default function App() {
             <IconButton onClick={() => setBirthOpen(true)} label={t('birth.title')}>
               <span aria-hidden>✎</span> {t('header.data')}
             </IconButton>
+            {user && (
+              <IconButton onClick={() => setChartsOpen(true)} label={t('clients.button')}>
+                <span aria-hidden>☰</span> {t('clients.button')}
+              </IconButton>
+            )}
             <IconButton onClick={() => setSettingsOpen(true)} label={t('header.settings')}>
               <span aria-hidden>⚙</span> {t('header.settings')}
             </IconButton>
@@ -504,7 +509,7 @@ export default function App() {
       />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} settings={settings} onChange={setSettings} />
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} google={Boolean(authConfig?.google)} turnstile={authConfig?.turnstile ?? null} onSignedIn={setUser} />
-      <ChartsModal
+      <ClientsModal
         open={chartsOpen}
         onClose={() => setChartsOpen(false)}
         birth={birth}
