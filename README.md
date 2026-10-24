@@ -1,4 +1,4 @@
-# Astrology Web App
+# DuoAstro
 
 A tropical astrology web app: natal charts, transits with step-by-step dynamics, aspect tables,
 aspect figures (including figures that transits complete with natal planets), asteroids and
