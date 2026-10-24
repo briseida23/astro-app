@@ -49,6 +49,10 @@ export async function signInWithGoogle() {
 
 export const signOut = () => request('/api/auth/sign-out', { method: 'POST', body: {} });
 
+/** Sends a message from the "About" form; `captcha` is needed for guests when Turnstile is on. */
+export const sendFeedback = (feedback, captcha) =>
+  request('/api/feedback', { method: 'POST', body: feedback, headers: captchaHeaders(captcha) });
+
 export const deleteAccount = () => request('/api/account', { method: 'DELETE' });
 
 export const loadSettings = () => request('/api/settings').then((r) => r.data);

@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import { Modal } from './Modal';
-import { APP_NAME, GITHUB_URL, FEEDBACK_URL } from '../appInfo';
+import { Turnstile } from './Turnstile';
+import { APP_NAME, GITHUB_URL } from '../appInfo';
+import { sendFeedback } from '../utils/api';
 import { useI18n } from '../i18n';
 
 // Long texts of the window, per language (kept here rather than in translations.js).
@@ -19,8 +22,14 @@ const CONTENT = {
     ],
     nextTitle: 'Что дальше — решаете вы',
     next: 'В планах — плавный слайдер времени, дирекции и соляры с переключением внешнего круга в один клик, ингрессии. Расскажите, что нужно именно вам: самые востребованные идеи сделаем первыми.',
-    feedback: 'Предложить идею или сообщить об ошибке',
-    feedbackNote: 'Откроется GitHub — понадобится бесплатный аккаунт.',
+    kinds: { idea: 'Идея', bug: 'Ошибка', other: 'Другое' },
+    placeholder: 'Опишите идею или что работает не так…',
+    email: 'Email для ответа (необязательно)',
+    send: 'Отправить',
+    sent: 'Спасибо! Сообщение получено — мы читаем каждое.',
+    another: 'Написать ещё',
+    error: 'Не удалось отправить. Попробуйте ещё раз.',
+    captcha: 'Подтвердите, что вы не робот.',
     code: 'Открытый код на GitHub',
     privacy: 'Политика конфиденциальности',
   },
@@ -39,8 +48,14 @@ const CONTENT = {
     ],
     nextTitle: 'Що далі — вирішуєте ви',
     next: 'У планах — плавний слайдер часу, дирекції та соляри з перемиканням зовнішнього кола в один клік, інгресії. Розкажіть, що потрібно саме вам: найзатребуваніші ідеї зробимо першими.',
-    feedback: 'Запропонувати ідею або повідомити про помилку',
-    feedbackNote: 'Відкриється GitHub — знадобиться безкоштовний акаунт.',
+    kinds: { idea: 'Ідея', bug: 'Помилка', other: 'Інше' },
+    placeholder: 'Опишіть ідею або що працює не так…',
+    email: 'Email для відповіді (необов’язково)',
+    send: 'Надіслати',
+    sent: 'Дякуємо! Повідомлення отримано — ми читаємо кожне.',
+    another: 'Написати ще',
+    error: 'Не вдалося надіслати. Спробуйте ще раз.',
+    captcha: 'Підтвердьте, що ви не робот.',
     code: 'Відкритий код на GitHub',
     privacy: 'Політика конфіденційності',
   },
@@ -59,14 +74,97 @@ const CONTENT = {
     ],
     nextTitle: 'What comes next is up to you',
     next: 'Planned: a smooth time slider, directions and solar returns with a one-click switch of the outer wheel, ingresses. Tell us what you need most — the most requested ideas come first.',
-    feedback: 'Suggest an idea or report a bug',
-    feedbackNote: 'Opens GitHub — a free account is needed.',
+    kinds: { idea: 'Idea', bug: 'Bug', other: 'Other' },
+    placeholder: 'Describe your idea or what does not work…',
+    email: 'Email for a reply (optional)',
+    send: 'Send',
+    sent: 'Thank you! Your message has arrived — we read every one.',
+    another: 'Write another',
+    error: 'Could not send. Please try again.',
+    captcha: 'Please confirm you are not a robot.',
     code: 'Open source on GitHub',
     privacy: 'Privacy policy',
   },
 };
 
-export function AboutModal({ open, onClose }) {
+/** Ideas and bug reports, stored in the database. Guests may leave an email and pass Turnstile. */
+function FeedbackForm({ c, user, turnstile }) {
+  const { lang } = useI18n();
+  const [kind, setKind] = useState('idea');
+  const [message, setMessage] = useState('');
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState('idle'); // idle | sending | sent | error | captcha
+  const [captcha, setCaptcha] = useState(null);
+  const [captchaRound, setCaptchaRound] = useState(0);
+  const needsCaptcha = Boolean(turnstile) && !user;
+
+  if (status === 'sent') {
+    return (
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-emerald-700">{c.sent}</p>
+        <button type="button" className="text-sm text-slate-600 underline hover:text-slate-900" onClick={() => setStatus('idle')}>
+          {c.another}
+        </button>
+      </div>
+    );
+  }
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (needsCaptcha && !captcha) {
+      setStatus('captcha');
+      return;
+    }
+    setStatus('sending');
+    try {
+      await sendFeedback({ kind, message, email: user ? undefined : email, lang }, captcha);
+      setMessage('');
+      setStatus('sent');
+    } catch (err) {
+      setStatus(err.code === 'VERIFICATION_FAILED' ? 'captcha' : 'error');
+    } finally {
+      // A Turnstile token works once.
+      setCaptcha(null);
+      setCaptchaRound((r) => r + 1);
+    }
+  };
+
+  return (
+    <form className="space-y-3" onSubmit={submit}>
+      <div className="flex gap-1 rounded-lg bg-white p-0.5 text-sm ring-1 ring-slate-200">
+        {Object.entries(c.kinds).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setKind(id)}
+            className={`flex-1 rounded-md px-3 py-1.5 transition ${kind === id ? 'bg-slate-900 font-medium text-white' : 'text-slate-600 hover:text-slate-900'}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <textarea
+        className="input min-h-[110px] w-full resize-y"
+        placeholder={c.placeholder}
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        maxLength={4000}
+        required
+      />
+      {!user && (
+        <input type="email" className="input w-full" placeholder={c.email} value={email} onChange={(e) => setEmail(e.target.value)} maxLength={200} autoComplete="email" />
+      )}
+      {needsCaptcha && <Turnstile siteKey={turnstile} lang={lang} round={captchaRound} onToken={setCaptcha} />}
+      {status === 'error' && <p className="text-sm text-red-600">{c.error}</p>}
+      {status === 'captcha' && <p className="text-sm text-red-600">{c.captcha}</p>}
+      <button type="submit" className="btn-primary" disabled={status === 'sending' || !message.trim()}>
+        {status === 'sending' ? '…' : c.send}
+      </button>
+    </form>
+  );
+}
+
+export function AboutModal({ open, onClose, user, turnstile }) {
   const { lang } = useI18n();
   const c = CONTENT[lang] ?? CONTENT.en;
   return (
@@ -96,10 +194,7 @@ export function AboutModal({ open, onClose }) {
         <section className="space-y-3 rounded-xl bg-slate-50 p-4">
           <h3 className="text-sm font-semibold">{c.nextTitle}</h3>
           <p className="text-sm text-slate-600">{c.next}</p>
-          <a href={FEEDBACK_URL} target="_blank" rel="noreferrer" className="btn-primary inline-block">
-            {c.feedback}
-          </a>
-          <p className="text-xs text-slate-500">{c.feedbackNote}</p>
+          {open && <FeedbackForm c={c} user={user} turnstile={turnstile} />}
         </section>
 
         <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">

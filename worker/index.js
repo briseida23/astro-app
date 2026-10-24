@@ -21,6 +21,16 @@ const APP_TABLES = [
      updated_at INTEGER NOT NULL
    )`,
   'CREATE INDEX IF NOT EXISTS chart_user ON chart(user_id, updated_at)',
+  // Messages from the "About" form; user_id is null for guests.
+  `CREATE TABLE IF NOT EXISTS feedback (
+     id TEXT PRIMARY KEY,
+     user_id TEXT,
+     email TEXT,
+     kind TEXT NOT NULL,
+     message TEXT NOT NULL,
+     lang TEXT,
+     created_at INTEGER NOT NULL
+   )`,
 ];
 
 // Limits that keep one account from filling the free database: real birth data is under 1 KB.
@@ -28,6 +38,8 @@ const MAX_SETTINGS = 32 * 1024;
 const MAX_CHART = 4 * 1024;
 const MAX_CHARTS = 500;
 const MAX_NAME = 120;
+const MAX_MESSAGE = 4000;
+const FEEDBACK_KINDS = ['idea', 'bug', 'other'];
 
 const googleEnabled = (env) => Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
 // Cloudflare Turnstile on sign-in and sign-up, so bots cannot mass-register or guess passwords.
@@ -162,6 +174,42 @@ async function handleData(request, env, url, userId) {
   return json({ error: 'not found' }, 404);
 }
 
+/** Cloudflare's answer on a Turnstile token (guests' feedback; sign-in uses Better Auth's plugin). */
+async function turnstilePassed(token, env, request) {
+  if (!token) return false;
+  const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      secret: env.TURNSTILE_SECRET_KEY,
+      response: token,
+      remoteip: request.headers.get('cf-connecting-ip') ?? undefined,
+    }),
+  });
+  const result = await response.json().catch(() => null);
+  return Boolean(result?.success);
+}
+
+/** POST /api/feedback: anyone may write; guests pass Turnstile, signed-in users are linked to the message. */
+async function handleFeedback(request, env, url, auth) {
+  if (request.headers.get('origin') !== url.origin) return json({ error: 'forbidden' }, 403);
+  const body = await readJson(request, 2 * MAX_MESSAGE);
+  const message = String(body?.message ?? '').trim().slice(0, MAX_MESSAGE);
+  const kind = FEEDBACK_KINDS.includes(body?.kind) ? body.kind : 'other';
+  if (!message) return json({ error: 'bad request' }, 400);
+
+  const session = await auth.api.getSession({ headers: request.headers });
+  if (!session && turnstileEnabled(env) && !(await turnstilePassed(request.headers.get('x-captcha-response'), env, request))) {
+    return json({ error: 'captcha', code: 'VERIFICATION_FAILED' }, 403);
+  }
+  const email = session ? session.user.email : String(body?.email ?? '').trim().slice(0, 200) || null;
+  const lang = String(body?.lang ?? '').slice(0, 5) || null;
+  await env.DB.prepare('INSERT INTO feedback (id, user_id, email, kind, message, lang, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .bind(crypto.randomUUID(), session?.user.id ?? null, email, kind, message, lang, Date.now())
+    .run();
+  return json({ ok: true }, 201);
+}
+
 /**
  * Per-IP request limits (Cloudflare rate limiting bindings): sign-in and sign-up hash
  * passwords (~100 ms CPU each), so they get a much lower limit than the rest of the API.
@@ -169,8 +217,9 @@ async function handleData(request, env, url, userId) {
  */
 async function rateLimited(request, env, url) {
   const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
-  const isPasswordCheck = /^\/api\/auth\/sign-(in|up)\//.test(url.pathname);
-  const limiter = isPasswordCheck ? env.AUTH_LIMITER : env.API_LIMITER;
+  // Password checks and feedback (open to guests) get the strict limit.
+  const strict = /^\/api\/auth\/sign-(in|up)\//.test(url.pathname) || url.pathname === '/api/feedback';
+  const limiter = strict ? env.AUTH_LIMITER : env.API_LIMITER;
   if (!limiter) return null;
   const { success } = await limiter.limit({ key: ip });
   return success ? null : json({ error: 'too many requests' }, 429);
@@ -204,6 +253,7 @@ export default {
     }
 
     if (url.pathname.startsWith('/api/auth/')) return auth.handler(request);
+    if (url.pathname === '/api/feedback' && request.method === 'POST') return handleFeedback(request, env, url, auth);
 
     // Our own endpoints: signed-in users only. Changes must come from this site (the session
     // cookie would otherwise be sent along with requests forged by other sites).
