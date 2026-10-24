@@ -25,3 +25,7 @@ dist-ssr
 
 # Personal notes, not part of the app
 docs/ROADMAP.md
+
+# Local Worker secrets and state
+.dev.vars
+.wrangler
