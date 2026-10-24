@@ -44,8 +44,9 @@
     </script>
   </head>
   <body>
-    <!-- The text below is for search engines and visitors without JavaScript; React replaces it on start. -->
-    <div id="root">
+    <div id="root"></div>
+    <!-- For visitors and crawlers without JavaScript (inside #root it would flash before React starts). -->
+    <noscript>
       <main style="max-width: 720px; margin: 0 auto; padding: 32px 16px; font-family: system-ui, sans-serif; color: #0f172a">
         <h1>DuoAstro — натальная карта и транзиты онлайн</h1>
         <p>
@@ -58,7 +59,7 @@
         <p lang="en">Free online natal chart and transits — tropical astrology in English, Ukrainian and Russian.</p>
         <p><a href="/privacy">Политика конфиденциальности</a></p>
       </main>
-    </div>
+    </noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
