@@ -3,6 +3,7 @@
 
 const ru = {
   'app.subtitle': 'Тропический гороскоп',
+  'app.about': 'О приложении',
   'app.language': 'Язык',
   'mode.natal': 'Натал',
   'mode.transit': 'Транзиты',
@@ -334,6 +335,7 @@ const ru = {
 
 const uk = {
   'app.subtitle': 'Тропічний гороскоп',
+  'app.about': 'Про застосунок',
   'app.language': 'Мова',
   'mode.natal': 'Натал',
   'mode.transit': 'Транзити',
@@ -665,6 +667,7 @@ const uk = {
 
 const en = {
   'app.subtitle': 'Tropical horoscope',
+  'app.about': 'About',
   'app.language': 'Language',
   'mode.natal': 'Natal',
   'mode.transit': 'Transits',

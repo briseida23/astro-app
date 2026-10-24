@@ -30,6 +30,8 @@ import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
 import { AccountMenu } from './components/AccountMenu';
 import { ClientsModal } from './components/ClientsModal';
+import { AboutModal } from './components/AboutModal';
+import { APP_NAME } from './appInfo';
 import { Tabs } from './components/Tabs';
 import { detectCurrentPlace, placeFields, withoutPlace, withoutClient } from './utils/location';
 import { I18nContext, LANGUAGES, loadLanguage, saveLanguage, translate, placeName } from './i18n';
@@ -124,6 +126,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
   const [chartsOpen, setChartsOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   // Id of the user whose account settings have been loaded: only then are changes saved back,
   // so local values never overwrite the account's before it has been read.
   const [syncedUserId, setSyncedUserId] = useState(null);
@@ -382,8 +385,18 @@ export default function App() {
       <header className="border-b border-slate-200/70 bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <div>
-            <h1 className="font-display text-3xl font-semibold leading-none tracking-tight">Astrology Web App</h1>
-            <p className="mt-1 text-xs tracking-wide text-slate-500">{t('app.subtitle')}</p>
+            <h1 className="font-display text-3xl font-semibold leading-none tracking-tight">{APP_NAME}</h1>
+            <p className="mt-1 flex flex-wrap gap-x-2 text-xs tracking-wide text-slate-500">
+              <span>{t('app.subtitle')}</span>
+              <span aria-hidden>·</span>
+              <button type="button" className="underline decoration-slate-300 underline-offset-2 hover:text-slate-900" onClick={() => setAboutOpen(true)}>
+                {t('app.about')}
+              </button>
+              <span aria-hidden>·</span>
+              <a href={`/privacy?lang=${lang}`} target="_blank" rel="noreferrer" className="underline decoration-slate-300 underline-offset-2 hover:text-slate-900">
+                {t('auth.privacy')}
+              </a>
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex rounded-lg bg-slate-100 p-0.5 text-sm">
@@ -509,6 +522,7 @@ export default function App() {
       />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} settings={settings} onChange={setSettings} />
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} google={Boolean(authConfig?.google)} turnstile={authConfig?.turnstile ?? null} onSignedIn={setUser} />
+      <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
       <ClientsModal
         open={chartsOpen}
         onClose={() => setChartsOpen(false)}
