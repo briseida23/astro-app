@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Modal } from './Modal';
 import { offsetForZone, formatOffset } from '../utils/ephemeris';
-import { placeFromSearch } from '../utils/location';
-import { useI18n, placeName } from '../i18n';
+import { placeFromSearch, withoutClient } from '../utils/location';
+import { useI18n, placeName, formatShortDate } from '../i18n';
 
 const OFFSETS = [
   ...Array.from({ length: 53 }, (_, i) => -12 + i * 0.5),
@@ -122,7 +122,65 @@ export function CitySearch({ onSelect }) {
   );
 }
 
-export function BirthModal({ open, onClose, birth, onSubmit }) {
+/** Search box over the signed-in user's saved clients; picking one fills the form. */
+function ClientPicker({ clients, onPick }) {
+  const { lang, t } = useI18n();
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const q = query.trim().toLowerCase();
+  const found = clients.filter((c) => !q || c.name.toLowerCase().includes(q)).slice(0, 8);
+
+  return (
+    <div className="relative">
+      <input
+        className="input w-full"
+        placeholder={t('client.search')}
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
+      />
+      {open && (
+        // preventDefault on mousedown keeps the input focused, so the click lands on the item.
+        <ul
+          className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg"
+          onMouseDown={(e) => e.preventDefault()}
+        >
+          {found.length === 0 && <li className="px-3 py-2 text-sm text-slate-500">{t(clients.length ? 'client.nothing' : 'charts.empty')}</li>}
+          {found.map((c) => (
+            <li key={c.id}>
+              <button
+                type="button"
+                className="w-full px-3 py-2 text-left text-sm hover:bg-slate-100"
+                onClick={() => {
+                  onPick(c);
+                  setQuery('');
+                  setOpen(false);
+                }}
+              >
+                <span className="font-medium">{c.name}</span>
+                <span className="text-slate-500">
+                  {' · '}
+                  {formatShortDate(c.data.birth.date, lang)} · {c.data.birth.time} · {placeName(c.data.birth, t)}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Birth data form. With an account (`clients` not null) it can load a saved client and save
+ * the entered data as a client (`onSaveClient` resolves to the birth data with its clientId).
+ */
+export function BirthModal({ open, onClose, birth, onSubmit, clients, onSaveClient }) {
   const { t } = useI18n();
   return (
     <Modal open={open} onClose={onClose} title={t('birth.title')} width="max-w-lg">
@@ -130,6 +188,8 @@ export function BirthModal({ open, onClose, birth, onSubmit }) {
       {open && (
         <BirthForm
           birth={birth}
+          clients={clients}
+          onSaveClient={onSaveClient}
           onSubmit={(b) => {
             onSubmit(b);
             onClose();
@@ -140,9 +200,14 @@ export function BirthModal({ open, onClose, birth, onSubmit }) {
   );
 }
 
-function BirthForm({ birth, onSubmit }) {
+function BirthForm({ birth, clients, onSaveClient, onSubmit }) {
   const { t } = useI18n();
   const [draft, setDraft] = useState(birth);
+  // Saving is opt-in: the name field and the save button show only when asked for
+  // (or when a saved client is open, so it can be updated).
+  const [saveOpen, setSaveOpen] = useState(Boolean(birth.clientId));
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   // Re-derive the UTC offset from the city's time zone whenever the date, time or city
   // changes, so historical DST rules for that date are applied.
   const set = (patch) =>
@@ -156,6 +221,21 @@ function BirthForm({ birth, onSubmit }) {
 
   const valid = draft.date && draft.time && draft.place;
 
+  const saveAndSubmit = async () => {
+    if (!draft.name?.trim()) {
+      setSaveError('client.nameRequired');
+      return;
+    }
+    setSaving(true);
+    setSaveError(null);
+    try {
+      onSubmit(await onSaveClient({ ...draft, name: draft.name.trim() }));
+    } catch {
+      setSaveError('auth.error.generic');
+      setSaving(false);
+    }
+  };
+
   return (
     <form
       className="space-y-5"
@@ -164,6 +244,16 @@ function BirthForm({ birth, onSubmit }) {
         if (valid) onSubmit(draft);
       }}
     >
+      {clients?.length > 0 && (
+        <ClientPicker
+          clients={clients}
+          onPick={(c) => {
+            setDraft({ ...c.data.birth, clientId: c.id, name: c.name });
+            setSaveOpen(true);
+          }}
+        />
+      )}
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <label className="field">
           <span>{t('field.date')}</span>
@@ -193,9 +283,47 @@ function BirthForm({ birth, onSubmit }) {
         )}
       </div>
 
-      <button type="submit" className="btn-primary w-full" disabled={!valid}>
+      <button type="submit" className="btn-primary w-full" disabled={!valid || saving}>
         {t('birth.submit')}
       </button>
+
+      {clients && !saveOpen && (
+        <button type="button" className="w-full text-sm text-slate-600 underline hover:text-slate-900" onClick={() => setSaveOpen(true)}>
+          {t('client.saveOpen')}
+        </button>
+      )}
+      {clients && saveOpen && (
+        <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <label className="field">
+            <span className="flex items-center justify-between">
+              {t('client.name')}
+              {draft.clientId && (
+                <button
+                  type="button"
+                  className="normal-case tracking-normal text-slate-500 underline hover:text-slate-800"
+                  onClick={() => setDraft(withoutClient)}
+                >
+                  {t('client.new')}
+                </button>
+              )}
+            </span>
+            <input
+              className="input"
+              placeholder={t('client.namePlaceholder')}
+              value={draft.name ?? ''}
+              onChange={(e) => {
+                setDraft((d) => ({ ...d, name: e.target.value }));
+                setSaveError(null);
+              }}
+              maxLength={120}
+            />
+          </label>
+          {saveError && <p className="text-sm text-red-600">{t(saveError)}</p>}
+          <button type="button" className="btn-secondary w-full" disabled={!valid || saving} onClick={saveAndSubmit}>
+            {saving ? '…' : t(draft.clientId ? 'client.update' : 'client.save')}
+          </button>
+        </div>
+      )}
     </form>
   );
 }

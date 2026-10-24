@@ -5,6 +5,10 @@ export const placeFields = ({ place, placeKey, latitude, longitude, timeZone }) 
 // eslint-disable-next-line no-unused-vars
 export const withoutPlace = ({ place, placeKey, latitude, longitude, timeZone, ...rest }) => rest;
 
+/** Birth data without its saved-client link and name. */
+// eslint-disable-next-line no-unused-vars
+export const withoutClient = ({ clientId, name, ...rest }) => rest;
+
 /**
  * Place fields from an Open-Meteo search result. Without a time zone the offset is estimated
  * from the longitude (15° per hour) and `timeZone` is null, so the form asks to check it.

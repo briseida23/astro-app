@@ -45,3 +45,9 @@ export function useI18n() {
 
 /** Display name of the birth place: translated for the default city, as found by search otherwise. */
 export const placeName = (birth, t) => (birth.placeKey ? t(`place.${birth.placeKey}`) : birth.place);
+
+/** 2026-10-13 → "13 окт. 2026 г." / "Oct 13, 2026". */
+export const formatShortDate = (iso, lang) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(y, m - 1, d));
+};

@@ -31,7 +31,7 @@ import { AuthModal } from './components/AuthModal';
 import { AccountMenu } from './components/AccountMenu';
 import { ChartsModal } from './components/ChartsModal';
 import { Tabs } from './components/Tabs';
-import { detectCurrentPlace, placeFields, withoutPlace } from './utils/location';
+import { detectCurrentPlace, placeFields, withoutPlace, withoutClient } from './utils/location';
 import { I18nContext, LANGUAGES, loadLanguage, saveLanguage, translate, placeName } from './i18n';
 
 
@@ -128,6 +128,9 @@ export default function App() {
   // so local values never overwrite the account's before it has been read.
   const [syncedUserId, setSyncedUserId] = useState(null);
   const syncReady = Boolean(user) && syncedUserId === user.id;
+  // Saved clients (name + birth data) of the signed-in user, newest first; null while signed out.
+  const [clientsOf, setClientsOf] = useState({ userId: null, list: [] });
+  const clients = user && clientsOf.userId === user.id ? clientsOf.list : null;
   // Asteroids and Selena need data files that load after the first render.
   const [extrasLoaded, setExtrasLoaded] = useState(false);
   const t = (key, vars) => translate(lang, key, vars);
@@ -160,6 +163,35 @@ export default function App() {
       cancelled = true;
     };
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    api
+      .listCharts()
+      .then((list) => !cancelled && setClientsOf({ userId: user.id, list }))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const setClients = (update) => setClientsOf((c) => ({ ...c, list: update(c.list) }));
+
+  /** Saves `b` as a client (updates it when it has a clientId); resolves to `b` with its clientId. */
+  const saveClient = async (b) => {
+    const { clientId, name } = b;
+    const data = withoutClient(b);
+    if (clientId) {
+      const { updatedAt } = await api.updateChart(clientId, name, { birth: data });
+      const saved = { id: clientId, name, data: { birth: data }, updatedAt };
+      setClients((list) => [saved, ...list.filter((c) => c.id !== clientId)]);
+      return b;
+    }
+    const chart = await api.createChart(name, { birth: data });
+    setClients((list) => [chart, ...list]);
+    return { ...b, clientId: chart.id };
+  };
 
   const syncTimer = useRef(null);
   useEffect(() => {
@@ -401,8 +433,9 @@ export default function App() {
         <section className="card flex flex-col gap-4 p-4 sm:p-6 lg:sticky lg:top-6 lg:self-start">
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-1">
             <button type="button" onClick={() => setBirthOpen(true)} className="text-left">
-              <div className="font-display text-xl font-semibold">{placeName(birth, t)}</div>
+              <div className="font-display text-xl font-semibold">{birth.name || placeName(birth, t)}</div>
               <div className="text-xs tabular-nums text-slate-500">
+                {birth.name && `${placeName(birth, t)} · `}
                 {formatDate(birth.date, lang)} · {birth.time} · {formatOffset(birth.utcOffset)}
               </div>
             </button>
@@ -461,10 +494,29 @@ export default function App() {
         </section>
       </main>
 
-      <BirthModal open={birthOpen} onClose={() => setBirthOpen(false)} birth={birth} onSubmit={setBirth} />
+      <BirthModal
+        open={birthOpen}
+        onClose={() => setBirthOpen(false)}
+        birth={birth}
+        onSubmit={setBirth}
+        clients={clients}
+        onSaveClient={saveClient}
+      />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} settings={settings} onChange={setSettings} />
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} google={Boolean(authConfig?.google)} turnstile={authConfig?.turnstile ?? null} onSignedIn={setUser} />
-      <ChartsModal open={chartsOpen} onClose={() => setChartsOpen(false)} birth={birth} onOpen={setBirth} />
+      <ChartsModal
+        open={chartsOpen}
+        onClose={() => setChartsOpen(false)}
+        birth={birth}
+        clients={clients}
+        onSave={saveClient}
+        onDeleted={(id) => {
+          setClients((list) => list.filter((c) => c.id !== id));
+          // The chart on screen stays, it just is no longer a saved client.
+          setBirth((current) => (current.clientId === id ? withoutClient(current) : current));
+        }}
+        onOpen={setBirth}
+      />
     </div>
     </I18nContext.Provider>
   );

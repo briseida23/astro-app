@@ -56,4 +56,6 @@ export const saveSettings = (data) => request('/api/settings', { method: 'PUT', 
 
 export const listCharts = () => request('/api/charts').then((r) => r.charts);
 export const createChart = (name, data) => request('/api/charts', { method: 'POST', body: { name, data } }).then((r) => r.chart);
+export const updateChart = (id, name, data) =>
+  request(`/api/charts/${encodeURIComponent(id)}`, { method: 'PUT', body: { name, data } });
 export const deleteChart = (id) => request(`/api/charts/${encodeURIComponent(id)}`, { method: 'DELETE' });
