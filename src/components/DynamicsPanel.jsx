@@ -1,6 +1,7 @@
 import { STEP_UNITS, formatOffset, formatOrb } from '../utils/ephemeris';
 import { useI18n, placeName } from '../i18n';
 import { Glyph } from './Glyph';
+import { Hint } from './Hint';
 
 const PRESETS = [
   { step: 1, unit: 'minute' },
@@ -127,21 +128,21 @@ export function DynamicsPanel({ moment, dynamics, onDynamicsChange, onStep, onNo
           <ul className="space-y-1 text-sm">
             {exact.map((a) => (
               <li key={a.id} className="flex items-center gap-1.5">
-                <Glyph of={a.a} className="inline-block w-6 text-center" />
-                <span className="astro text-base" style={{ color: a.type === 'opposition' ? undefined : aspectColors[a.type] }}>
-                  {a.glyph}
-                </span>
-                <Glyph of={a.b} className="inline-block w-6 text-center" />
-                <span className="text-slate-600">
-                  {t('wheel.transitPrefix')}{t(`object.${a.a.id}`)} — {t(`aspect.${a.type}`)} — {t('wheel.natalPrefix')}{t(`object.${a.b.id}`)}
-                </span>
+                <Hint label={`${t('wheel.transitPrefix')}${t(`object.${a.a.id}`)}`}>
+                  <Glyph of={a.a} className="inline-block w-6 text-center" symbolClass="astro text-base" />
+                </Hint>
+                <Hint label={t(`aspect.${a.type}`)}>
+                  <span className="astro w-6 text-center text-base" style={{ color: a.type === 'opposition' ? undefined : aspectColors[a.type] }}>
+                    {a.glyph}
+                  </span>
+                </Hint>
+                <Hint label={`${t('wheel.natalPrefix')}${t(`object.${a.b.id}`)}`}>
+                  <Glyph of={a.b} className="inline-block w-6 text-center" symbolClass="astro text-base" />
+                </Hint>
                 <span className="ml-auto tabular-nums text-slate-500">{formatOrb(a.orb)}</span>
-                <span
-                  title={t(a.applying ? 'aspects.applying' : 'aspects.separating')}
-                  className={`w-4 text-xs font-semibold ${a.applying ? 'text-emerald-700' : 'text-slate-400'}`}
-                >
-                  {a.applying ? 'A' : 'S'}
-                </span>
+                <Hint label={t(a.applying ? 'aspects.applying' : 'aspects.separating')}>
+                  <span className={`w-4 text-xs font-semibold ${a.applying ? 'text-emerald-700' : 'text-slate-400'}`}>{a.applying ? 'A' : 'S'}</span>
+                </Hint>
               </li>
             ))}
           </ul>

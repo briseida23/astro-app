@@ -1,6 +1,7 @@
 import { ROMAN } from '../utils/ephemeris';
 import { useI18n } from '../i18n';
 import { Glyph } from './Glyph';
+import { Hint } from './Hint';
 
 export function PlanetTable({ points, transitPlanets, focus, onHover }) {
   const { t } = useI18n();
@@ -29,14 +30,16 @@ export function PlanetTable({ points, transitPlanets, focus, onHover }) {
             const transitActive = transit && focus?.planets.has(transit.key);
             return (
               <tr key={p.key} className={`border-t border-slate-100 transition-colors ${rowActive ? 'bg-slate-100' : ''}`}>
-                <td className="px-3 py-2" {...hoverProps(p.key)}>
-                  <Glyph of={p} className="mr-2 inline-block w-7 text-center" symbolClass="astro text-base" />
-                  {t(`object.${p.id}`)}
-                  {p.retrograde && <span className="ml-1 text-[10px] font-semibold text-red-600">R</span>}
+                <td className="px-3 py-2 whitespace-nowrap" {...hoverProps(p.key)}>
+                  <Hint label={t(`object.${p.id}`)}>
+                    <Glyph of={p} className="inline-block w-7 text-center" symbolClass="astro text-base" />
+                  </Hint>
+                  {p.retrograde && <span className="ml-0.5 text-[10px] font-semibold text-red-600">R</span>}
                 </td>
                 <td className="px-3 py-2" {...hoverProps(p.key)}>
-                  <span className="astro mr-1">{p.sign.glyph}</span>
-                  {t(`sign.${p.sign.id}`)}
+                  <Hint label={t(`sign.${p.sign.id}`)}>
+                    <span className="astro text-base">{p.sign.glyph}</span>
+                  </Hint>
                 </td>
                 <td className="px-3 py-2 tabular-nums" {...hoverProps(p.key)}>{p.degree}</td>
                 <td className="px-3 py-2 font-display text-base" {...hoverProps(p.key)}>{ROMAN[p.house - 1]}</td>
@@ -46,12 +49,14 @@ export function PlanetTable({ points, transitPlanets, focus, onHover }) {
                     {...(transit ? hoverProps(transit.key) : {})}
                   >
                     {transit && (
-                      <>
-                        <span className="astro mr-1">{transit.sign.glyph}</span>
+                      <span className="whitespace-nowrap">
+                        <Hint label={t(`sign.${transit.sign.id}`)}>
+                          <span className="astro mr-1">{transit.sign.glyph}</span>
+                        </Hint>
                         <span className="tabular-nums">{transit.degree}</span>
                         {transit.retrograde && <span className="ml-1 text-[10px] font-semibold text-red-600">R</span>}
                         <span className="ml-1.5 font-display text-slate-400">{ROMAN[transit.house - 1]}</span>
-                      </>
+                      </span>
                     )}
                   </td>
                 )}

@@ -1,6 +1,7 @@
 import { formatOrb } from '../utils/ephemeris';
 import { useI18n } from '../i18n';
 import { Glyph } from './Glyph';
+import { Hint } from './Hint';
 
 /** The transit member of a figure, its widest orb to the natal members and whether it is still closing in. */
 function transitContact(pattern, aspects) {
@@ -147,8 +148,10 @@ export function PatternsPanel({ patterns, hover, onHover, transitSettings, onTra
             <span className="font-display text-lg font-semibold">{t(`pattern.${pattern.type}`)}</span>
             {pattern.apex && (
               <span className="text-xs text-slate-500">
-                {t(pattern.type === 'kite' ? 'patterns.axis' : 'patterns.apex')}: <span className="astro">{pattern.apex.glyph}</span>{' '}
-                {ringLabel(pattern.apex)}{t(`object.${pattern.apex.id}`)}
+                {t(pattern.type === 'kite' ? 'patterns.axis' : 'patterns.apex')}: {ringLabel(pattern.apex)}
+                <Hint label={t(`object.${pattern.apex.id}`)}>
+                  <span className="astro text-sm">{pattern.apex.glyph}</span>
+                </Hint>
               </span>
             )}
           </div>
@@ -156,7 +159,10 @@ export function PatternsPanel({ patterns, hover, onHover, transitSettings, onTra
             {pattern.members.map((m, j) => (
               <span key={m.key}>
                 {j > 0 && <span className="mx-1.5 text-slate-300">·</span>}
-                <span className="astro">{m.glyph}</span> {ringLabel(m)}{t(`object.${m.id}`)}
+                {ringLabel(m)}
+                <Hint label={t(`object.${m.id}`)}>
+                  <span className="astro text-base">{m.glyph}</span>
+                </Hint>
               </span>
             ))}
           </div>
