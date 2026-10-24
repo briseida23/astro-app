@@ -116,7 +116,10 @@ export function MobileMenu({ modes, mode, onModeChange, user, accountsEnabled, o
               className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] animate-[slide-in-left_200ms_ease-out] flex-col overflow-y-auto bg-white shadow-2xl"
             >
               <div className="flex items-center justify-between px-5 py-4">
-                <span className="font-display text-2xl font-semibold">{APP_NAME}</span>
+                <span className="flex items-center gap-2 font-display text-2xl font-semibold">
+                  <img src="/favicon.svg" alt="" className="h-7 w-7" />
+                  {APP_NAME}
+                </span>
                 <button type="button" onClick={() => setOpen(false)} className="btn-ghost text-lg leading-none" aria-label={t('modal.close')}>
                   ✕
                 </button>

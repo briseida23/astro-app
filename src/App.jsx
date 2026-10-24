@@ -411,7 +411,10 @@ export default function App() {
               />
             </div>
             <div>
-              <h1 className="font-display text-3xl font-semibold leading-none tracking-tight">{APP_NAME}</h1>
+              <h1 className="flex items-center gap-2 font-display text-3xl font-semibold leading-none tracking-tight">
+                <img src="/favicon.svg" alt="" className="h-8 w-8" />
+                {APP_NAME}
+              </h1>
               <p className="mt-1 flex flex-wrap gap-x-2 text-xs tracking-wide text-slate-500">
                 <span>{t('app.subtitle')}</span>
                 {/* On phones About and Privacy live in the slide-out menu. */}

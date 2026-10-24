@@ -41,6 +41,8 @@ const MAX_CHARTS = 500;
 const MAX_NAME = 120;
 const MAX_MESSAGE = 4000;
 const FEEDBACK_KINDS = ['idea', 'bug', 'other'];
+// Feedback is also emailed to the owner, so the database copy is kept only this long.
+const FEEDBACK_DAYS = 30;
 
 const googleEnabled = (env) => Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
 // Cloudflare Turnstile on sign-in and sign-up, so bots cannot mass-register or guess passwords.
@@ -275,7 +277,27 @@ async function rateLimited(request, env, url) {
   return success ? null : json({ error: 'too many requests' }, 429);
 }
 
+/**
+ * Daily cleanup (cron in wrangler.jsonc): sign-in sessions and one-time records past their expiry,
+ * which Better Auth leaves behind when a user never comes back, and old feedback.
+ * Better Auth stores dates as ISO text, so they compare as strings.
+ */
+async function cleanUp(env) {
+  const now = new Date().toISOString();
+  const results = await env.DB.batch([
+    env.DB.prepare('DELETE FROM session WHERE expiresAt < ?').bind(now),
+    env.DB.prepare('DELETE FROM verification WHERE expiresAt < ?').bind(now),
+    env.DB.prepare('DELETE FROM feedback WHERE created_at < ?').bind(Date.now() - FEEDBACK_DAYS * 24 * 60 * 60 * 1000),
+  ]);
+  const [sessions, verifications, feedback] = results.map((r) => r.meta.changes);
+  console.log('cleanup', { sessions, verifications, feedback });
+}
+
 export default {
+  async scheduled(controller, env, ctx) {
+    ctx.waitUntil(cleanUp(env));
+  },
+
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
