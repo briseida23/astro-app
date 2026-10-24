@@ -69,8 +69,9 @@ function createAuth(env, origin) {
   });
 }
 
+// no-store: answers carry per-user data (settings, saved charts) and must never be served from a cache.
 const json = (data, status = 200) =>
-  new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } });
+  new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
 
 /** Request body as parsed JSON, or null when larger than `max` bytes or not JSON. */
 async function readJson(request, max) {
@@ -324,7 +325,14 @@ export default {
       return json({ created: toBeCreated.map((t) => t.table), added: toBeAdded.map((t) => t.table) });
     }
 
-    if (url.pathname.startsWith('/api/auth/')) return auth.handler(request);
+    if (url.pathname.startsWith('/api/auth/')) {
+      // The session answer holds the user's name and email: same no-store rule as json().
+      const response = await auth.handler(request);
+      if (response.headers.has('cache-control')) return response;
+      const uncached = new Response(response.body, response);
+      uncached.headers.set('cache-control', 'no-store');
+      return uncached;
+    }
     if (url.pathname === '/api/feedback' && request.method === 'POST') return handleFeedback(request, env, url, auth, ctx);
 
     // Our own endpoints: signed-in users only. Changes must come from this site (the session
