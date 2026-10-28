@@ -3,7 +3,10 @@ import { useI18n } from '../i18n';
 import { Glyph } from './Glyph';
 import { Hint } from './Hint';
 
-const Retro = () => <span className="ml-0.5 text-[10px] font-semibold text-red-600">R</span>;
+/** Retrograde mark beside the object's glyph; the slot is always there so the columns stay aligned. */
+const Retro = ({ point }) => (
+  <span className="inline-block w-3 text-[10px] font-semibold text-red-600">{point.retrograde && 'R'}</span>
+);
 
 /** "1°10′ ♏" as in astrological notation: degrees right-aligned so the signs line up in a column. */
 function Position({ point }) {
@@ -14,7 +17,6 @@ function Position({ point }) {
       <Hint label={t(`sign.${point.sign.id}`)}>
         <span className="astro ml-1.5 text-base">{point.sign.glyph}</span>
       </Hint>
-      <span className="inline-block w-3">{point.retrograde && <Retro />}</span>
     </span>
   );
 }
@@ -50,6 +52,7 @@ export function PlanetTable({ points, transitPlanets, focus, onHover }) {
                   <Hint label={t(`object.${p.id}`)}>
                     <Glyph of={p} className="inline-block w-7 text-center" symbolClass="astro text-base" />
                   </Hint>
+                  <Retro point={p} />
                 </td>
                 <td className="px-3 py-2" {...hoverProps(p.key)}>
                   <Position point={p} />
@@ -62,6 +65,7 @@ export function PlanetTable({ points, transitPlanets, focus, onHover }) {
                   >
                     {transit && (
                       <span className="inline-flex items-center whitespace-nowrap">
+                        <Retro point={transit} />
                         <Position point={transit} />
                         <span className="ml-2 font-display text-slate-400">{ROMAN[transit.house - 1]}</span>
                       </span>
