@@ -65,6 +65,10 @@ export function PlanetTable({ points, transitPlanets, focus, onHover }) {
                   >
                     {transit && (
                       <span className="inline-flex items-center whitespace-nowrap">
+                        {/* The transit planet's own glyph, so its R mark sits by a planet as in the natal column. */}
+                        <Hint label={`${t('wheel.transitPrefix')}${t(`object.${transit.id}`)}`}>
+                          <Glyph of={transit} className="inline-block w-6 text-center" symbolClass="astro text-base" />
+                        </Hint>
                         <Retro point={transit} />
                         <Position point={transit} />
                         <span className="ml-2 font-display text-slate-400">{ROMAN[transit.house - 1]}</span>
