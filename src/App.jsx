@@ -126,7 +126,7 @@ export default function App() {
   });
   const [settings, setSettings] = useState(loadSettings);
   const [hover, setHover] = useState(null);
-  const [tab, setTab] = useState('balance');
+  const [tab, setTab] = useState('dynamics');
   const [dynamics, setDynamics] = useState({ step: 1, unit: 'day' });
   const [birthOpen, setBirthOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -371,9 +371,9 @@ export default function App() {
     return null;
   }, [hover, visibleAspects, natalPlanets, patternAspects, patterns]);
 
-  // The natal chart has the element balance and Dynamics; transits show Dynamics in place of the balance.
+  // Dynamics comes first; the natal chart also has the element balance, transits show only Dynamics.
   const dynamicsTab = { id: 'dynamics', label: t('tab.dynamics') };
-  const firstTabs = mode === 'transit' ? [dynamicsTab] : [{ id: 'balance', label: t('tab.balance') }, dynamicsTab];
+  const firstTabs = mode === 'transit' ? [dynamicsTab] : [dynamicsTab, { id: 'balance', label: t('tab.balance') }];
   const activeTab = tab === 'balance' && mode === 'transit' ? 'dynamics' : tab;
   // Transits draw only transit-to-natal aspects, so a hovered figure adds its missing lines
   // (natal pairs, transit-to-transit pairs) to the wheel.
