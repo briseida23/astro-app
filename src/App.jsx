@@ -267,6 +267,8 @@ export default function App() {
   const updateTransit = (m) => setTransitMoment(hasTransitPlace ? m : withoutPlace(m));
   const transitNow = () => updateTransit(momentAt(transit, Date.now()));
   const stepTransit = (count) => updateTransit(shiftMoment(transit, count * dynamics.step, dynamics.unit));
+  // Natal dynamics move the birth moment itself; nothing is saved until the birth form is submitted.
+  const stepBirth = (count) => setBirth((b) => shiftMoment(b, count * dynamics.step, dynamics.unit));
 
   const { visible, weights, colors } = settings;
 
@@ -360,9 +362,10 @@ export default function App() {
     return null;
   }, [hover, visibleAspects, natalPlanets, patternAspects, patterns]);
 
-  // Transits show Dynamics in place of the element balance.
-  const firstTab = mode === 'transit' ? { id: 'dynamics', label: t('tab.dynamics') } : { id: 'balance', label: t('tab.balance') };
-  const activeTab = tab === 'balance' || tab === 'dynamics' ? firstTab.id : tab;
+  // The natal chart has the element balance and Dynamics; transits show Dynamics in place of the balance.
+  const dynamicsTab = { id: 'dynamics', label: t('tab.dynamics') };
+  const firstTabs = mode === 'transit' ? [dynamicsTab] : [{ id: 'balance', label: t('tab.balance') }, dynamicsTab];
+  const activeTab = tab === 'balance' && mode === 'transit' ? 'dynamics' : tab;
   // Transits draw only transit-to-natal aspects, so a hovered figure adds its missing lines
   // (natal pairs, transit-to-transit pairs) to the wheel.
   // With "contours" on, every transit figure stays drawn, not only the hovered one.
@@ -381,7 +384,7 @@ export default function App() {
   }, [isBiWheel, hover, focus, visibleAspects, patternAspects, patterns, transitPatternSettings.contours]);
 
   const tabs = [
-    firstTab,
+    ...firstTabs,
     { id: 'planets', label: t('tab.planets') },
     { id: 'aspects', label: t('tab.aspects'), badge: visibleAspects.length },
     { id: 'patterns', label: t('tab.patterns'), badge: patterns.length },
@@ -510,11 +513,12 @@ export default function App() {
           {activeTab === 'balance' && <BalancePanel balance={balance} elementColors={colors.elements} />}
           {activeTab === 'dynamics' && (
             <DynamicsPanel
-              moment={transit}
+              natal={!isBiWheel}
+              moment={isBiWheel ? transit : birth}
               dynamics={dynamics}
               onDynamicsChange={setDynamics}
-              onStep={stepTransit}
-              onNow={transitNow}
+              onStep={isBiWheel ? stepTransit : stepBirth}
+              onNow={isBiWheel ? transitNow : null}
               aspects={visibleAspects}
               aspectColors={colors.aspects}
             />

@@ -44,8 +44,8 @@ function StepButton({ onClick, label, caption, children }) {
   );
 }
 
-/** Moves the transit moment back and forth by a chosen interval. */
-export function DynamicsPanel({ moment, dynamics, onDynamicsChange, onStep, onNow, aspects, aspectColors }) {
+/** Moves the transit moment (or, with `natal`, the birth moment) back and forth by a chosen interval. */
+export function DynamicsPanel({ natal, moment, dynamics, onDynamicsChange, onStep, onNow, aspects, aspectColors }) {
   const { lang, t } = useI18n();
   const { step, unit } = dynamics;
   const set = (patch) => onDynamicsChange({ ...dynamics, ...patch });
@@ -115,20 +115,22 @@ export function DynamicsPanel({ moment, dynamics, onDynamicsChange, onStep, onNo
             </button>
           );
         })}
-        <button type="button" className="btn-ghost ml-auto" onClick={onNow}>
-          {t('transit.now')}
-        </button>
+        {onNow && (
+          <button type="button" className="btn-ghost ml-auto" onClick={onNow}>
+            {t('transit.now')}
+          </button>
+        )}
       </div>
 
       <div>
         <h3 className="mb-2 text-[11px] font-medium uppercase tracking-wider text-slate-400">{t('dynamics.exact')}</h3>
         {exact.length === 0 ? (
-          <p className="text-sm text-slate-500">{t('dynamics.exactEmpty')}</p>
+          <p className="text-sm text-slate-500">{t(natal ? 'dynamics.exactEmptyNatal' : 'dynamics.exactEmpty')}</p>
         ) : (
           <ul className="space-y-1 text-sm">
             {exact.map((a) => (
               <li key={a.id} className="flex items-center gap-1.5">
-                <Hint label={`${t('wheel.transitPrefix')}${t(`object.${a.a.id}`)}`}>
+                <Hint label={`${natal ? '' : t('wheel.transitPrefix')}${t(`object.${a.a.id}`)}`}>
                   <Glyph of={a.a} className="inline-block w-6 text-center" symbolClass="astro text-base" />
                 </Hint>
                 <Hint label={t(`aspect.${a.type}`)}>
@@ -136,7 +138,7 @@ export function DynamicsPanel({ moment, dynamics, onDynamicsChange, onStep, onNo
                     {a.glyph}
                   </span>
                 </Hint>
-                <Hint label={`${t('wheel.natalPrefix')}${t(`object.${a.b.id}`)}`}>
+                <Hint label={`${natal ? '' : t('wheel.natalPrefix')}${t(`object.${a.b.id}`)}`}>
                   <Glyph of={a.b} className="inline-block w-6 text-center" symbolClass="astro text-base" />
                 </Hint>
                 <span className="ml-auto tabular-nums text-slate-500">{formatOrb(a.orb)}</span>
