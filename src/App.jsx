@@ -45,6 +45,7 @@ function nowLocal() {
     date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
     time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
     utcOffset: -d.getTimezoneOffset() / 60,
+    live: true,
   };
 }
 
@@ -117,7 +118,12 @@ function IconButton({ onClick, children, label }) {
 export default function App() {
   const [birth, setBirth] = useState(() => savedSession?.birth ?? defaultBirth());
   const [mode, setMode] = useState(() => savedSession?.mode ?? 'natal');
-  const [transitMoment, setTransitMoment] = useState(() => savedSession?.transitMoment ?? nowLocal());
+  // A transit moment that was "now" (never moved by hand) is "now" again after a reload.
+  const [transitMoment, setTransitMoment] = useState(() => {
+    const saved = savedSession?.transitMoment;
+    if (!saved) return nowLocal();
+    return saved.live ? momentAt(saved, Date.now()) : saved;
+  });
   const [settings, setSettings] = useState(loadSettings);
   const [hover, setHover] = useState(null);
   const [tab, setTab] = useState('balance');
@@ -264,8 +270,8 @@ export default function App() {
     const ms = toUtcDate(transitMoment.date, transitMoment.time, transitMoment.utcOffset).getTime();
     return Number.isNaN(ms) ? merged : momentAt(merged, ms);
   }, [hasTransitPlace, transitMoment, birth]);
-  const updateTransit = (m) => setTransitMoment(hasTransitPlace ? m : withoutPlace(m));
-  const transitNow = () => updateTransit(momentAt(transit, Date.now()));
+  const updateTransit = (m, live = false) => setTransitMoment({ ...(hasTransitPlace ? m : withoutPlace(m)), live });
+  const transitNow = () => updateTransit(momentAt(transit, Date.now()), true);
   const stepTransit = (count) => updateTransit(shiftMoment(transit, count * dynamics.step, dynamics.unit));
   // Natal dynamics move the birth moment itself; nothing is saved until the birth form is submitted.
   const stepBirth = (count) => setBirth((b) => shiftMoment(b, count * dynamics.step, dynamics.unit));
