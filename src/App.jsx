@@ -128,6 +128,8 @@ export default function App() {
   const [hover, setHover] = useState(null);
   const [tab, setTab] = useState('balance');
   const [dynamics, setDynamics] = useState({ step: 1, unit: 'day' });
+  // The natal chart of another moment ("Now"), shown over the client without changing it; null = the client.
+  const [natalMoment, setNatalMoment] = useState(null);
   const [birthOpen, setBirthOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [lang, setLang] = useState(loadLanguage);
@@ -273,8 +275,18 @@ export default function App() {
   const updateTransit = (m, live = false) => setTransitMoment({ ...(hasTransitPlace ? m : withoutPlace(m)), live });
   const transitNow = () => updateTransit(momentAt(transit, Date.now()), true);
   const stepTransit = (count) => updateTransit(shiftMoment(transit, count * dynamics.step, dynamics.unit));
-  // Natal dynamics move the birth moment itself; nothing is saved until the birth form is submitted.
-  const stepBirth = (count) => setBirth((b) => shiftMoment(b, count * dynamics.step, dynamics.unit));
+  // Natal dynamics move the shown moment ("Now" or the birth itself); nothing is saved until the birth form is submitted.
+  const stepBirth = (count) =>
+    natalMoment
+      ? setNatalMoment((m) => shiftMoment(m, count * dynamics.step, dynamics.unit))
+      : setBirth((b) => shiftMoment(b, count * dynamics.step, dynamics.unit));
+  // "Now" at the transit place (the birth place unless transits have their own).
+  const natalNow = () => setNatalMoment(momentAt({ ...placeFields(transit), utcOffset: transit.utcOffset }, Date.now()));
+  const openBirth = (b) => {
+    setNatalMoment(null);
+    setBirth(b);
+  };
+  const shown = mode === 'natal' && natalMoment ? natalMoment : birth;
 
   const { visible, weights, colors } = settings;
 
@@ -285,13 +297,13 @@ export default function App() {
   const chartData = useMemo(
     () =>
       calculateNatal(
-        { date: toUtcDate(birth.date, birth.time, birth.utcOffset), latitude: birth.latitude, longitude: birth.longitude },
+        { date: toUtcDate(shown.date, shown.time, shown.utcOffset), latitude: shown.latitude, longitude: shown.longitude },
         settings.houseSystem,
         extras
       ),
     // extrasLoaded: recalculate once the data files arrive.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [birth, settings.houseSystem, extras, extrasLoaded]
+    [shown, settings.houseSystem, extras, extrasLoaded]
   );
 
   const natalPlanets = useMemo(() => chartData.planets.filter((p) => visible[p.id]), [chartData, visible]);
@@ -484,13 +496,25 @@ export default function App() {
         {/* Wheel Chart Component */}
         <section className="card flex flex-col gap-4 p-4 sm:p-6 lg:sticky lg:top-6 lg:self-start">
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-1">
-            <button type="button" onClick={() => setBirthOpen(true)} className="text-left">
-              <div className="font-display text-xl font-semibold">{birth.name || placeName(birth, t)}</div>
-              <div className="text-xs tabular-nums text-slate-500">
-                {birth.name && `${placeName(birth, t)} · `}
-                {formatDate(birth.date, lang)} · {birth.time} · {formatOffset(birth.utcOffset)}
+            {shown === birth ? (
+              <button type="button" onClick={() => setBirthOpen(true)} className="text-left">
+                <div className="font-display text-xl font-semibold">{birth.name || placeName(birth, t)}</div>
+                <div className="text-xs tabular-nums text-slate-500">
+                  {birth.name && `${placeName(birth, t)} · `}
+                  {formatDate(birth.date, lang)} · {birth.time} · {formatOffset(birth.utcOffset)}
+                </div>
+              </button>
+            ) : (
+              <div>
+                <div className="font-display text-xl font-semibold">{t('transit.now')}</div>
+                <div className="text-xs tabular-nums text-slate-500">
+                  {placeName(shown, t)} · {formatDate(shown.date, lang)} · {shown.time} · {formatOffset(shown.utcOffset)}
+                </div>
+                <button type="button" className="mt-1 text-xs font-medium text-slate-600 underline hover:text-slate-900" onClick={() => setNatalMoment(null)}>
+                  ← {birth.name || t('natal.backToBirth')}
+                </button>
               </div>
-            </button>
+            )}
             <div className="text-[11px] uppercase tracking-wider text-slate-400">{houseSystem && t(`houseSystem.${houseSystem.key}`)}</div>
           </div>
 
@@ -520,11 +544,11 @@ export default function App() {
           {activeTab === 'dynamics' && (
             <DynamicsPanel
               natal={!isBiWheel}
-              moment={isBiWheel ? transit : birth}
+              moment={isBiWheel ? transit : shown}
               dynamics={dynamics}
               onDynamicsChange={setDynamics}
               onStep={isBiWheel ? stepTransit : stepBirth}
-              onNow={isBiWheel ? transitNow : null}
+              onNow={isBiWheel ? transitNow : natalNow}
               aspects={visibleAspects}
               aspectColors={colors.aspects}
             />
@@ -551,7 +575,7 @@ export default function App() {
         open={birthOpen}
         onClose={() => setBirthOpen(false)}
         birth={birth}
-        onSubmit={setBirth}
+        onSubmit={openBirth}
         clients={clients}
         onSaveClient={saveClient}
       />
@@ -569,7 +593,7 @@ export default function App() {
           // The chart on screen stays, it just is no longer a saved client.
           setBirth((current) => (current.clientId === id ? withoutClient(current) : current));
         }}
-        onOpen={setBirth}
+        onOpen={openBirth}
       />
     </div>
     </I18nContext.Provider>
