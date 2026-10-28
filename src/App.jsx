@@ -510,9 +510,6 @@ export default function App() {
                 <div className="text-xs tabular-nums text-slate-500">
                   {placeName(shown, t)} · {formatDate(shown.date, lang)} · {shown.time} · {formatOffset(shown.utcOffset)}
                 </div>
-                <button type="button" className="mt-1 text-xs font-medium text-slate-600 underline hover:text-slate-900" onClick={() => setNatalMoment(null)}>
-                  ← {birth.name || t('natal.backToBirth')}
-                </button>
               </div>
             )}
             <div className="text-[11px] uppercase tracking-wider text-slate-400">{houseSystem && t(`houseSystem.${houseSystem.key}`)}</div>
