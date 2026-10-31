@@ -6,7 +6,7 @@ import {
   calculateTransitPlanets,
   calculateProgressions,
   calculateReturn,
-  findReturn,
+  returnsAround,
   calculateDirections,
   lunationPhase,
   progressedMoonIngresses,
@@ -33,7 +33,7 @@ import { AspectTable } from './components/AspectTable';
 import { BalancePanel } from './components/BalancePanel';
 import { PatternsPanel, TransitEvents } from './components/PatternsPanel';
 import { BirthModal } from './components/BirthForm';
-import { TransitBar, BarSteps } from './components/TransitBar';
+import { TransitBar, BarSteps, ReturnPicker } from './components/TransitBar';
 import { DynamicsPanel } from './components/DynamicsPanel';
 import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
@@ -137,16 +137,11 @@ function placedMoment(moment, birth) {
   return Number.isNaN(ms) ? merged : momentAt(merged, ms);
 }
 
-/**
- * The moment (on `moment`'s clock) of the return before or after `shown`, the return on screen:
- * a minute past it, so the date bar shows the return itself and it stays the last one.
- */
-function returnJump(natal, kind, shown, moment, direction) {
-  const periodMs = (360 / RETURNS[kind].speed) * 86400000;
-  // The last return before a minute ago is the previous one; before half a cycle past the next, the next.
-  const probe = new Date(shown.date.getTime() + (direction < 0 ? -60000 : 1.5 * periodMs));
-  return momentAt(moment, findReturn(natal, kind, probe).getTime() + 60000);
-}
+// Returns listed around the one shown: solars five years each way, lunars half a year.
+const RETURN_LIST_SPAN = { solar: 5, lunar: 6 };
+
+/** The moment (on `moment`'s clock) a minute past return `date`, so the bar shows that return and it stays the last one. */
+const atReturn = (moment, date) => momentAt(moment, date.getTime() + 60000);
 
 /** Points of a forecast method for `date`: transits at `place`, progressions and directions from the birth chart. */
 function forecastPoints(method, natal, date, place, settings, extras) {
@@ -391,6 +386,11 @@ export default function App() {
     const place = { latitude: transitLat, longitude: transitLon };
     return calculateReturn(chartData, returnKind, date, place, settings.houseSystem, extras, settings.nodeType);
   }, [returnKind, transitMoment, transitLat, transitLon, chartData, settings.houseSystem, extras, settings.nodeType]);
+  // The returns around the one shown, for the picker in the date bar.
+  const returnList = useMemo(
+    () => (returnChart ? returnsAround(chartData, returnKind, returnChart.date, RETURN_LIST_SPAN[returnKind]) : null),
+    [returnChart, chartData, returnKind]
+  );
   // The return moment on the clock of its place.
   const returnMoment = returnChart && momentAt({ ...placeFields(transit), utcOffset: transit.utcOffset }, returnChart.date.getTime());
   // The chart in the middle of the wheel and in the tables: the birth chart or the return.
@@ -468,6 +468,10 @@ export default function App() {
     const preset = { ...settings.aspects, ...settings[ORB_PRESET_KEYS[secondMode]] };
     return { ...base, ring, points: ring, aspects: withSeparating(findAspects(ring, preset, birthPoints), preset), moment: secondTransit };
   }, [secondMode, secondRaw, secondTransit, chartData, birth, settings, extras, visible, birthPlanets, birthAngles, birthPoints, returnAspectSettings]);
+  const secondReturnList = useMemo(
+    () => (secondView?.isReturn ? returnsAround(chartData, secondMode, secondView.chart.date, RETURN_LIST_SPAN[secondMode]) : null),
+    [secondView, chartData, secondMode]
+  );
   // The aspects table can list the second chart instead: the main forecast to a return, or the second chart's own aspects.
   const secondTableAspects = useMemo(() => {
     if (!secondView) return null;
@@ -540,12 +544,12 @@ export default function App() {
   // so both wheels start at the same height.
   const forecastBar = (forecast || returnKind) && (
     <TransitBar method={mode} moment={transit} onChange={updateTransit} onPlaceChange={setTransitMoment} onNow={transitNow}>
-      {returnChart && (
-        <BarSteps
-          prevLabel={t(`returns.prev.${returnKind}`)}
-          nextLabel={t(`returns.next.${returnKind}`)}
-          onPrev={() => updateTransit(returnJump(chartData, returnKind, returnChart, transit, -1))}
-          onNext={() => updateTransit(returnJump(chartData, returnKind, returnChart, transit, 1))}
+      {returnList && (
+        <ReturnPicker
+          kind={returnKind}
+          dates={returnList}
+          current={RETURN_LIST_SPAN[returnKind]}
+          onPick={(date) => updateTransit(atReturn(transit, date))}
         />
       )}
       {mode === 'directions' && (
@@ -784,11 +788,11 @@ export default function App() {
             {secondMode !== 'natal' && (
               <TransitBar method={secondMode} moment={secondTransit} onChange={updateSecond} onPlaceChange={setSecondOwnMoment} onNow={secondNow}>
                 {secondView.isReturn ? (
-                  <BarSteps
-                    prevLabel={t(`returns.prev.${secondMode}`)}
-                    nextLabel={t(`returns.next.${secondMode}`)}
-                    onPrev={() => updateSecond(returnJump(chartData, secondMode, secondView.chart, secondTransit, -1))}
-                    onNext={() => updateSecond(returnJump(chartData, secondMode, secondView.chart, secondTransit, 1))}
+                  <ReturnPicker
+                    kind={secondMode}
+                    dates={secondReturnList}
+                    current={RETURN_LIST_SPAN[secondMode]}
+                    onPick={(date) => updateSecond(atReturn(secondTransit, date))}
                   />
                 ) : (
                   <BarSteps

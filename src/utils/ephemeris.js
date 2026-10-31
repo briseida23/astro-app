@@ -460,6 +460,19 @@ export function findReturn(natal, kind, date) {
 }
 
 /**
+ * Return moments around `shown` (a return moment): `count` before it, it, and `count` after,
+ * oldest first. A minute before a return the last one is the previous; half a cycle past the
+ * next, the next.
+ */
+export function returnsAround(natal, kind, shown, count) {
+  const periodMs = (360 / RETURNS[kind].speed) * 86400000;
+  const list = [shown];
+  for (let i = 0; i < count; i++) list.unshift(findReturn(natal, kind, new Date(list[0].getTime() - 60000)));
+  for (let i = 0; i < count; i++) list.push(findReturn(natal, kind, new Date(list[list.length - 1].getTime() + 1.5 * periodMs)));
+  return list;
+}
+
+/**
  * The chart of the last solar or lunar return at or before `date`, cast at `place`;
  * `ring` names its points ("natal" when it stands in for the birth chart).
  */

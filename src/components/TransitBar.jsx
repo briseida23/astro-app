@@ -60,6 +60,44 @@ export function BarSteps({ prevLabel, nextLabel, onPrev, onNext }) {
 }
 
 /**
+ * ‹ [return date] › for solar and lunar returns: `dates` are the returns around the one shown
+ * (`current` is its index); picking one or stepping calls `onPick` with that return's date.
+ */
+export function ReturnPicker({ kind, dates, current, onPick }) {
+  const { lang, t } = useI18n();
+  const label = (d) => new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', year: 'numeric' }).format(d);
+  return (
+    <div className="mb-0.5 flex gap-1">
+      <button
+        type="button"
+        className="input-sm px-3 hover:border-slate-300"
+        onClick={() => onPick(dates[current - 1])}
+        aria-label={t(`returns.prev.${kind}`)}
+        title={t(`returns.prev.${kind}`)}
+      >
+        ‹
+      </button>
+      <select className="input-sm" aria-label={t(`mode.${kind}`)} value={current} onChange={(e) => onPick(dates[Number(e.target.value)])}>
+        {dates.map((d, i) => (
+          <option key={d.getTime()} value={i}>
+            {label(d)}
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        className="input-sm px-3 hover:border-slate-300"
+        onClick={() => onPick(dates[current + 1])}
+        aria-label={t(`returns.next.${kind}`)}
+        title={t(`returns.next.${kind}`)}
+      >
+        ›
+      </button>
+    </div>
+  );
+}
+
+/**
  * Date, time, zone and place of the forecast moment. `onChange` gets date/time/zone edits,
  * `onPlaceChange` a moment with a newly chosen place. Progressions and directions come from the
  * birth chart, so they have no place; returns use it as the return place. `children` are the
