@@ -21,9 +21,12 @@ function Position({ point }) {
   );
 }
 
-export function PlanetTable({ points, transitPlanets, focus, onHover }) {
+/** Natal points, optionally with a second chart (solar or lunar return, own houses) and the forecast ring. */
+export function PlanetTable({ points, secondPoints, transitPlanets, focus, onHover }) {
   const { t } = useI18n();
   const transitById = Object.fromEntries((transitPlanets ?? []).map((p) => [p.id, p]));
+  const secondById = Object.fromEntries((secondPoints ?? []).map((p) => [p.id, p]));
+  const compare = Boolean(transitPlanets || secondPoints);
   const hoverProps = (key) => ({
     onMouseEnter: () => onHover({ type: 'planet', key }),
     onMouseLeave: () => onHover(null),
@@ -36,8 +39,11 @@ export function PlanetTable({ points, transitPlanets, focus, onHover }) {
           <tr>
             {/* Columns hug their content (w-px); the last one takes the spare width. */}
             <th className="w-px px-3 py-2 font-medium">{t('table.object')}</th>
-            <th className="w-px px-3 py-2 font-medium">{t(transitPlanets ? 'table.natal' : 'table.position')}</th>
-            <th className={`${transitPlanets ? 'w-px' : ''} px-3 py-2 font-medium`}>{t('table.house')}</th>
+            <th className="w-px px-3 py-2 font-medium">{t(compare ? 'table.natal' : 'table.position')}</th>
+            <th className={`${compare ? 'w-px' : ''} px-3 py-2 font-medium`}>{t('table.house')}</th>
+            {secondPoints && (
+              <th className={`${transitPlanets ? 'w-px' : ''} px-3 py-2 font-medium`}>{t(`table.${secondPoints[0]?.ring}`)}</th>
+            )}
             {transitPlanets && <th className="px-3 py-2 font-medium">{t(`table.${transitPlanets[0]?.ring ?? 'transit'}`)}</th>}
           </tr>
         </thead>
@@ -58,6 +64,17 @@ export function PlanetTable({ points, transitPlanets, focus, onHover }) {
                   <Position point={p} />
                 </td>
                 <td className="px-3 py-2 font-display text-base" {...hoverProps(p.key)}>{ROMAN[p.house - 1]}</td>
+                {secondPoints && (
+                  <td className="px-3 py-2 text-slate-600">
+                    {secondById[p.id] && (
+                      <span className="inline-flex items-center whitespace-nowrap">
+                        <Retro point={secondById[p.id]} />
+                        <Position point={secondById[p.id]} />
+                        <span className="ml-2 font-display text-slate-400">{ROMAN[secondById[p.id].house - 1]}</span>
+                      </span>
+                    )}
+                  </td>
+                )}
                 {transitPlanets && (
                   <td
                     className={`px-3 py-2 text-slate-600 ${transitActive ? 'bg-slate-100' : ''}`}

@@ -234,7 +234,7 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
     className: 'cursor-pointer',
   });
 
-  const renderPlanets = (list, glyphRadius, degreeRadius) =>
+  const renderPlanets = (list, glyphRadius, degreeRadius, outer = false) =>
     spreadPlanets(list).map((planet) => {
       const glyph = point(planet.displayLon, glyphRadius, ascendant);
       const degree = point(planet.displayLon, degreeRadius, ascendant);
@@ -244,7 +244,7 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
       const active = focus?.planets.has(planet.key);
       const dimmed = focus && !active;
       const color = planet.ink ?? ink(elementColors[planet.element]);
-      const isTransit = planet.ring !== 'natal';
+      const isTransit = outer;
       return (
         <g key={planet.key} {...hoverProps({ type: 'planet', key: planet.key })} opacity={dimmed ? 0.45 : 1}>
           <line x1={tickA.x} y1={tickA.y} x2={tickB.x} y2={tickB.y} stroke={color} strokeWidth={1.5} />
@@ -430,7 +430,7 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
         })}
 
         {renderPlanets(planets, layout.natalGlyph, layout.natalDegree)}
-        {isBiWheel && renderPlanets(transitPlanets, layout.transitGlyph, layout.transitDegree)}
+        {isBiWheel && renderPlanets(transitPlanets, layout.transitGlyph, layout.transitDegree, true)}
       </svg>
 
       {pointer && hover && hover.type !== 'pattern' && (

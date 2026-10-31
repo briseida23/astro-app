@@ -237,7 +237,7 @@ function calculatePlanets(jd, ring, cusps, extras, nodeType) {
  * @param {{ date: Date, latitude: number, longitude: number }} birthData
  * @param {string} houseSystem one of HOUSE_SYSTEMS ids
  */
-export function calculateNatal(birthData, houseSystem = HouseSystem.Placidus, extras = new Set(), nodeType = 'mean') {
+export function calculateNatal(birthData, houseSystem = HouseSystem.Placidus, extras = new Set(), nodeType = 'mean', ring = 'natal') {
   const { date, latitude, longitude } = birthData;
   const jd = swe.dateToJulianDay(date);
   const houseData = swe.calculateHouses(jd, latitude, longitude, houseSystem);
@@ -245,14 +245,14 @@ export function calculateNatal(birthData, houseSystem = HouseSystem.Placidus, ex
   // Angles are treated as fixed points (speed 0) for applying/separating. Their house is
   // looked up: with Equal or Whole Sign houses the MC need not be in the 10th.
   const angles = [
-    makePoint('natal', ANGLES[0], houseData.ascendant, 0, houseOf(normalize(houseData.ascendant), houses)),
-    makePoint('natal', ANGLES[1], houseData.mc, 0, houseOf(normalize(houseData.mc), houses)),
+    makePoint(ring, ANGLES[0], houseData.ascendant, 0, houseOf(normalize(houseData.ascendant), houses)),
+    makePoint(ring, ANGLES[1], houseData.mc, 0, houseOf(normalize(houseData.mc), houses)),
   ];
   return {
     date,
     latitude,
     longitude,
-    planets: calculatePlanets(jd, 'natal', houses, extras, nodeType),
+    planets: calculatePlanets(jd, ring, houses, extras, nodeType),
     angles,
     houses,
     ascendant: angles[0].longitude,
@@ -323,11 +323,12 @@ export const RETURNS = {
 
 /**
  * The last solar or lunar return at or before `date`: the moment the body is back at its natal
- * longitude, refined by Newton's method. Returns the chart cast for that moment at `place`.
+ * longitude, refined by Newton's method. Returns the chart cast for that moment at `place`;
+ * `ring` names its points ("natal" when it stands in for the birth chart).
  * @param {ReturnType<typeof calculateNatal>} natal
  * @param {'solar' | 'lunar'} kind
  */
-export function calculateReturn(natal, kind, date, place, houseSystem = HouseSystem.Placidus, extras = new Set(), nodeType = 'mean') {
+export function calculateReturn(natal, kind, date, place, houseSystem = HouseSystem.Placidus, extras = new Set(), nodeType = 'mean', ring = 'natal') {
   const { body, speed } = RETURNS[kind];
   const natalLon = swe.calculatePosition(swe.dateToJulianDay(natal.date), body).longitude;
   const targetJd = swe.dateToJulianDay(date);
@@ -345,7 +346,7 @@ export function calculateReturn(natal, kind, date, place, houseSystem = HouseSys
   let jd = solve(targetJd - normalize(swe.calculatePosition(targetJd, body).longitude - natalLon) / speed);
   if (jd > targetJd) jd = solve(jd - 360 / speed);
   const returnDate = new Date(date.getTime() + (jd - targetJd) * 86400000);
-  return calculateNatal({ date: returnDate, latitude: place.latitude, longitude: place.longitude }, houseSystem, extras, nodeType);
+  return calculateNatal({ date: returnDate, latitude: place.latitude, longitude: place.longitude }, houseSystem, extras, nodeType, ring);
 }
 
 /** Wall-clock { date, time } in `timeZone` at the UTC instant `ms`. */
