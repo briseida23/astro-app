@@ -315,6 +315,82 @@ export function calculateProgressions(natal, date, houseSystem = HouseSystem.Pla
   ];
 }
 
+/** The real date whose secondary progression is the progressed Julian day `progJd`. */
+const progressedToDate = (natal, birthJd, progJd) => new Date(natal.date.getTime() + (progJd - birthJd) * TROPICAL_YEAR * 86400000);
+
+/** Next sign and next natal house the forward-moving `lon` enters: [{ kind, to, delta }] with delta in degrees. */
+function nextBoundaries(lon, cusps, backwards = false) {
+  const ahead = (target) => (backwards ? normalize(lon - target) : normalize(target - lon)) || 360;
+  const sign = backwards ? Math.floor(lon / 30) : (Math.floor(lon / 30) + 1) % 12;
+  const signEdge = backwards ? sign * 30 : sign * 30;
+  // Moving backwards a point leaves its sign through the sign's start and enters the one before.
+  const signTo = backwards ? (sign + 11) % 12 : sign;
+  const house = houseOf(lon, cusps);
+  const houseEdge = backwards ? cusps[house - 1] : cusps[house % 12];
+  const houseTo = backwards ? ((house + 10) % 12) + 1 : (house % 12) + 1;
+  return [
+    { kind: 'sign', to: SIGNS[signTo], delta: ahead(signEdge) },
+    { kind: 'house', to: houseTo, delta: ahead(houseEdge) },
+  ];
+}
+
+/**
+ * When the progressed Moon (`moon`, a progressed point for `date`) next enters a sign and a natal
+ * house: [{ point, kind: 'sign' | 'house', to, date }], earliest first.
+ */
+export function progressedMoonIngresses(natal, date, moon) {
+  const birthJd = swe.dateToJulianDay(natal.date);
+  const progJd = birthJd + (swe.dateToJulianDay(date) - birthJd) / TROPICAL_YEAR;
+  return nextBoundaries(moon.longitude, natal.houses)
+    .map(({ kind, to, delta }) => {
+      // Newton on the progressed day: the Moon always moves forward.
+      const target = normalize(moon.longitude + delta);
+      let jd = progJd + delta / RETURNS.lunar.speed;
+      for (let i = 0; i < 12; i++) {
+        const pos = swe.calculatePosition(jd, Planet.Moon);
+        const step = signedDiff(pos.longitude, target) / pos.longitudeSpeed;
+        jd -= step;
+        if (Math.abs(step) < 1e-7) break;
+      }
+      return { point: moon, kind, to, date: progressedToDate(natal, birthJd, jd) };
+    })
+    .sort((a, b) => a.date - b.date);
+}
+
+/**
+ * Coming ingresses of directed points (`points`, directions for `date`) into the next sign and
+ * natal house, within `years`: [{ point, kind, to, date }], earliest first. Converse directions
+ * move backwards.
+ */
+export function directionIngresses(natal, date, { arc: arcType, converse }, points, years = 10) {
+  const birthJd = swe.dateToJulianDay(natal.date);
+  const ageNow = (swe.dateToJulianDay(date) - birthJd) / TROPICAL_YEAR;
+  const perYear = DIRECTION_ARCS[arcType];
+  const sunNatal = swe.calculatePosition(birthJd, Planet.Sun).longitude;
+  const arcAt = (age) => (perYear === null ? signedDiff(swe.calculatePosition(birthJd + age, Planet.Sun).longitude, sunNatal) : age * perYear);
+  // Age at which the arc reaches `arc`: direct for 1°/Naibod, Newton on the progressed Sun for the solar arc.
+  const ageFor = (arc) => {
+    if (perYear !== null) return arc / perYear;
+    let age = arc / RETURNS.solar.speed;
+    for (let i = 0; i < 12; i++) {
+      const step = (arcAt(age) - arc) / swe.calculatePosition(birthJd + age, Planet.Sun).longitudeSpeed;
+      age -= step;
+      if (Math.abs(step) < 1e-7) break;
+    }
+    return age;
+  };
+  const arcNow = arcAt(ageNow);
+  return points
+    .flatMap((point) =>
+      nextBoundaries(point.longitude, natal.houses, converse).map(({ kind, to, delta }) => {
+        const age = ageFor(arcNow + delta);
+        return { point, kind, to, age, date: progressedToDate(natal, birthJd, birthJd + age) };
+      })
+    )
+    .filter((i) => i.age - ageNow <= years)
+    .sort((a, b) => a.date - b.date);
+}
+
 // The eight phases of the Sun–Moon cycle, 45° each, from the New Moon on.
 export const LUNATION_PHASES = ['new', 'crescent', 'firstQuarter', 'gibbous', 'full', 'disseminating', 'lastQuarter', 'balsamic'];
 

@@ -9,6 +9,8 @@ import {
   findReturn,
   calculateDirections,
   lunationPhase,
+  progressedMoonIngresses,
+  directionIngresses,
   DIRECTION_ARCS,
   RETURNS,
   toUtcDate,
@@ -423,6 +425,14 @@ export default function App() {
   const progressedSun = forecast === 'progressions' && transitPlanets.find((p) => p.id === 'sun');
   const progressedMoon = forecast === 'progressions' && transitPlanets.find((p) => p.id === 'moon');
   const lunation = progressedSun && progressedMoon ? lunationPhase(progressedSun, progressedMoon) : null;
+  // Coming changes of sign and natal house: the progressed Moon's, or every directed point's.
+  const ingresses = useMemo(() => {
+    if (!transitPlanets || (forecast !== 'progressions' && forecast !== 'directions')) return null;
+    const date = toUtcDate(transitMoment.date, transitMoment.time, transitMoment.utcOffset);
+    if (forecast === 'directions') return directionIngresses(chartData, date, settings.directions, transitPlanets);
+    const moon = transitPlanets.find((p) => p.id === 'moon');
+    return moon ? progressedMoonIngresses(chartData, date, moon) : null;
+  }, [forecast, transitPlanets, transitMoment, chartData, settings.directions]);
 
   // The second wheel shows any other mode for the same moment: the birth chart, a forecast ring
   // around it, or a solar or lunar return with its own houses (at the transit place).
@@ -813,6 +823,7 @@ export default function App() {
               aspects={visibleAspects}
               aspectColors={colors.aspects}
               lunation={lunation}
+              ingresses={ingresses}
               showPlace={mode !== 'progressions' && mode !== 'directions'}
             />
           )}

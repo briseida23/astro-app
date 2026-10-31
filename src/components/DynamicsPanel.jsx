@@ -1,4 +1,4 @@
-import { STEP_UNITS, formatOffset, formatOrb } from '../utils/ephemeris';
+import { STEP_UNITS, ROMAN, formatOffset, formatOrb } from '../utils/ephemeris';
 import { useI18n, placeName } from '../i18n';
 import { Glyph } from './Glyph';
 import { Hint } from './Hint';
@@ -20,6 +20,9 @@ const formatMoment = (moment, lang) => {
   const date = new Intl.DateTimeFormat(lang, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(y, m - 1, d));
   return `${date}, ${moment.time}`;
 };
+
+/** A Date as "12 бер. 2027 р.". */
+const formatDay = (date, lang) => new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
 
 /** Arrow button with the shift it makes written underneath and a tooltip on hover/focus. */
 function StepButton({ onClick, label, caption, children }) {
@@ -45,7 +48,7 @@ function StepButton({ onClick, label, caption, children }) {
 }
 
 /** Moves the transit moment (or, with `natal`, the birth moment) back and forth by a chosen interval. */
-export function DynamicsPanel({ natal, moment, dynamics, onDynamicsChange, onStep, onNow, aspects, aspectColors, lunation, showPlace = true }) {
+export function DynamicsPanel({ natal, moment, dynamics, onDynamicsChange, onStep, onNow, aspects, aspectColors, lunation, ingresses, showPlace = true }) {
   const { lang, t } = useI18n();
   const { step, unit } = dynamics;
   const set = (patch) => onDynamicsChange({ ...dynamics, ...patch });
@@ -128,6 +131,34 @@ export function DynamicsPanel({ natal, moment, dynamics, onDynamicsChange, onSte
           </button>
         )}
       </div>
+
+      {ingresses && (
+        <div>
+          <h3 className="mb-2 text-[11px] font-medium uppercase tracking-wider text-slate-400">{t('dynamics.ingresses')}</h3>
+          {ingresses.length === 0 ? (
+            <p className="text-sm text-slate-500">{t('dynamics.ingressesEmpty')}</p>
+          ) : (
+            <ul className="space-y-1 text-sm">
+              {ingresses.map((i) => (
+                <li key={`${i.point.key}:${i.kind}`} className="flex items-center gap-1.5">
+                  <Hint label={`${t(`wheel.${i.point.ring}Prefix`)}${t(`object.${i.point.id}`)}`}>
+                    <Glyph of={i.point} className="inline-block w-6 text-center" symbolClass="astro text-base" />
+                  </Hint>
+                  <span className="text-slate-400">→</span>
+                  {i.kind === 'sign' ? (
+                    <Hint label={t(`sign.${i.to.id}`)}>
+                      <span className="astro w-6 text-center text-base">{i.to.glyph}</span>
+                    </Hint>
+                  ) : (
+                    <span className="font-display text-base">{t('ingress.house', { n: ROMAN[i.to - 1] })}</span>
+                  )}
+                  <span className="ml-auto tabular-nums text-slate-500">{formatDay(i.date, lang)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <div>
         <h3 className="mb-2 text-[11px] font-medium uppercase tracking-wider text-slate-400">{t('dynamics.exact')}</h3>
