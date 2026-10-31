@@ -97,7 +97,7 @@ export function findTransitPatterns(natalPlanets, natalAspects, transitPlanets, 
     ...findAspects(transits, narrow, natalPlanets.filter((p) => PLANET_IDS.has(p.id))),
   ];
   const patterns = findAspectPatterns([...natalPlanets, ...transits], aspects).filter(
-    (p) => p.members.some((m) => m.ring === 'natal') && p.members.some((m) => m.ring === 'transit')
+    (p) => p.members.some((m) => m.ring === 'natal') && p.members.some((m) => m.ring !== 'natal')
   );
   return { patterns, aspects };
 }

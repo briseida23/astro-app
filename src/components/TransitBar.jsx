@@ -46,10 +46,11 @@ function TransitPlaceModal({ open, onClose, onSelect }) {
 }
 
 /**
- * Date, time, zone and place of the transit moment. `onChange` gets date/time/zone edits,
- * `onPlaceChange` a moment with a newly chosen place.
+ * Date, time, zone and place of the forecast moment. `onChange` gets date/time/zone edits,
+ * `onPlaceChange` a moment with a newly chosen place. Progressions are cast for the birth
+ * place, so `method` "progressions" has no place.
  */
-export function TransitBar({ moment, onChange, onPlaceChange, onNow }) {
+export function TransitBar({ method = 'transit', moment, onChange, onPlaceChange, onNow }) {
   const { t } = useI18n();
   const [placeOpen, setPlaceOpen] = useState(false);
   // Changing the date or time re-derives the offset from the place's time zone (DST included).
@@ -63,7 +64,7 @@ export function TransitBar({ moment, onChange, onPlaceChange, onNow }) {
   return (
     <div className="flex flex-wrap items-end gap-2 rounded-xl bg-slate-50 px-3 py-2.5">
       <label className="field">
-        <span>{t('transit.date')}</span>
+        <span>{t(`${method}.date`)}</span>
         <input type="date" className="input-sm" value={moment.date} onChange={(e) => set({ date: e.target.value })} />
       </label>
       <label className="field">
@@ -74,17 +75,19 @@ export function TransitBar({ moment, onChange, onPlaceChange, onNow }) {
         <span>{t('transit.zone')}</span>
         <OffsetSelect className="input-sm" value={moment.utcOffset} onChange={(utcOffset) => set({ utcOffset })} />
       </label>
-      <div className="field min-w-0">
-        <span>{t('transit.place')}</span>
-        <button
-          type="button"
-          className="input-sm max-w-[14rem] truncate text-left hover:border-slate-300"
-          onClick={() => setPlaceOpen(true)}
-          title={t('transit.placeTitle')}
-        >
-          <span aria-hidden>⌖</span> {placeName(moment, t)}
-        </button>
-      </div>
+      {method === 'transit' && (
+        <div className="field min-w-0">
+          <span>{t('transit.place')}</span>
+          <button
+            type="button"
+            className="input-sm max-w-[14rem] truncate text-left hover:border-slate-300"
+            onClick={() => setPlaceOpen(true)}
+            title={t('transit.placeTitle')}
+          >
+            <span aria-hidden>⌖</span> {placeName(moment, t)}
+          </button>
+        </div>
+      )}
       <button type="button" className="btn-ghost mb-1" onClick={onNow}>
         {t('transit.now')}
       </button>

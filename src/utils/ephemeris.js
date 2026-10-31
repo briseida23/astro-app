@@ -257,6 +257,7 @@ export function calculateNatal(birthData, houseSystem = HouseSystem.Placidus, ex
     houses,
     ascendant: angles[0].longitude,
     mc: angles[1].longitude,
+    armc: houseData.armc,
   };
 }
 
@@ -280,6 +281,39 @@ export function calculateTransitPlanets(date, natalHouses, place = null, houseSy
   ];
 }
 
+const TROPICAL_YEAR = 365.242199;
+const DEG = Math.PI / 180;
+
+/** Signed difference a − b folded into −180…180. */
+const signedDiff = (a, b) => ((((a - b) % 360) + 540) % 360) - 180;
+
+/** Right ascension of an ecliptic longitude (latitude 0) for obliquity `eps`, degrees. */
+const rightAscension = (lon, eps) => normalize(Math.atan2(Math.sin(lon * DEG) * Math.cos(eps * DEG), Math.cos(lon * DEG)) / DEG);
+
+/**
+ * Secondary progressions (a day after birth for each year of life) for `date`, placed in the
+ * natal houses. Progressed MC = natal MC + solar arc in longitude; the progressed ASC is the
+ * ASC of that MC at the birth place (houses cast for the matching sidereal time).
+ * @param {ReturnType<typeof calculateNatal>} natal
+ */
+export function calculateProgressions(natal, date, houseSystem = HouseSystem.Placidus, extras = new Set(), nodeType = 'mean') {
+  const birthJd = swe.dateToJulianDay(natal.date);
+  const jd = birthJd + (swe.dateToJulianDay(date) - birthJd) / TROPICAL_YEAR;
+  const planets = calculatePlanets(jd, 'progressions', natal.houses, extras, nodeType);
+  const sun = swe.calculatePosition(jd, Planet.Sun);
+  const arc = signedDiff(sun.longitude, swe.calculatePosition(birthJd, Planet.Sun).longitude);
+  // Mean obliquity of the ecliptic at birth; enough for turning the MC into sidereal time.
+  const eps = 23.439291 - 0.0130042 * ((birthJd - 2451545) / 36525);
+  const mc = normalize(natal.mc + arc);
+  const armcShift = signedDiff(rightAscension(mc, eps), rightAscension(natal.mc, eps));
+  const houseData = swe.calculateHouses(birthJd + armcShift / ANGLE_SPEED, natal.latitude, natal.longitude, houseSystem);
+  // The angles move with the solar arc: about 1° a year, the progressed Sun's speed.
+  return [
+    ...planets,
+    makePoint('progressions', ANGLES[0], houseData.ascendant, sun.longitudeSpeed, houseOf(normalize(houseData.ascendant), natal.houses)),
+    makePoint('progressions', ANGLES[1], mc, sun.longitudeSpeed, houseOf(mc, natal.houses)),
+  ];
+}
 
 /** Wall-clock { date, time } in `timeZone` at the UTC instant `ms`. */
 function wallClock(ms, timeZone) {

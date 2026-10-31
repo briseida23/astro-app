@@ -1,6 +1,6 @@
 import { HouseSystem } from '@swisseph/browser';
 import { OBJECTS, EXTRA_OBJECTS, DEFAULT_EXTRAS } from './ephemeris';
-import { DEFAULT_ASPECT_SETTINGS, DEFAULT_TRANSIT_ORB_SETTINGS } from './aspects';
+import { DEFAULT_ASPECT_SETTINGS, DEFAULT_TRANSIT_ORB_SETTINGS, DEFAULT_PROGRESSION_ORB_SETTINGS } from './aspects';
 import { DEFAULT_WEIGHTS, PREVIOUS_DEFAULT_WEIGHTS } from './balance';
 
 export const DEFAULT_ELEMENT_COLORS = {
@@ -31,6 +31,7 @@ export const DEFAULT_SETTINGS = {
   weights: DEFAULT_WEIGHTS,
   aspects: DEFAULT_ASPECT_SETTINGS,
   transitOrbPreset: DEFAULT_TRANSIT_ORB_SETTINGS,
+  progressionOrbPreset: DEFAULT_PROGRESSION_ORB_SETTINGS,
   colors: { elements: DEFAULT_ELEMENT_COLORS, aspects: DEFAULT_ASPECT_COLORS },
   // Figures that transits complete with natal planets; transit aspects use the narrow orb.
   transitPatterns: { enabled: true, orb: 1, contours: false },

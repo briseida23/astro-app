@@ -38,7 +38,7 @@ export function PlanetTable({ points, transitPlanets, focus, onHover }) {
             <th className="w-px px-3 py-2 font-medium">{t('table.object')}</th>
             <th className="w-px px-3 py-2 font-medium">{t(transitPlanets ? 'table.natal' : 'table.position')}</th>
             <th className={`${transitPlanets ? 'w-px' : ''} px-3 py-2 font-medium`}>{t('table.house')}</th>
-            {transitPlanets && <th className="px-3 py-2 font-medium">{t('table.transit')}</th>}
+            {transitPlanets && <th className="px-3 py-2 font-medium">{t(`table.${transitPlanets[0]?.ring ?? 'transit'}`)}</th>}
           </tr>
         </thead>
         <tbody>
@@ -66,7 +66,7 @@ export function PlanetTable({ points, transitPlanets, focus, onHover }) {
                     {transit && (
                       <span className="inline-flex items-center whitespace-nowrap">
                         {/* The transit planet's own glyph, so its R mark sits by a planet as in the natal column. */}
-                        <Hint label={`${t('wheel.transitPrefix')}${t(`object.${transit.id}`)}`}>
+                        <Hint label={`${t(`wheel.${transit.ring}Prefix`)}${t(`object.${transit.id}`)}`}>
                           <Glyph of={transit} className="inline-block w-6 text-center" symbolClass="astro text-base" />
                         </Hint>
                         <Retro point={transit} />

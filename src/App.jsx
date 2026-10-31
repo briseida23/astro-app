@@ -4,6 +4,7 @@ import {
   HOUSE_SYSTEMS,
   calculateNatal,
   calculateTransitPlanets,
+  calculateProgressions,
   toUtcDate,
   offsetForZone,
   formatOffset,
@@ -13,7 +14,7 @@ import {
   EXTRA_OBJECTS,
   extrasReady,
 } from './utils/ephemeris';
-import { findAspects } from './utils/aspects';
+import { findAspects, ORB_PRESET_KEYS } from './utils/aspects';
 import { calculateBalance } from './utils/balance';
 import { findAspectPatterns, findTransitPatterns } from './utils/aspectPatterns';
 import { loadSettings, saveSettings, loadSession, saveSession, normalizeSettings } from './utils/settings';
@@ -104,8 +105,8 @@ function Legend({ aspectColors, t }) {
   );
 }
 
-// Natal chart alone, or with the transit ring; labels are `mode.<id>`.
-const MODES = ['natal', 'transit'];
+// Natal chart alone, or with the ring of a forecast method; labels are `mode.<id>`.
+const MODES = ['natal', 'transit', 'progressions'];
 
 function IconButton({ onClick, children, label }) {
   return (
@@ -304,19 +305,23 @@ export default function App() {
   const natalAspects = useMemo(() => findAspects(natalPoints, settings.aspects), [natalPoints, settings.aspects]);
 
   const { latitude: transitLat, longitude: transitLon } = transit;
+  // Forecast methods draw an outer ring for the moment in the transit bar: transits at the
+  // transit place, progressions for the birth place.
+  const forecast = mode === 'natal' ? null : mode;
   const transitPlanets = useMemo(() => {
-    if (mode !== 'transit' || !transitMoment.date) return null;
+    if (!forecast || !transitMoment.date) return null;
     const date = toUtcDate(transitMoment.date, transitMoment.time, transitMoment.utcOffset);
     if (Number.isNaN(date.getTime())) return null;
-    const place = { latitude: transitLat, longitude: transitLon };
-    return calculateTransitPlanets(date, chartData.houses, place, settings.houseSystem, extras, settings.nodeType).filter((p) => visible[p.id]);
-  }, [mode, transitMoment, transitLat, transitLon, chartData, visible, settings.houseSystem, extras, settings.nodeType]);
+    const points =
+      forecast === 'progressions'
+        ? calculateProgressions(chartData, date, settings.houseSystem, extras, settings.nodeType)
+        : calculateTransitPlanets(date, chartData.houses, { latitude: transitLat, longitude: transitLon }, settings.houseSystem, extras, settings.nodeType);
+    return points.filter((p) => visible[p.id]);
+  }, [forecast, transitMoment, transitLat, transitLon, chartData, visible, settings.houseSystem, extras, settings.nodeType]);
 
-  // Transit aspects use their own orb table and formula; the rest of the aspect settings is shared.
-  const transitAspectSettings = useMemo(
-    () => ({ ...settings.aspects, ...settings.transitOrbPreset }),
-    [settings.aspects, settings.transitOrbPreset]
-  );
+  // Each forecast method has its own orb table and formula; the rest of the aspect settings is shared.
+  const orbPreset = settings[ORB_PRESET_KEYS[forecast] ?? ORB_PRESET_KEYS.transit];
+  const transitAspectSettings = useMemo(() => ({ ...settings.aspects, ...orbPreset }), [settings.aspects, orbPreset]);
   const transitAspects = useMemo(() => {
     if (!transitPlanets) return null;
     const { separating, separatingOrb } = transitAspectSettings;
@@ -374,8 +379,8 @@ export default function App() {
 
   // Dynamics comes first; the natal chart also has the element balance, transits show only Dynamics.
   const dynamicsTab = { id: 'dynamics', label: t('tab.dynamics') };
-  const firstTabs = mode === 'transit' ? [dynamicsTab] : [dynamicsTab, { id: 'balance', label: t('tab.balance') }];
-  const activeTab = tab === 'balance' && mode === 'transit' ? 'dynamics' : tab;
+  const firstTabs = forecast ? [dynamicsTab] : [dynamicsTab, { id: 'balance', label: t('tab.balance') }];
+  const activeTab = tab === 'balance' && forecast ? 'dynamics' : tab;
   // Transits draw only transit-to-natal aspects, so a hovered figure adds its missing lines
   // (natal pairs, transit-to-transit pairs) to the wheel.
   // With "contours" on, every transit figure stays drawn, not only the hovered one.
@@ -498,7 +503,9 @@ export default function App() {
             <div className="text-[11px] uppercase tracking-wider text-slate-400">{houseSystem && t(`houseSystem.${houseSystem.key}`)}</div>
           </div>
 
-          {mode === 'transit' && <TransitBar moment={transit} onChange={updateTransit} onPlaceChange={setTransitMoment} onNow={transitNow} />}
+          {forecast && (
+            <TransitBar method={forecast} moment={transit} onChange={updateTransit} onPlaceChange={setTransitMoment} onNow={transitNow} />
+          )}
 
           <ChartWheel
             chartData={chartData}

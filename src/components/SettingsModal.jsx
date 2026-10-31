@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Modal } from './Modal';
 import { Tabs } from './Tabs';
 import { OBJECTS, EXTRA_OBJECTS, EXTRA_GROUPS, ASPECTS, HOUSE_SYSTEMS, NODE_TYPES } from '../utils/ephemeris';
-import { ORB_METHODS, SEPARATING_MODES } from '../utils/aspects';
+import { ORB_METHODS, SEPARATING_MODES, ORB_PRESET_KEYS } from '../utils/aspects';
 import { ELEMENTS } from '../utils/balance';
 import { DEFAULT_SETTINGS } from '../utils/settings';
 import { useI18n } from '../i18n';
@@ -14,7 +14,7 @@ const TABS = ['params', 'objects', 'extras', 'orbs', 'method', 'colors'];
 // and each resets only its own entries (see resetTab).
 const TAB_KEYS = {
   params: ['houseSystem', 'nodeType', 'highContrast'],
-  orbs: ['aspects', 'transitOrbPreset'],
+  orbs: ['aspects', ...Object.values(ORB_PRESET_KEYS)],
   method: ['weights'],
   colors: ['colors'],
 };
@@ -226,22 +226,23 @@ function Segmented({ options, value, onChange }) {
 
 function OrbsTab({ settings, update }) {
   const { t } = useI18n();
-  // Which orb table and formula are being edited: natal chart or transits.
+  // Which orb table and formula are being edited: the natal chart or a forecast method.
   const [chart, setChart] = useState('natal');
   const aspects = settings.aspects;
   const setAspects = (patch) => update({ aspects: { ...aspects, ...patch } });
-  const orbSource = chart === 'natal' ? aspects : settings.transitOrbPreset;
-  const setOrbSource = (patch) =>
-    chart === 'natal' ? setAspects(patch) : update({ transitOrbPreset: { ...settings.transitOrbPreset, ...patch } });
+  const forecast = chart !== 'natal';
+  const presetKey = ORB_PRESET_KEYS[chart];
+  const orbSource = forecast ? settings[presetKey] : aspects;
+  const setOrbSource = (patch) => (forecast ? update({ [presetKey]: { ...orbSource, ...patch } }) : setAspects(patch));
   const setOrb = (objectId, aspectId, value) =>
     setOrbSource({ orbs: { ...orbSource.orbs, [objectId]: { ...orbSource.orbs[objectId], [aspectId]: value } } });
-  const methods = ORB_METHODS.filter((m) => chart === 'transit' || !m.transitOnly);
+  const methods = ORB_METHODS.filter((m) => forecast || !m.transitOnly);
 
   return (
     <div className="space-y-5">
       <Row label={t('settings.orbChart')} hint={t(`settings.orbChart.${chart}Hint`)}>
         <Segmented
-          options={['natal', 'transit'].map((id) => ({ id, label: t(`settings.orbChart.${id}`) }))}
+          options={['natal', ...Object.keys(ORB_PRESET_KEYS)].map((id) => ({ id, label: t(`settings.orbChart.${id}`) }))}
           value={chart}
           onChange={setChart}
         />
@@ -253,8 +254,8 @@ function OrbsTab({ settings, update }) {
           onChange={(method) => setOrbSource({ method })}
         />
       </Row>
-      {chart === 'transit' && (
-        <Row label={t('settings.separating')} hint={t('settings.separatingHint', { orb: settings.transitOrbPreset.separatingOrb })}>
+      {forecast && (
+        <Row label={t('settings.separating')} hint={t('settings.separatingHint', { orb: orbSource.separatingOrb })}>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <label className="flex items-center gap-1 text-sm text-slate-600">
               &gt;
@@ -264,16 +265,14 @@ function OrbsTab({ settings, update }) {
                 min={0}
                 max={5}
                 step={0.1}
-                value={settings.transitOrbPreset.separatingOrb}
-                onChange={(e) =>
-                  setOrbSource({ separatingOrb: Math.min(5, parseNumber(e.target.value, settings.transitOrbPreset.separatingOrb)) })
-                }
+                value={orbSource.separatingOrb}
+                onChange={(e) => setOrbSource({ separatingOrb: Math.min(5, parseNumber(e.target.value, orbSource.separatingOrb)) })}
               />
               °
             </label>
             <Segmented
               options={SEPARATING_MODES.map((id) => ({ id, label: t(`settings.separating.${id}`) }))}
-              value={settings.transitOrbPreset.separating}
+              value={orbSource.separating}
               onChange={(separating) => setOrbSource({ separating })}
             />
           </div>
@@ -281,7 +280,7 @@ function OrbsTab({ settings, update }) {
       )}
       <Row label={t('settings.include')} hint={t(`settings.include.${chart}Hint`)}>
         <div className="flex flex-col items-start gap-1.5">
-          {INCLUDE_GROUPS.filter((g) => chart === 'transit' || g !== 'moon').map((g) => (
+          {INCLUDE_GROUPS.filter((g) => forecast || g !== 'moon').map((g) => (
             <label key={g} className="flex cursor-pointer items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -289,7 +288,7 @@ function OrbsTab({ settings, update }) {
                 checked={Boolean(orbSource.include[g])}
                 onChange={(e) => setOrbSource({ include: { ...orbSource.include, [g]: e.target.checked } })}
               />
-              {t(`settings.include.${g}`)}
+              {t(g === 'moon' && chart === 'progressions' ? 'settings.include.progressionsMoon' : `settings.include.${g}`)}
             </label>
           ))}
         </div>

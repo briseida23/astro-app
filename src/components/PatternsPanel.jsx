@@ -5,7 +5,7 @@ import { Hint } from './Hint';
 
 /** The transit member of a figure, its widest orb to the natal members and whether it is still closing in. */
 function transitContact(pattern, aspects) {
-  const transit = pattern.members.find((m) => m.ring === 'transit');
+  const transit = pattern.members.find((m) => m.ring !== 'natal');
   const natal = pattern.members.filter((m) => m.ring === 'natal');
   const keys = new Set(natal.map((m) => m.key));
   const own = aspects.filter((a) => a.a.key === transit.key && keys.has(a.b.key));
@@ -39,7 +39,7 @@ export function TransitEvents({ patterns, aspects, hover, onHover }) {
             <span aria-hidden className="text-base leading-5">⚠️</span>
             <div>
               <span className="font-semibold">
-                {t('wheel.transitPrefix')}
+                {t(`wheel.${transit.ring}Prefix`)}
                 <Glyph of={transit} /> {t(`object.${transit.id}`)}
               </span>{' '}
               {t('events.completes')} <span className="font-semibold">{t(`pattern.${pattern.type}`)}</span>{' '}
@@ -120,7 +120,7 @@ function TransitPatternControls({ settings, onChange }) {
  */
 export function PatternsPanel({ patterns, hover, onHover, transitSettings, onTransitSettingsChange }) {
   const { t } = useI18n();
-  const ringLabel = (p) => (transitSettings ? t(p.ring === 'transit' ? 'wheel.transitPrefix' : 'wheel.natalPrefix') : '');
+  const ringLabel = (p) => (transitSettings ? t(`wheel.${p.ring}Prefix`) : '');
   const controls = transitSettings && <TransitPatternControls settings={transitSettings} onChange={onTransitSettingsChange} />;
   if (patterns.length === 0) {
     const empty = transitSettings ? (transitSettings.enabled ? 'patterns.transitEmpty' : 'patterns.transitOff') : 'patterns.empty';

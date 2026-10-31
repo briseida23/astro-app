@@ -116,7 +116,7 @@ function spreadPlanets(planets) {
 
 function TooltipBody({ hover, aspects, points, houses, angleCusps, isBiWheel }) {
   const { t } = useI18n();
-  const ringLabel = (p) => (isBiWheel ? t(p.ring === 'transit' ? 'wheel.transitPrefix' : 'wheel.natalPrefix') : '');
+  const ringLabel = (p) => (isBiWheel ? t(`wheel.${p.ring}Prefix`) : '');
   const name = (p) => t(`object.${p.id}`);
   if (hover.type === 'aspect') {
     const aspect = aspects.find((a) => a.id === hover.id);
@@ -244,7 +244,7 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
       const active = focus?.planets.has(planet.key);
       const dimmed = focus && !active;
       const color = planet.ink ?? ink(elementColors[planet.element]);
-      const isTransit = planet.ring === 'transit';
+      const isTransit = planet.ring !== 'natal';
       return (
         <g key={planet.key} {...hoverProps({ type: 'planet', key: planet.key })} opacity={dimmed ? 0.45 : 1}>
           <line x1={tickA.x} y1={tickA.y} x2={tickB.x} y2={tickB.y} stroke={color} strokeWidth={1.5} />

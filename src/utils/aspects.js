@@ -13,8 +13,8 @@ const NODE_IDS = new Set(['node', 'southNode', 'lilith']);
 
 /** Whether point `p` may form aspects under `include` ({ angles, nodes, extras, moon? }). */
 function takesPart(p, include) {
-  // The transiting Moon (~13°/day) is optional: it sets the mood of the day, not events.
-  if (p.ring === 'transit' && p.id === 'moon') return include.moon !== false;
+  // The forecast Moon is optional: the transiting one (~13°/day) sets the mood of the day, not events.
+  if (p.ring !== 'natal' && p.id === 'moon') return include.moon !== false;
   if (CORE_IDS.has(p.id)) return true;
   if (ANGLE_IDS.has(p.id)) return include.angles;
   if (NODE_IDS.has(p.id)) return include.nodes;
@@ -93,6 +93,21 @@ export const DEFAULT_TRANSIT_ORB_SETTINGS = {
   separating: 'hide',
   separatingOrb: 0.5,
 };
+
+/**
+ * Secondary progressions: 1° for every point, the progressed Moon (~1° a month) and angles
+ * included; only applying and exact contacts count.
+ */
+export const DEFAULT_PROGRESSION_ORB_SETTINGS = {
+  method: 'transit',
+  orbs: Object.fromEntries(ALL_OBJECTS.map((o) => [o.id, Object.fromEntries(ASPECTS.map((a) => [a.id, 1]))])),
+  include: { angles: true, nodes: false, extras: false, moon: true },
+  separating: 'hide',
+  separatingOrb: 0.2,
+};
+
+/** Forecast method → settings key of its orb preset. */
+export const ORB_PRESET_KEYS = { transit: 'transitOrbPreset', progressions: 'progressionOrbPreset' };
 
 export const SEPARATING_MODES = ['show', 'dim', 'hide'];
 

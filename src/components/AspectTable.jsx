@@ -8,11 +8,11 @@ export function AspectTable({ aspects, aspectColors, isBiWheel, focus, onHover }
   const { t } = useI18n();
   // An aspect is read with the houses of both planets: transits are placed in the natal houses.
   const houseOf = (p) => (p.house ? ROMAN[p.house - 1] : '');
-  const pointLabel = (p, prefix) =>
-    `${isBiWheel ? t(prefix) : ''}${t(`object.${p.id}`)}${p.house ? ` · ${houseOf(p)} ${t('table.house').toLowerCase()}` : ''}`;
-  const point = (p, prefix) => (
+  const pointLabel = (p) =>
+    `${isBiWheel ? t(`wheel.${p.ring}Prefix`) : ''}${t(`object.${p.id}`)}${p.house ? ` · ${houseOf(p)} ${t('table.house').toLowerCase()}` : ''}`;
+  const point = (p) => (
     <>
-      <Hint label={pointLabel(p, prefix)}>
+      <Hint label={pointLabel(p)}>
         <Glyph of={p} className="inline-block w-6 text-center" symbolClass="astro text-base" />
       </Hint>
       <span className="inline-block w-8 font-display text-xs text-slate-400">{houseOf(p)}</span>
@@ -47,13 +47,13 @@ export function AspectTable({ aspects, aspectColors, isBiWheel, focus, onHover }
               {/* "☉ VII ☌ ☽ I": first object (the transit one under transits) with its house, aspect, second object. */}
               <td className="px-3 py-2 whitespace-nowrap">
                 <span className="inline-flex items-center">
-                  {point(a.a, 'wheel.transitPrefix')}
+                  {point(a.a)}
                   <Hint label={t(`aspect.${a.type}`)}>
                     <span className="astro w-6 text-center text-base" style={{ color: a.type === 'opposition' ? undefined : aspectColors[a.type] }}>
                       {a.glyph}
                     </span>
                   </Hint>
-                  {point(a.b, 'wheel.natalPrefix')}
+                  {point(a.b)}
                   {a.exact && <span className="rounded bg-slate-900 px-1 py-px text-[9px] font-semibold uppercase text-white">{t('aspects.exactShort')}</span>}
                 </span>
               </td>

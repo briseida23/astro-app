@@ -130,7 +130,7 @@ export function DynamicsPanel({ natal, moment, dynamics, onDynamicsChange, onSte
           <ul className="space-y-1 text-sm">
             {exact.map((a) => (
               <li key={a.id} className="flex items-center gap-1.5">
-                <Hint label={`${natal ? '' : t('wheel.transitPrefix')}${t(`object.${a.a.id}`)}`}>
+                <Hint label={`${natal ? '' : t(`wheel.${a.a.ring}Prefix`)}${t(`object.${a.a.id}`)}`}>
                   <Glyph of={a.a} className="inline-block w-6 text-center" symbolClass="astro text-base" />
                 </Hint>
                 <Hint label={t(`aspect.${a.type}`)}>
