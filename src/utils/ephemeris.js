@@ -47,6 +47,8 @@ export const PLANETS = [
   { id: 'neptune', body: Planet.Neptune, glyph: '♆' },
   { id: 'pluto', body: Planet.Pluto, glyph: '♇' },
   { id: 'node', body: LunarPoint.TrueNode, glyph: '☊' },
+  // Always exactly opposite the North Node: the nodal axis is read as a whole.
+  { id: 'southNode', body: LunarPoint.TrueNode, glyph: '☋', opposite: true },
   { id: 'lilith', body: LunarPoint.MeanApogee, glyph: '⚸' },
 ];
 
@@ -182,6 +184,8 @@ function houseOf(longitude, cusps) {
   return 1;
 }
 
+const NODE_IDS = new Set(['node', 'southNode']);
+
 function makePoint(ring, def, longitude, speed, house) {
   const lon = normalize(longitude);
   const signIndex = Math.floor(lon / 30);
@@ -196,8 +200,8 @@ function makePoint(ring, def, longitude, speed, house) {
     ink: def.ink ?? null,
     longitude: lon,
     speed,
-    // The node moves backwards almost all the time, so its "R" carries no information.
-    retrograde: speed < 0 && def.id !== 'node',
+    // The nodes move backwards almost all the time, so their "R" carries no information.
+    retrograde: speed < 0 && !NODE_IDS.has(def.id),
     signIndex,
     sign,
     element: sign.element,
@@ -218,9 +222,10 @@ function calculatePlanets(jd, ring, cusps, extras, nodeType) {
   const defs = [...PLANETS, ...EXTRA_OBJECTS.filter((o) => extras.has(o.id))];
   return defs.flatMap((p) => {
     try {
-      const body = p.id === 'node' && nodeType === 'mean' ? LunarPoint.MeanNode : p.body;
+      const body = NODE_IDS.has(p.id) && nodeType === 'mean' ? LunarPoint.MeanNode : p.body;
       const pos = swe.calculatePosition(jd, body);
-      return [makePoint(ring, p, pos.longitude, pos.longitudeSpeed, houseOf(normalize(pos.longitude), cusps))];
+      const lon = normalize(pos.longitude + (p.opposite ? 180 : 0));
+      return [makePoint(ring, p, lon, pos.longitudeSpeed, houseOf(lon, cusps))];
     } catch {
       return [];
     }

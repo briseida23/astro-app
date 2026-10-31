@@ -9,7 +9,7 @@ export const PLANET_IDS = new Set([
 // Planets and Chiron always take part in aspects; the other groups are switched on per chart.
 const CORE_IDS = new Set([...PLANET_IDS, 'chiron']);
 const ANGLE_IDS = new Set(['ascendant', 'mc']);
-const NODE_IDS = new Set(['node', 'lilith']);
+const NODE_IDS = new Set(['node', 'southNode', 'lilith']);
 
 /** Whether point `p` may form aspects under `include` ({ angles, nodes, extras, moon? }). */
 function takesPart(p, include) {
@@ -41,6 +41,7 @@ const BASE_ORBS = {
   neptune: 4,
   pluto: 4,
   node: 2,
+  southNode: 2,
   lilith: 2,
   chiron: 2,
 };
@@ -154,6 +155,8 @@ export function findAspects(points, settings, others = null) {
   }
   for (let i = 0; i < points.length; i++) {
     for (let j = i + 1; j < points.length; j++) {
+      // The North and South Node are one axis, always exactly opposite: not an aspect.
+      if (points[i].id === 'node' && points[j].id === 'southNode') continue;
       const aspect = aspectBetween(points[i], points[j], settings);
       if (aspect) aspects.push(aspect);
     }
