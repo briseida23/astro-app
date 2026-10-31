@@ -637,36 +637,42 @@ export default function App() {
         {/* Wheel Chart Component */}
         <section className={`card flex flex-col gap-4 p-4 sm:p-6 ${secondView ? 'lg:self-start' : 'lg:sticky lg:top-6 lg:self-start'}`}>
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-1">
+            {/* A return is named with its own moment and place; the birth data stay one click away. */}
             <button type="button" onClick={() => setBirthOpen(true)} className="text-left">
-              <div className="font-display text-xl font-semibold">{birth.name || placeName(birth, t)}</div>
-              <div className="text-xs tabular-nums text-slate-500">
-                {birth.name && `${placeName(birth, t)} · `}
-                {formatDate(birth.date, lang)} · {birth.time} · {formatOffset(birth.utcOffset)}
-              </div>
+              {returnMoment ? (
+                <>
+                  <div className="font-display text-xl font-semibold">
+                    {t(`mode.${returnKind}`)}
+                    {birth.name && ` · ${birth.name}`}
+                  </div>
+                  <div className="text-xs tabular-nums text-slate-500">
+                    {placeName(transit, t)} · {formatDate(returnMoment.date, lang)} · {returnMoment.time} · {formatOffset(returnMoment.utcOffset)}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="font-display text-xl font-semibold">{birth.name || placeName(birth, t)}</div>
+                  <div className="text-xs tabular-nums text-slate-500">
+                    {birth.name && `${placeName(birth, t)} · `}
+                    {formatDate(birth.date, lang)} · {birth.time} · {formatOffset(birth.utcOffset)}
+                  </div>
+                </>
+              )}
             </button>
             <div className="flex items-center gap-3">
-              {wide && (
-                <label className="flex items-center gap-2 text-xs text-slate-500">
-                  {t('second.label')}
-                  <select className="input-sm" value={secondMode ?? 'none'} onChange={(e) => setSecond(e.target.value)}>
-                    <option value="none">{t('second.none')}</option>
-                    {MODES.filter((id) => id !== mode).map((id) => (
-                      <option key={id} value={id}>{t(`mode.${id}`)}</option>
-                    ))}
-                  </select>
-                </label>
+              {/* Opens the second wheel; which chart it shows is chosen in its own title. */}
+              {wide && !secondView && (
+                <button
+                  type="button"
+                  className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-200"
+                  onClick={() => setSecond(mode === 'solar' ? 'natal' : 'solar')}
+                >
+                  + {t('second.label')}
+                </button>
               )}
               <div className="text-[11px] uppercase tracking-wider text-slate-400">{houseSystem && t(`houseSystem.${houseSystem.key}`)}</div>
             </div>
           </div>
-          {returnMoment && (
-            <div className="-mt-2 px-1">
-              <div className="font-display text-lg font-semibold">{t(`mode.${returnKind}`)}</div>
-              <div className="text-xs tabular-nums text-slate-500">
-                {placeName(transit, t)} · {formatDate(returnMoment.date, lang)} · {returnMoment.time} · {formatOffset(returnMoment.utcOffset)}
-              </div>
-            </div>
-          )}
 
           {!secondView && forecastBar}
 
@@ -691,7 +697,18 @@ export default function App() {
         {secondView && (
           <section className="card flex flex-col gap-4 p-4 sm:p-6 lg:self-start">
             <div className="px-1">
-              <div className="font-display text-xl font-semibold">{t(`mode.${secondMode}`)}</div>
+              {/* The title is the chart picker: any mode but the main one, or none to close the wheel. */}
+              <select
+                aria-label={t('second.label')}
+                className="-ml-1 cursor-pointer rounded-md bg-transparent py-0.5 pl-1 pr-1 font-display text-xl font-semibold hover:bg-slate-50"
+                value={secondMode}
+                onChange={(e) => setSecond(e.target.value)}
+              >
+                {MODES.filter((id) => id !== mode).map((id) => (
+                  <option key={id} value={id}>{t(`mode.${id}`)}</option>
+                ))}
+                <option value="none">{t('second.close')}</option>
+              </select>
               <div className="text-xs tabular-nums text-slate-500">
                 {placeName(secondView.moment, t)} · {formatDate(secondView.moment.date, lang)} · {secondView.moment.time} ·{' '}
                 {formatOffset(secondView.moment.utcOffset)}
