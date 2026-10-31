@@ -479,9 +479,10 @@ function sampleStep(method, id) {
 /**
  * Moments between `from` and `to` (Dates) when object `mover`, moved by `method`, makes one of
  * `aspects` exactly to one of `targets` ({ key, longitude }; a target with `cusp` set, a house number, is
- * that natal cusp and takes only the conjunction: the ingress into that house). Sampled, then refined by
- * bisection to a minute: [{ date, target, aspect, house, retrograde }], earliest first; `house` is
- * the house entered at a cusp, which is the one before it when the mover goes backwards.
+ * that natal cusp and one with `signStart`, a sign index, that sign's first degree: both take only the
+ * conjunction, the ingress into that house or sign). Sampled, then refined by
+ * bisection to a minute: [{ date, target, aspect, house, sign, retrograde }], earliest first; `house`
+ * and `sign` are the ones entered at a boundary: the one before it when the mover goes backwards.
  * @param {{ houseSystem, pointTypes, directions: { arc, converse } }} options
  */
 export function findContacts(natal, method, mover, targets, aspects, from, to, options) {
@@ -497,7 +498,8 @@ export function findContacts(natal, method, mover, targets, aspects, from, to, o
   const toDate = (jd) => new Date(from.getTime() + (jd - fromJd) * 86400000);
   const hits = [];
   for (const target of targets) {
-    for (const aspect of target.cusp ? aspects.filter((a) => a.angle === 0) : aspects) {
+    const boundary = target.cusp || target.signStart != null;
+    for (const aspect of boundary ? aspects.filter((a) => a.angle === 0) : aspects) {
       // Both sides of the target, once for the conjunction and the opposition.
       const goals = aspect.angle % 180 === 0 ? [target.longitude + aspect.angle] : [target.longitude + aspect.angle, target.longitude - aspect.angle];
       for (const goal of goals) {
@@ -517,9 +519,10 @@ export function findContacts(natal, method, mover, targets, aspects, from, to, o
                 fa = fm;
               } else b = m;
             }
-            // Crossing a cusp backwards enters the house before it.
+            // Crossing a cusp or a sign's start backwards enters the house or sign before it.
             const house = target.cusp && (prev > 0 ? ((target.cusp + 10) % 12) + 1 : target.cusp);
-            hits.push({ date: toDate((a + b) / 2), target, aspect, house, retrograde: prev > 0 });
+            const sign = target.signStart != null ? SIGNS[prev > 0 ? (target.signStart + 11) % 12 : target.signStart] : undefined;
+            hits.push({ date: toDate((a + b) / 2), target, aspect, house, sign, retrograde: prev > 0 });
           }
           prev = cur;
         }
@@ -709,6 +712,67 @@ export function rectify(birth, from, to, stepSeconds, events, { houseSystem, arc
     results.push({ date: new Date(from.getTime() + i * stepSeconds * 1000), score, orbs, percent: (score / maxScore) * 100, matches });
   }
   return results;
+}
+
+/**
+ * Transiting planets `ids` entering natal houses and signs between `from` and `to`:
+ * [{ date, mover, kind: 'house' | 'sign', house?, sign?, retrograde }], earliest first.
+ */
+export function transitIngresses(natal, ids, from, to, options) {
+  const boundaries = [
+    ...natal.houses.map((longitude, i) => ({ key: `cusp:${i + 1}`, longitude, cusp: i + 1 })),
+    ...SIGNS.map((sign, i) => ({ key: `sign:${sign.id}`, longitude: i * 30, signStart: i })),
+  ];
+  const conjunction = ASPECTS.filter((a) => a.angle === 0);
+  return ids
+    .flatMap((mover) =>
+      findContacts(natal, 'transit', mover, boundaries, conjunction, from, to, options).map((h) => ({
+        date: h.date,
+        mover,
+        kind: h.house ? 'house' : 'sign',
+        house: h.house,
+        sign: h.sign,
+        retrograde: h.retrograde,
+      }))
+    )
+    .sort((a, b) => a.date - b.date);
+}
+
+/** A Julian day (UT) as a Date. */
+const jdToDate = (jd) => new Date((jd - 2440587.5) * 86400000);
+
+// Eclipses touch natal points by conjunction and opposition within 3°, by square within 2°.
+const ECLIPSE_ORBS = { conjunction: 3, opposition: 3, square: 2 };
+
+/**
+ * Solar and lunar eclipses within `years` of `date`: [{ kind: 'solar' | 'lunar', type, date,
+ * longitude, house, contacts: [{ point, aspect, orb }] }], earliest first. The longitude is the
+ * Sun's for a solar eclipse and the Moon's for a lunar one; `house` is the natal house it falls in
+ * and `contacts` its aspects to `points` (natal points).
+ */
+export function eclipsesAround(natal, date, years, points) {
+  const center = swe.dateToJulianDay(date);
+  const to = center + years * TROPICAL_YEAR;
+  const list = [];
+  for (const kind of ['solar', 'lunar']) {
+    let jd = center - years * TROPICAL_YEAR;
+    for (;;) {
+      const e = kind === 'solar' ? swe.findNextSolarEclipse(jd) : swe.findNextLunarEclipse(jd);
+      if (e.maximum > to) break;
+      const longitude = normalize(swe.calculatePosition(e.maximum, kind === 'solar' ? Planet.Sun : Planet.Moon).longitude);
+      const type =
+        kind === 'solar'
+          ? e.isTotal() ? 'total' : e.isAnnular() ? 'annular' : e.isHybrid() ? 'hybrid' : 'partial'
+          : e.isTotal() ? 'total' : e.isPartial() ? 'partial' : 'penumbral';
+      const contacts = points.flatMap((point) => {
+        const sep = Math.abs(signedDiff(longitude, point.longitude));
+        return ASPECTS.filter((a) => ECLIPSE_ORBS[a.id] && Math.abs(sep - a.angle) <= ECLIPSE_ORBS[a.id]).map((aspect) => ({ point, aspect, orb: Math.abs(sep - aspect.angle) }));
+      });
+      list.push({ kind, type, date: jdToDate(e.maximum), longitude, house: houseOf(longitude, natal.houses), contacts: contacts.sort((a, b) => a.orb - b.orb) });
+      jd = e.maximum + 1;
+    }
+  }
+  return list.sort((a, b) => a.date - b.date);
 }
 
 // Return methods: the body whose return to its natal longitude starts the chart, and its mean speed (°/day).

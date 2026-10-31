@@ -198,7 +198,7 @@ function TooltipBody({ hover, aspects, points, houses, angleCusps, isBiWheel }) 
   return null;
 }
 
-export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects, elementColors, aspectColors, hover, focus, onHover, highContrast = false }) {
+export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects, elementColors, aspectColors, hover, focus, onHover, mark = null, highContrast = false }) {
   const { LINE, MUTED, LABEL, fs, glyphScale, ink, aspectWidth, cuspWidth, glyphStroke } = theme(highContrast);
   const [pointer, setPointer] = useState(null);
   const { t } = useI18n();
@@ -431,6 +431,20 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
 
         {renderPlanets(planets, layout.natalGlyph, layout.natalDegree)}
         {isBiWheel && renderPlanets(transitPlanets, layout.transitGlyph, layout.transitDegree, true)}
+
+        {/* An eclipse's degree, from outside the zodiac to the middle: a dark disc for the Sun, half a disc for the Moon. */}
+        {mark && (() => {
+          const outer = point(mark.longitude, R_OUTER + 16, ascendant);
+          const a = point(mark.longitude, R_OUTER + 6, ascendant);
+          const b = point(mark.longitude, 70, ascendant);
+          return (
+            <g pointerEvents="none">
+              <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#D97706" strokeWidth={1.5} strokeDasharray="5 4" />
+              <circle cx={outer.x} cy={outer.y} r={8} fill={mark.kind === 'solar' ? '#0F172A' : '#ffffff'} stroke="#0F172A" strokeWidth={1.5} />
+              {mark.kind === 'lunar' && <path d={`M${outer.x},${outer.y - 8} A8,8 0 0,1 ${outer.x},${outer.y + 8} Z`} fill="#0F172A" />}
+            </g>
+          );
+        })()}
       </svg>
 
       {pointer && hover && hover.type !== 'pattern' && (

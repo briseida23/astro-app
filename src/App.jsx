@@ -40,6 +40,7 @@ import { DynamicsPanel } from './components/DynamicsPanel';
 import { SearchPanel } from './components/SearchPanel';
 import { EventsPanel } from './components/EventsPanel';
 import { RectificationPanel } from './components/RectificationPanel';
+import { CalendarPanel } from './components/CalendarPanel';
 import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
 import { AccountMenu } from './components/AccountMenu';
@@ -221,6 +222,8 @@ export default function App() {
   const [settings, setSettings] = useState(loadSettings);
   const [hover, setHover] = useState(null);
   const [tab, setTab] = useState('dynamics');
+  // The eclipse hovered in the Calendar tab, marked on the main wheel.
+  const [eclipseMark, setEclipseMark] = useState(null);
   const [dynamics, setDynamics] = useState({ step: 1, unit: 'day' });
   const [birthOpen, setBirthOpen] = useState(false);
   // false, or the settings tab to open on.
@@ -588,6 +591,7 @@ export default function App() {
     { id: 'aspects', label: t('tab.aspects') },
     { id: 'patterns', label: t('tab.patterns'), badge: patterns.length },
     { id: 'search', label: t('tab.search') },
+    { id: 'calendar', label: t('tab.calendar') },
     { id: 'events', label: t('tab.events') },
   ];
   // The open client's life events, kept with its saved chart.
@@ -801,6 +805,7 @@ export default function App() {
             hover={hover}
             focus={focus}
             onHover={setHover}
+            mark={activeTab === 'calendar' ? eclipseMark : null}
             highContrast={settings.highContrast}
           />
           {secondView && forecastBar}
@@ -964,6 +969,17 @@ export default function App() {
               defaultMethod={forecast}
               aspectColors={colors.aspects}
               onPick={openContact}
+            />
+          )}
+          {activeTab === 'calendar' && (
+            <CalendarPanel
+              natal={chartData}
+              points={birthPoints}
+              moment={transit}
+              options={calcOptions}
+              aspectColors={colors.aspects}
+              onOpen={(ms) => openContact('transit', ms)}
+              onEclipseHover={setEclipseMark}
             />
           )}
           {activeTab === 'events' && (
