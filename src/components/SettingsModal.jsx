@@ -289,7 +289,7 @@ function OrbsTab({ settings, update }) {
                 checked={Boolean(orbSource.include[g])}
                 onChange={(e) => setOrbSource({ include: { ...orbSource.include, [g]: e.target.checked } })}
               />
-              {t(g === 'moon' && chart === 'progressions' ? 'settings.include.progressionsMoon' : `settings.include.${g}`)}
+              {t(g === 'moon' && chart !== 'transit' ? `settings.include.${chart}Moon` : `settings.include.${g}`)}
             </label>
           ))}
         </div>

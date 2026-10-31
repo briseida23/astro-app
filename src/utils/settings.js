@@ -1,6 +1,12 @@
 import { HouseSystem } from '@swisseph/browser';
 import { OBJECTS, EXTRA_OBJECTS, DEFAULT_EXTRAS } from './ephemeris';
-import { DEFAULT_ASPECT_SETTINGS, DEFAULT_TRANSIT_ORB_SETTINGS, DEFAULT_PROGRESSION_ORB_SETTINGS, DEFAULT_RETURN_ORB_SETTINGS } from './aspects';
+import {
+  DEFAULT_ASPECT_SETTINGS,
+  DEFAULT_TRANSIT_ORB_SETTINGS,
+  DEFAULT_PROGRESSION_ORB_SETTINGS,
+  DEFAULT_DIRECTION_ORB_SETTINGS,
+  DEFAULT_RETURN_ORB_SETTINGS,
+} from './aspects';
 import { DEFAULT_WEIGHTS, PREVIOUS_DEFAULT_WEIGHTS } from './balance';
 
 export const DEFAULT_ELEMENT_COLORS = {
@@ -33,6 +39,9 @@ export const DEFAULT_SETTINGS = {
   transitOrbPreset: DEFAULT_TRANSIT_ORB_SETTINGS,
   progressionOrbPreset: DEFAULT_PROGRESSION_ORB_SETTINGS,
   returnOrbPreset: DEFAULT_RETURN_ORB_SETTINGS,
+  directionOrbPreset: DEFAULT_DIRECTION_ORB_SETTINGS,
+  // Directions: 1° a year by default (Naibod or solar arc as options), direct or converse.
+  directions: { arc: 'symbolic', converse: false },
   colors: { elements: DEFAULT_ELEMENT_COLORS, aspects: DEFAULT_ASPECT_COLORS },
   // Figures that transits complete with natal planets; transit aspects use the narrow orb.
   transitPatterns: { enabled: true, orb: 1, contours: false },

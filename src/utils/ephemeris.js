@@ -315,6 +315,42 @@ export function calculateProgressions(natal, date, houseSystem = HouseSystem.Pla
   ];
 }
 
+// The eight phases of the Sun–Moon cycle, 45° each, from the New Moon on.
+export const LUNATION_PHASES = ['new', 'crescent', 'firstQuarter', 'gibbous', 'full', 'disseminating', 'lastQuarter', 'balsamic'];
+
+/** Lunation phase of a Moon–Sun pair: { phase, angle } with the Moon's elongation from the Sun, 0…360°. */
+export function lunationPhase(sun, moon) {
+  const angle = normalize(moon.longitude - sun.longitude);
+  return { phase: LUNATION_PHASES[Math.floor(angle / 45)], angle };
+}
+
+// Directions: the arc added to every natal point, in degrees per year of life (null: solar arc).
+export const DIRECTION_ARCS = { symbolic: 1, naibod: 0.985647, solar: null };
+
+/**
+ * Directions for `date`: every natal point moved by the same arc and placed in the natal houses.
+ * The arc is 1° a year (symbolic), Naibod's mean solar motion, or the solar arc (progressed minus
+ * natal Sun); converse directions subtract it.
+ * @param {ReturnType<typeof calculateNatal>} natal
+ * @param {{ arc: keyof DIRECTION_ARCS, converse: boolean }} options
+ */
+export function calculateDirections(natal, date, { arc: arcType, converse }) {
+  const birthJd = swe.dateToJulianDay(natal.date);
+  const years = (swe.dateToJulianDay(date) - birthJd) / TROPICAL_YEAR;
+  const perYear = DIRECTION_ARCS[arcType];
+  const arc =
+    perYear === null
+      ? signedDiff(swe.calculatePosition(birthJd + years, Planet.Sun).longitude, swe.calculatePosition(birthJd, Planet.Sun).longitude)
+      : years * perYear;
+  const sign = converse ? -1 : 1;
+  // About 1° a year either way: enough for applying/separating.
+  const speed = sign / TROPICAL_YEAR;
+  return [...natal.planets, ...natal.angles].map((p) => {
+    const lon = normalize(p.longitude + sign * arc);
+    return makePoint('directions', p, lon, speed, houseOf(lon, natal.houses));
+  });
+}
+
 // Return methods: the body whose return to its natal longitude starts the chart, and its mean speed (°/day).
 export const RETURNS = {
   solar: { body: Planet.Sun, speed: 0.98561 },

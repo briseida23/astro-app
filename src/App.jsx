@@ -6,6 +6,9 @@ import {
   calculateTransitPlanets,
   calculateProgressions,
   calculateReturn,
+  calculateDirections,
+  lunationPhase,
+  DIRECTION_ARCS,
   RETURNS,
   toUtcDate,
   offsetForZone,
@@ -148,7 +151,7 @@ function pointFocus(hover, aspects, planets) {
 }
 
 // Natal chart alone, or with the ring of a forecast method; labels are `mode.<id>`.
-const MODES = ['natal', 'transit', 'progressions', 'solar', 'lunar'];
+const MODES = ['natal', 'transit', 'progressions', 'directions', 'solar', 'lunar'];
 
 function IconButton({ onClick, children, label }) {
   return (
@@ -348,8 +351,8 @@ export default function App() {
 
   const { latitude: transitLat, longitude: transitLon } = transit;
   // Forecast methods draw an outer ring for the moment in the transit bar: transits at the
-  // transit place, progressions for the birth place.
-  const forecast = mode === 'transit' || mode === 'progressions' ? mode : null;
+  // transit place, progressions and directions from the birth chart.
+  const forecast = mode in ORB_PRESET_KEYS ? mode : null;
   // Solar and lunar returns replace the chart: the last return before the moment in the bar, at its place.
   const returnKind = RETURNS[mode] ? mode : null;
   const returnChart = useMemo(() => {
@@ -375,12 +378,12 @@ export default function App() {
     if (!forecast || !transitMoment.date) return null;
     const date = toUtcDate(transitMoment.date, transitMoment.time, transitMoment.utcOffset);
     if (Number.isNaN(date.getTime())) return null;
-    const points =
-      forecast === 'progressions'
-        ? calculateProgressions(chartData, date, settings.houseSystem, extras, settings.nodeType)
-        : calculateTransitPlanets(date, chartData.houses, { latitude: transitLat, longitude: transitLon }, settings.houseSystem, extras, settings.nodeType);
+    let points;
+    if (forecast === 'progressions') points = calculateProgressions(chartData, date, settings.houseSystem, extras, settings.nodeType);
+    else if (forecast === 'directions') points = calculateDirections(chartData, date, settings.directions);
+    else points = calculateTransitPlanets(date, chartData.houses, { latitude: transitLat, longitude: transitLon }, settings.houseSystem, extras, settings.nodeType);
     return points.filter((p) => visible[p.id]);
-  }, [forecast, transitMoment, transitLat, transitLon, chartData, visible, settings.houseSystem, extras, settings.nodeType]);
+  }, [forecast, transitMoment, transitLat, transitLon, chartData, visible, settings.houseSystem, extras, settings.nodeType, settings.directions]);
 
   // Each forecast method has its own orb table and formula; the rest of the aspect settings is shared.
   const orbPreset = settings[ORB_PRESET_KEYS[forecast] ?? ORB_PRESET_KEYS.transit];
@@ -392,6 +395,10 @@ export default function App() {
 
   const isBiWheel = Boolean(transitPlanets);
   const visibleAspects = transitAspects ?? natalAspects;
+  // Progressed lunation: where the progressed Moon stands in its cycle with the progressed Sun.
+  const progressedSun = forecast === 'progressions' && transitPlanets.find((p) => p.id === 'sun');
+  const progressedMoon = forecast === 'progressions' && transitPlanets.find((p) => p.id === 'moon');
+  const lunation = progressedSun && progressedMoon ? lunationPhase(progressedSun, progressedMoon) : null;
 
   // The second wheel: a solar or lunar return with its own houses, at the transit place.
   const wide = useSyncExternalStore(subscribeWide, isWide);
@@ -596,7 +603,35 @@ export default function App() {
           )}
 
           {(forecast || returnKind) && (
-            <TransitBar method={mode} moment={transit} onChange={updateTransit} onPlaceChange={setTransitMoment} onNow={transitNow} />
+            <TransitBar method={mode} moment={transit} onChange={updateTransit} onPlaceChange={setTransitMoment} onNow={transitNow}>
+              {mode === 'directions' && (
+                <>
+                  <label className="field">
+                    <span>{t('directions.arc')}</span>
+                    <select
+                      className="input-sm"
+                      value={settings.directions.arc}
+                      onChange={(e) => setSettings((s) => ({ ...s, directions: { ...s.directions, arc: e.target.value } }))}
+                    >
+                      {Object.keys(DIRECTION_ARCS).map((id) => (
+                        <option key={id} value={id}>{t(`directions.arc.${id}`)}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span>{t('directions.direction')}</span>
+                    <select
+                      className="input-sm"
+                      value={settings.directions.converse ? 'converse' : 'direct'}
+                      onChange={(e) => setSettings((s) => ({ ...s, directions: { ...s.directions, converse: e.target.value === 'converse' } }))}
+                    >
+                      <option value="direct">{t('directions.direct')}</option>
+                      <option value="converse">{t('directions.converse')}</option>
+                    </select>
+                  </label>
+                </>
+              )}
+            </TransitBar>
           )}
 
           <ChartWheel
@@ -658,6 +693,7 @@ export default function App() {
               onNow={mode === 'natal' ? natalNow : transitNow}
               aspects={visibleAspects}
               aspectColors={colors.aspects}
+              lunation={lunation}
             />
           )}
           {activeTab === 'planets' && (

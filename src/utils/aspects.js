@@ -123,8 +123,17 @@ export const DEFAULT_RETURN_ORB_SETTINGS = {
   include: { angles: true, nodes: true, extras: false },
 };
 
+/** Directions: 1° for every point (major aspects only, as the aspect list holds). */
+export const DEFAULT_DIRECTION_ORB_SETTINGS = {
+  method: 'transit',
+  orbs: Object.fromEntries(ALL_OBJECTS.map((o) => [o.id, Object.fromEntries(ASPECTS.map((a) => [a.id, 1]))])),
+  include: { angles: true, nodes: false, extras: false, moon: true },
+  separating: 'show',
+  separatingOrb: 0.2,
+};
+
 /** Forecast method → settings key of its orb preset. */
-export const ORB_PRESET_KEYS = { transit: 'transitOrbPreset', progressions: 'progressionOrbPreset' };
+export const ORB_PRESET_KEYS = { transit: 'transitOrbPreset', progressions: 'progressionOrbPreset', directions: 'directionOrbPreset' };
 
 export const SEPARATING_MODES = ['show', 'dim', 'hide'];
 

@@ -47,10 +47,11 @@ function TransitPlaceModal({ open, onClose, onSelect }) {
 
 /**
  * Date, time, zone and place of the forecast moment. `onChange` gets date/time/zone edits,
- * `onPlaceChange` a moment with a newly chosen place. Progressions are cast for the birth
- * place, so `method` "progressions" has no place; returns use it as the return place.
+ * `onPlaceChange` a moment with a newly chosen place. Progressions and directions come from the
+ * birth chart, so they have no place; returns use it as the return place. `children` are the
+ * method's own controls.
  */
-export function TransitBar({ method = 'transit', moment, onChange, onPlaceChange, onNow }) {
+export function TransitBar({ method = 'transit', moment, onChange, onPlaceChange, onNow, children }) {
   const { t } = useI18n();
   const [placeOpen, setPlaceOpen] = useState(false);
   // Changing the date or time re-derives the offset from the place's time zone (DST included).
@@ -75,7 +76,7 @@ export function TransitBar({ method = 'transit', moment, onChange, onPlaceChange
         <span>{t('transit.zone')}</span>
         <OffsetSelect className="input-sm" value={moment.utcOffset} onChange={(utcOffset) => set({ utcOffset })} />
       </label>
-      {method !== 'progressions' && (
+      {method !== 'progressions' && method !== 'directions' && (
         <div className="field min-w-0">
           <span>{t('transit.place')}</span>
           <button
@@ -88,6 +89,7 @@ export function TransitBar({ method = 'transit', moment, onChange, onPlaceChange
           </button>
         </div>
       )}
+      {children}
       <button type="button" className="btn-ghost mb-1" onClick={onNow}>
         {t('transit.now')}
       </button>
