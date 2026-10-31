@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Modal } from './Modal';
 import { Tabs } from './Tabs';
-import { OBJECTS, EXTRA_OBJECTS, EXTRA_GROUPS, ASPECTS, HOUSE_SYSTEMS, NODE_TYPES } from '../utils/ephemeris';
+import { OBJECTS, EXTRA_OBJECTS, EXTRA_GROUPS, ASPECTS, HOUSE_SYSTEMS, NODE_TYPES, LILITH_TYPES } from '../utils/ephemeris';
 import { ORB_METHODS, SEPARATING_MODES, ORB_PRESET_KEYS } from '../utils/aspects';
 import { ELEMENTS } from '../utils/balance';
 import { DEFAULT_SETTINGS } from '../utils/settings';
@@ -13,7 +13,7 @@ const TABS = ['params', 'objects', 'extras', 'orbs', 'method', 'colors'];
 // Which settings keys each tab owns, for "reset tab". Objects and extras share `visible`
 // and each resets only its own entries (see resetTab).
 const TAB_KEYS = {
-  params: ['houseSystem', 'nodeType', 'highContrast'],
+  params: ['houseSystem', 'nodeType', 'lilithType', 'highContrast'],
   orbs: ['aspects', 'returnOrbPreset', ...Object.values(ORB_PRESET_KEYS)],
   method: ['weights'],
   colors: ['colors'],
@@ -71,6 +71,13 @@ function ParamsTab({ settings, update }) {
         <select className="input" value={settings.nodeType} onChange={(e) => update({ nodeType: e.target.value })}>
           {NODE_TYPES.map((id) => (
             <option key={id} value={id}>{t(`nodeType.${id}`)}</option>
+          ))}
+        </select>
+      </Row>
+      <Row label={t('settings.lilithType')} hint={t('settings.lilithTypeHint')}>
+        <select className="input" value={settings.lilithType} onChange={(e) => update({ lilithType: e.target.value })}>
+          {LILITH_TYPES.map((id) => (
+            <option key={id} value={id}>{t(`lilithType.${id}`)}</option>
           ))}
         </select>
       </Row>

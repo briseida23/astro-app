@@ -213,17 +213,27 @@ function makePoint(ring, def, longitude, speed, house) {
 
 /** Lunar node calculations offered in the settings: the mean node (default) or the true (osculating) one. */
 export const NODE_TYPES = ['mean', 'true'];
+/** Lilith calculations: the mean apogee (default) or the true (osculating) one. */
+export const LILITH_TYPES = ['mean', 'true'];
+/** Which node and Lilith to calculate: { nodeType, lilithType }. */
+export const POINT_TYPES = { nodeType: 'mean', lilithType: 'mean' };
+
+/** The body to calculate for `p` under `types`: the chosen node and Lilith, else its own. */
+function bodyOf(p, types) {
+  if (NODE_IDS.has(p.id)) return types.nodeType === 'true' ? LunarPoint.TrueNode : LunarPoint.MeanNode;
+  if (p.id === 'lilith') return types.lilithType === 'true' ? LunarPoint.OsculatingApogee : LunarPoint.MeanApogee;
+  return p.body;
+}
 
 /**
  * Planets plus the additional objects whose ids are in `extras`. An additional object that
  * cannot be calculated (data file missing, date outside its range) is left out.
  */
-function calculatePlanets(jd, ring, cusps, extras, nodeType) {
+function calculatePlanets(jd, ring, cusps, extras, pointTypes) {
   const defs = [...PLANETS, ...EXTRA_OBJECTS.filter((o) => extras.has(o.id))];
   return defs.flatMap((p) => {
     try {
-      const body = NODE_IDS.has(p.id) && nodeType === 'mean' ? LunarPoint.MeanNode : p.body;
-      const pos = swe.calculatePosition(jd, body);
+      const pos = swe.calculatePosition(jd, bodyOf(p, pointTypes));
       const lon = normalize(pos.longitude + (p.opposite ? 180 : 0));
       return [makePoint(ring, p, lon, pos.longitudeSpeed, houseOf(lon, cusps))];
     } catch {
@@ -237,7 +247,7 @@ function calculatePlanets(jd, ring, cusps, extras, nodeType) {
  * @param {{ date: Date, latitude: number, longitude: number }} birthData
  * @param {string} houseSystem one of HOUSE_SYSTEMS ids
  */
-export function calculateNatal(birthData, houseSystem = HouseSystem.Placidus, extras = new Set(), nodeType = 'mean', ring = 'natal') {
+export function calculateNatal(birthData, houseSystem = HouseSystem.Placidus, extras = new Set(), pointTypes = POINT_TYPES, ring = 'natal') {
   const { date, latitude, longitude } = birthData;
   const jd = swe.dateToJulianDay(date);
   const houseData = swe.calculateHouses(jd, latitude, longitude, houseSystem);
@@ -252,7 +262,7 @@ export function calculateNatal(birthData, houseSystem = HouseSystem.Placidus, ex
     date,
     latitude,
     longitude,
-    planets: calculatePlanets(jd, ring, houses, extras, nodeType),
+    planets: calculatePlanets(jd, ring, houses, extras, pointTypes),
     angles,
     houses,
     ascendant: angles[0].longitude,
@@ -269,9 +279,9 @@ const ANGLE_SPEED = 360.9856;
  * ASC and MC for that place are added after the planets.
  * @param {{ latitude: number, longitude: number } | null} place
  */
-export function calculateTransitPlanets(date, natalHouses, place = null, houseSystem = HouseSystem.Placidus, extras = new Set(), nodeType = 'mean') {
+export function calculateTransitPlanets(date, natalHouses, place = null, houseSystem = HouseSystem.Placidus, extras = new Set(), pointTypes = POINT_TYPES) {
   const jd = swe.dateToJulianDay(date);
-  const planets = calculatePlanets(jd, 'transit', natalHouses, extras, nodeType);
+  const planets = calculatePlanets(jd, 'transit', natalHouses, extras, pointTypes);
   if (!place) return planets;
   const houseData = swe.calculateHouses(jd, place.latitude, place.longitude, houseSystem);
   return [
@@ -296,10 +306,10 @@ const rightAscension = (lon, eps) => normalize(Math.atan2(Math.sin(lon * DEG) * 
  * ASC of that MC at the birth place (houses cast for the matching sidereal time).
  * @param {ReturnType<typeof calculateNatal>} natal
  */
-export function calculateProgressions(natal, date, houseSystem = HouseSystem.Placidus, extras = new Set(), nodeType = 'mean') {
+export function calculateProgressions(natal, date, houseSystem = HouseSystem.Placidus, extras = new Set(), pointTypes = POINT_TYPES) {
   const birthJd = swe.dateToJulianDay(natal.date);
   const jd = birthJd + (swe.dateToJulianDay(date) - birthJd) / TROPICAL_YEAR;
-  const planets = calculatePlanets(jd, 'progressions', natal.houses, extras, nodeType);
+  const planets = calculatePlanets(jd, 'progressions', natal.houses, extras, pointTypes);
   const sun = swe.calculatePosition(jd, Planet.Sun);
   const arc = signedDiff(sun.longitude, swe.calculatePosition(birthJd, Planet.Sun).longitude);
   // Mean obliquity of the ecliptic at birth; enough for turning the MC into sidereal time.
@@ -476,9 +486,9 @@ export function returnsAround(natal, kind, shown, count) {
  * The chart of the last solar or lunar return at or before `date`, cast at `place`;
  * `ring` names its points ("natal" when it stands in for the birth chart).
  */
-export function calculateReturn(natal, kind, date, place, houseSystem = HouseSystem.Placidus, extras = new Set(), nodeType = 'mean', ring = 'natal') {
+export function calculateReturn(natal, kind, date, place, houseSystem = HouseSystem.Placidus, extras = new Set(), pointTypes = POINT_TYPES, ring = 'natal') {
   const returnDate = findReturn(natal, kind, date);
-  return calculateNatal({ date: returnDate, latitude: place.latitude, longitude: place.longitude }, houseSystem, extras, nodeType, ring);
+  return calculateNatal({ date: returnDate, latitude: place.latitude, longitude: place.longitude }, houseSystem, extras, pointTypes, ring);
 }
 
 /** Wall-clock { date, time } in `timeZone` at the UTC instant `ms`. */

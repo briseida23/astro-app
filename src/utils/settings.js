@@ -28,6 +28,8 @@ export const DEFAULT_SETTINGS = {
   houseSystem: HouseSystem.Placidus,
   // Lunar node: 'mean' (classical default) or 'true' (osculating).
   nodeType: 'mean',
+  // Lilith (Black Moon): 'mean' apogee (classical default) or 'true' (osculating).
+  lilithType: 'mean',
   // Darker, thicker, larger chart for low vision.
   highContrast: false,
   visible: Object.fromEntries([

@@ -143,11 +143,14 @@ const RETURN_LIST_SPAN = { solar: 5, lunar: 6 };
 /** The moment (on `moment`'s clock) a minute past return `date`, so the bar shows that return and it stays the last one. */
 const atReturn = (moment, date) => momentAt(moment, date.getTime() + 60000);
 
+/** Which lunar node and Lilith the settings ask for. */
+const pointTypesOf = (settings) => ({ nodeType: settings.nodeType, lilithType: settings.lilithType });
+
 /** Points of a forecast method for `date`: transits at `place`, progressions and directions from the birth chart. */
 function forecastPoints(method, natal, date, place, settings, extras) {
-  if (method === 'progressions') return calculateProgressions(natal, date, settings.houseSystem, extras, settings.nodeType);
+  if (method === 'progressions') return calculateProgressions(natal, date, settings.houseSystem, extras, pointTypesOf(settings));
   if (method === 'directions') return calculateDirections(natal, date, settings.directions);
-  return calculateTransitPlanets(date, natal.houses, place, settings.houseSystem, extras, settings.nodeType);
+  return calculateTransitPlanets(date, natal.houses, place, settings.houseSystem, extras, pointTypesOf(settings));
 }
 
 /** Forecast aspects with the separating ones past `separatingOrb` hidden or dimmed. */
@@ -179,6 +182,13 @@ function pointFocus(hover, aspects, planets) {
     };
   }
   return null;
+}
+
+/** Highlight in one wheel for a planet hovered in the other: the same object in every ring. */
+function sameObjectFocus(hover, points) {
+  if (hover?.type !== 'planet') return null;
+  const id = hover.key.slice(hover.key.indexOf(':') + 1);
+  return { planets: new Set(points.filter((p) => p.id === id).map((p) => p.key)), aspects: new Set() };
 }
 
 // Natal chart alone, or with the ring of a forecast method; labels are `mode.<id>`.
@@ -360,17 +370,19 @@ export default function App() {
   const extrasKey = EXTRA_OBJECTS.filter((o) => visible[o.id]).map((o) => o.id).join();
   const extras = useMemo(() => new Set(extrasKey ? extrasKey.split(',') : []), [extrasKey]);
 
+  const pointTypes = useMemo(() => pointTypesOf({ nodeType: settings.nodeType, lilithType: settings.lilithType }), [settings.nodeType, settings.lilithType]);
+
   const chartData = useMemo(
     () =>
       calculateNatal(
         { date: toUtcDate(birth.date, birth.time, birth.utcOffset), latitude: birth.latitude, longitude: birth.longitude },
         settings.houseSystem,
         extras,
-        settings.nodeType
+        pointTypes
       ),
     // extrasLoaded: recalculate once the data files arrive.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [birth, settings.houseSystem, extras, settings.nodeType, extrasLoaded]
+    [birth, settings.houseSystem, extras, pointTypes, extrasLoaded]
   );
 
   const { latitude: transitLat, longitude: transitLon } = transit;
@@ -384,8 +396,8 @@ export default function App() {
     const date = toUtcDate(transitMoment.date, transitMoment.time, transitMoment.utcOffset);
     if (Number.isNaN(date.getTime())) return null;
     const place = { latitude: transitLat, longitude: transitLon };
-    return calculateReturn(chartData, returnKind, date, place, settings.houseSystem, extras, settings.nodeType);
-  }, [returnKind, transitMoment, transitLat, transitLon, chartData, settings.houseSystem, extras, settings.nodeType]);
+    return calculateReturn(chartData, returnKind, date, place, settings.houseSystem, extras, pointTypes);
+  }, [returnKind, transitMoment, transitLat, transitLon, chartData, settings.houseSystem, extras, pointTypes]);
   // The returns around the one shown, for the picker in the date bar.
   const returnList = useMemo(
     () => (returnChart ? returnsAround(chartData, returnKind, returnChart.date, RETURN_LIST_SPAN[returnKind]) : null),
@@ -455,7 +467,7 @@ export default function App() {
     if (Number.isNaN(date.getTime())) return null;
     const place = { latitude: secondTransit.latitude, longitude: secondTransit.longitude };
     if (RETURNS[secondMode]) {
-      const chart = calculateReturn(chartData, secondMode, date, place, settings.houseSystem, extras, settings.nodeType, secondMode);
+      const chart = calculateReturn(chartData, secondMode, date, place, settings.houseSystem, extras, pointTypes, secondMode);
       const planets = chart.planets.filter((p) => visible[p.id]);
       const angles = chart.angles.filter((p) => visible[p.id]);
       const points = [...planets, ...angles];
@@ -467,7 +479,7 @@ export default function App() {
     const ring = forecastPoints(secondMode, chartData, date, place, settings, extras).filter((p) => visible[p.id]);
     const preset = { ...settings.aspects, ...settings[ORB_PRESET_KEYS[secondMode]] };
     return { ...base, ring, points: ring, aspects: withSeparating(findAspects(ring, preset, birthPoints), preset), moment: secondTransit };
-  }, [secondMode, secondRaw, secondTransit, chartData, birth, settings, extras, visible, birthPlanets, birthAngles, birthPoints, returnAspectSettings]);
+  }, [secondMode, secondRaw, secondTransit, chartData, birth, settings, extras, pointTypes, visible, birthPlanets, birthAngles, birthPoints, returnAspectSettings]);
   const secondReturnList = useMemo(
     () => (secondView?.isReturn ? returnsAround(chartData, secondMode, secondView.chart.date, RETURN_LIST_SPAN[secondMode]) : null),
     [secondView, chartData, secondMode]
@@ -483,7 +495,12 @@ export default function App() {
   const showSecondAspects = Boolean(secondTableAspects) && aspectTarget === 'second';
   const tableAspects = showSecondAspects ? secondTableAspects : visibleAspects;
   const tableTwoRings = showSecondAspects ? Boolean(secondView.ring || (secondView.isReturn && transitPlanets)) : isBiWheel;
-  const secondFocus = useMemo(() => pointFocus(secondHover, secondView?.aspects ?? [], secondView?.planets ?? []), [secondHover, secondView]);
+  const secondFocus = useMemo(() => {
+    if (!secondView) return null;
+    if (secondHover) return pointFocus(secondHover, secondView.aspects, secondView.planets);
+    // A planet hovered in the main wheel or a table lights up the same object here.
+    return sameObjectFocus(hover, [...secondView.planets, ...secondView.angles, ...(secondView.ring ?? [])]);
+  }, [secondHover, secondView, hover]);
 
   const balance = useMemo(() => calculateBalance(mainChart, weights), [mainChart, weights]);
   // Natal figures in the natal chart; under transits, the figures transits complete with natal planets.
@@ -497,7 +514,8 @@ export default function App() {
 
   // What to highlight on the wheel and in the tables for the current hover target.
   const focus = useMemo(() => {
-    if (!hover) return null;
+    // A planet hovered in the second wheel lights up the same object here.
+    if (!hover) return sameObjectFocus(secondHover, [...natalPoints, ...(transitPlanets ?? [])]);
     if (hover.type === 'pattern') {
       const pattern = patterns[hover.index];
       if (!pattern) return null;
@@ -509,7 +527,7 @@ export default function App() {
     }
     // Aspects hovered in the table may belong to the second chart.
     return pointFocus(hover, secondTableAspects ? [...visibleAspects, ...secondTableAspects] : visibleAspects, natalPlanets);
-  }, [hover, visibleAspects, secondTableAspects, natalPlanets, patternAspects, patterns]);
+  }, [hover, secondHover, natalPoints, transitPlanets, visibleAspects, secondTableAspects, natalPlanets, patternAspects, patterns]);
 
   // Dynamics comes first; the natal chart also has the element balance, transits show only Dynamics.
   const dynamicsTab = { id: 'dynamics', label: t('tab.dynamics') };
@@ -672,7 +690,7 @@ export default function App() {
         }`}
       >
         {/* Wheel Chart Component */}
-        <section className={`card flex flex-col gap-4 p-4 sm:p-6 ${secondView ? 'lg:self-start' : 'lg:sticky lg:top-6 lg:self-start'}`}>
+        <section className={`card flex flex-col gap-4 p-4 sm:p-6 ${secondView ? '' : 'lg:sticky lg:top-6 lg:self-start'}`}>
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-1">
             {/* A return is named with its own moment and place; the birth data stay one click away. */}
             <button type="button" onClick={() => setBirthOpen(true)} className="text-left">
@@ -732,7 +750,8 @@ export default function App() {
         </section>
 
         {secondView && (
-          <section className="card flex flex-col gap-4 p-4 sm:p-6 lg:self-start">
+          <section className="card flex flex-col gap-4 p-4 sm:p-6">
+            {/* The card stretches to the main card's height so the two cards line up. */}
             <div className="px-1">
               <div className="flex items-start justify-between gap-2">
                 {/* The title is the chart picker: any mode but the main one. */}
@@ -809,6 +828,7 @@ export default function App() {
                 )}
               </TransitBar>
             )}
+            <Legend aspectColors={colors.aspects} t={t} />
           </section>
         )}
 
