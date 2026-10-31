@@ -119,6 +119,13 @@ const subscribeWide = (onChange) => {
 };
 const isWide = () => window.matchMedia(WIDE).matches;
 
+/** Points of a forecast method for `date`: transits at `place`, progressions and directions from the birth chart. */
+function forecastPoints(method, natal, date, place, settings, extras) {
+  if (method === 'progressions') return calculateProgressions(natal, date, settings.houseSystem, extras, settings.nodeType);
+  if (method === 'directions') return calculateDirections(natal, date, settings.directions);
+  return calculateTransitPlanets(date, natal.houses, place, settings.houseSystem, extras, settings.nodeType);
+}
+
 /** Forecast aspects with the separating ones past `separatingOrb` hidden or dimmed. */
 function withSeparating(aspects, { separating, separatingOrb }) {
   return aspects.flatMap((a) => {
@@ -378,12 +385,9 @@ export default function App() {
     if (!forecast || !transitMoment.date) return null;
     const date = toUtcDate(transitMoment.date, transitMoment.time, transitMoment.utcOffset);
     if (Number.isNaN(date.getTime())) return null;
-    let points;
-    if (forecast === 'progressions') points = calculateProgressions(chartData, date, settings.houseSystem, extras, settings.nodeType);
-    else if (forecast === 'directions') points = calculateDirections(chartData, date, settings.directions);
-    else points = calculateTransitPlanets(date, chartData.houses, { latitude: transitLat, longitude: transitLon }, settings.houseSystem, extras, settings.nodeType);
-    return points.filter((p) => visible[p.id]);
-  }, [forecast, transitMoment, transitLat, transitLon, chartData, visible, settings.houseSystem, extras, settings.nodeType, settings.directions]);
+    const place = { latitude: transitLat, longitude: transitLon };
+    return forecastPoints(forecast, chartData, date, place, settings, extras).filter((p) => visible[p.id]);
+  }, [forecast, transitMoment, transitLat, transitLon, chartData, visible, settings, extras]);
 
   // Each forecast method has its own orb table and formula; the rest of the aspect settings is shared.
   const orbPreset = settings[ORB_PRESET_KEYS[forecast] ?? ORB_PRESET_KEYS.transit];
@@ -400,29 +404,44 @@ export default function App() {
   const progressedMoon = forecast === 'progressions' && transitPlanets.find((p) => p.id === 'moon');
   const lunation = progressedSun && progressedMoon ? lunationPhase(progressedSun, progressedMoon) : null;
 
-  // The second wheel: a solar or lunar return with its own houses, at the transit place.
+  // The second wheel shows any other mode for the same moment: the birth chart, a forecast ring
+  // around it, or a solar or lunar return with its own houses (at the transit place).
   const wide = useSyncExternalStore(subscribeWide, isWide);
-  const secondKind = wide && !returnKind && RETURNS[second] ? second : null;
-  const secondChart = useMemo(() => {
-    if (!secondKind || !transitMoment.date) return null;
+  const secondMode = wide && second !== mode && MODES.includes(second) ? second : null;
+  const birthPlanets = useMemo(() => chartData.planets.filter((p) => visible[p.id]), [chartData, visible]);
+  const birthAngles = useMemo(() => chartData.angles.filter((p) => visible[p.id]), [chartData, visible]);
+  const birthPoints = useMemo(() => [...birthPlanets, ...birthAngles], [birthPlanets, birthAngles]);
+  const secondView = useMemo(() => {
+    if (!secondMode || !transitMoment.date) return null;
     const date = toUtcDate(transitMoment.date, transitMoment.time, transitMoment.utcOffset);
     if (Number.isNaN(date.getTime())) return null;
     const place = { latitude: transitLat, longitude: transitLon };
-    return calculateReturn(chartData, secondKind, date, place, settings.houseSystem, extras, settings.nodeType, secondKind);
-  }, [secondKind, transitMoment, transitLat, transitLon, chartData, settings.houseSystem, extras, settings.nodeType]);
-  const secondMoment = secondChart && momentAt({ ...placeFields(transit), utcOffset: transit.utcOffset }, secondChart.date.getTime());
-  const secondPlanets = useMemo(() => secondChart?.planets.filter((p) => visible[p.id]) ?? null, [secondChart, visible]);
-  const secondAngles = useMemo(() => secondChart?.angles.filter((p) => visible[p.id]) ?? null, [secondChart, visible]);
-  const secondPoints = useMemo(() => (secondPlanets ? [...secondPlanets, ...secondAngles] : null), [secondPlanets, secondAngles]);
-  const secondAspects = useMemo(() => (secondPoints ? findAspects(secondPoints, returnAspectSettings) : null), [secondPoints, returnAspectSettings]);
-  // The aspects table can list the second chart instead: the forecast to it, or its own aspects.
+    if (RETURNS[secondMode]) {
+      const chart = calculateReturn(chartData, secondMode, date, place, settings.houseSystem, extras, settings.nodeType, secondMode);
+      const planets = chart.planets.filter((p) => visible[p.id]);
+      const angles = chart.angles.filter((p) => visible[p.id]);
+      const points = [...planets, ...angles];
+      const moment = momentAt({ ...placeFields(transit), utcOffset: transit.utcOffset }, chart.date.getTime());
+      return { chart, planets, angles, ring: null, points, aspects: findAspects(points, returnAspectSettings), moment, isReturn: true };
+    }
+    const base = { chart: chartData, planets: birthPlanets, angles: birthAngles };
+    if (secondMode === 'natal') return { ...base, ring: null, points: birthPoints, aspects: findAspects(birthPoints, settings.aspects), moment: birth };
+    const ring = forecastPoints(secondMode, chartData, date, place, settings, extras).filter((p) => visible[p.id]);
+    const preset = { ...settings.aspects, ...settings[ORB_PRESET_KEYS[secondMode]] };
+    return { ...base, ring, points: ring, aspects: withSeparating(findAspects(ring, preset, birthPoints), preset), moment: transit };
+  }, [secondMode, transitMoment, transitLat, transitLon, transit, chartData, birth, settings, extras, visible, birthPlanets, birthAngles, birthPoints, returnAspectSettings]);
+  // The aspects table can list the second chart instead: the main forecast to a return, or the second chart's own aspects.
   const secondTableAspects = useMemo(() => {
-    if (!secondPoints) return null;
-    if (!transitPlanets) return secondAspects;
-    return withSeparating(findAspects(transitPlanets, transitAspectSettings, secondPoints), transitAspectSettings);
-  }, [secondPoints, secondAspects, transitPlanets, transitAspectSettings]);
-  const tableAspects = secondTableAspects && aspectTarget === 'second' ? secondTableAspects : visibleAspects;
-  const secondFocus = useMemo(() => pointFocus(secondHover, secondAspects ?? [], secondPlanets ?? []), [secondHover, secondAspects, secondPlanets]);
+    if (!secondView) return null;
+    if (secondView.isReturn && transitPlanets) {
+      return withSeparating(findAspects(transitPlanets, transitAspectSettings, secondView.points), transitAspectSettings);
+    }
+    return secondView.aspects;
+  }, [secondView, transitPlanets, transitAspectSettings]);
+  const showSecondAspects = Boolean(secondTableAspects) && aspectTarget === 'second';
+  const tableAspects = showSecondAspects ? secondTableAspects : visibleAspects;
+  const tableTwoRings = showSecondAspects ? Boolean(secondView.ring || (secondView.isReturn && transitPlanets)) : isBiWheel;
+  const secondFocus = useMemo(() => pointFocus(secondHover, secondView?.aspects ?? [], secondView?.planets ?? []), [secondHover, secondView]);
 
   const balance = useMemo(() => calculateBalance(mainChart, weights), [mainChart, weights]);
   // Natal figures in the natal chart; under transits, the figures transits complete with natal planets.
@@ -599,11 +618,11 @@ export default function App() {
       {/* With a second wheel both wheels share the top row and the tabs take the full width below. */}
       <main
         className={`mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 ${
-          secondChart ? 'lg:grid-cols-2' : 'lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]'
+          secondView ? 'lg:grid-cols-2' : 'lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]'
         }`}
       >
         {/* Wheel Chart Component */}
-        <section className={`card flex flex-col gap-4 p-4 sm:p-6 ${secondChart ? 'lg:self-start' : 'lg:sticky lg:top-6 lg:self-start'}`}>
+        <section className={`card flex flex-col gap-4 p-4 sm:p-6 ${secondView ? 'lg:self-start' : 'lg:sticky lg:top-6 lg:self-start'}`}>
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-1">
             <button type="button" onClick={() => setBirthOpen(true)} className="text-left">
               <div className="font-display text-xl font-semibold">{birth.name || placeName(birth, t)}</div>
@@ -613,23 +632,16 @@ export default function App() {
               </div>
             </button>
             <div className="flex items-center gap-3">
-              {wide && !returnKind && (
-                <div role="group" aria-label={t('second.label')} className="flex items-center gap-1.5 text-xs">
-                  <span className="text-slate-500">{t('second.label')}</span>
-                  {Object.keys(RETURNS).map((id) => (
-                    <button
-                      key={id}
-                      type="button"
-                      aria-pressed={second === id}
-                      onClick={() => setSecond(second === id ? 'none' : id)}
-                      className={`rounded-full px-2.5 py-1 font-medium transition ${
-                        second === id ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                      }`}
-                    >
-                      {second === id ? '✓' : '+'} {t(`mode.${id}`)}
-                    </button>
-                  ))}
-                </div>
+              {wide && (
+                <label className="flex items-center gap-2 text-xs text-slate-500">
+                  {t('second.label')}
+                  <select className="input-sm" value={secondMode ?? 'none'} onChange={(e) => setSecond(e.target.value)}>
+                    <option value="none">{t('second.none')}</option>
+                    {MODES.filter((id) => id !== mode).map((id) => (
+                      <option key={id} value={id}>{t(`mode.${id}`)}</option>
+                    ))}
+                  </select>
+                </label>
               )}
               <div className="text-[11px] uppercase tracking-wider text-slate-400">{houseSystem && t(`houseSystem.${houseSystem.key}`)}</div>
             </div>
@@ -643,7 +655,7 @@ export default function App() {
             </div>
           )}
 
-          {!secondChart && forecastBar}
+          {!secondView && forecastBar}
 
           <ChartWheel
             chartData={mainChart}
@@ -658,25 +670,26 @@ export default function App() {
             onHover={setHover}
             highContrast={settings.highContrast}
           />
-          {secondChart && forecastBar}
+          {secondView && forecastBar}
           <Legend aspectColors={colors.aspects} t={t} />
           {isBiWheel && <TransitEvents patterns={patterns} aspects={patternAspects} hover={hover} onHover={setHover} />}
         </section>
 
-        {secondChart && (
+        {secondView && (
           <section className="card flex flex-col gap-4 p-4 sm:p-6 lg:self-start">
             <div className="px-1">
-              <div className="font-display text-xl font-semibold">{t(`mode.${secondKind}`)}</div>
+              <div className="font-display text-xl font-semibold">{t(`mode.${secondMode}`)}</div>
               <div className="text-xs tabular-nums text-slate-500">
-                {placeName(transit, t)} · {formatDate(secondMoment.date, lang)} · {secondMoment.time} · {formatOffset(secondMoment.utcOffset)}
+                {placeName(secondView.moment, t)} · {formatDate(secondView.moment.date, lang)} · {secondView.moment.time} ·{' '}
+                {formatOffset(secondView.moment.utcOffset)}
               </div>
             </div>
             <ChartWheel
-              chartData={secondChart}
-              planets={secondPlanets}
-              angles={secondAngles}
-              transitPlanets={null}
-              aspects={secondAspects}
+              chartData={secondView.chart}
+              planets={secondView.planets}
+              angles={secondView.angles}
+              transitPlanets={secondView.ring}
+              aspects={secondView.aspects}
               elementColors={colors.elements}
               aspectColors={colors.aspects}
               hover={secondHover}
@@ -684,16 +697,16 @@ export default function App() {
               onHover={setSecondHover}
               highContrast={settings.highContrast}
             />
-            {/* Without a forecast bar in the main card the return's date and place are chosen here,
+            {/* Without a date bar in the main card the second chart's date and place are chosen here,
                 under the wheel, so both wheels start at the same height. */}
-            {!forecast && (
-              <TransitBar method={secondKind} moment={transit} onChange={updateTransit} onPlaceChange={setTransitMoment} onNow={transitNow} />
+            {!forecastBar && secondMode !== 'natal' && (
+              <TransitBar method={secondMode} moment={transit} onChange={updateTransit} onPlaceChange={setTransitMoment} onNow={transitNow} />
             )}
           </section>
         )}
 
         {/* Balance, planets, aspects and patterns as tabs */}
-        <section className={`card self-start p-4 sm:p-6 ${secondChart ? 'lg:col-span-2' : ''}`}>
+        <section className={`card self-start p-4 sm:p-6 ${secondView ? 'lg:col-span-2' : ''}`}>
           <Tabs tabs={tabs} active={activeTab} onChange={setTab} className="-mt-2 mb-5" />
           {activeTab === 'balance' && <BalancePanel balance={balance} elementColors={colors.elements} />}
           {activeTab === 'dynamics' && (
@@ -710,13 +723,13 @@ export default function App() {
             />
           )}
           {activeTab === 'planets' && (
-            <PlanetTable points={natalPoints} secondPoints={secondPoints} transitPlanets={transitPlanets} focus={focus} onHover={setHover} />
+            <PlanetTable points={natalPoints} secondPoints={secondView?.points} transitPlanets={transitPlanets} focus={focus} onHover={setHover} />
           )}
           {activeTab === 'aspects' && (
             <>
               {secondTableAspects && (
                 <div className="mb-4 flex items-center gap-3 text-sm">
-                  <span className="text-slate-500">{t(isBiWheel ? 'second.aspectsTo' : 'second.aspectsOf')}</span>
+                  <span className="text-slate-500">{t('second.aspectsOf')}</span>
                   <div className="flex rounded-lg bg-slate-100 p-1">
                     {['main', 'second'].map((id) => (
                       <button
@@ -726,7 +739,7 @@ export default function App() {
                         onClick={() => setAspectTarget(id)}
                         className={`rounded-md px-3 py-1 transition ${aspectTarget === id ? 'bg-white font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
                       >
-                        {t(`mode.${id === 'main' ? 'natal' : secondKind}`)}
+                        {t(`mode.${id === 'main' ? mode : secondMode}`)}
                       </button>
                     ))}
                   </div>
@@ -735,7 +748,7 @@ export default function App() {
               <AspectTable
                 aspects={tableAspects}
                 aspectColors={colors.aspects}
-                isBiWheel={isBiWheel}
+                isBiWheel={tableTwoRings}
                 focus={focus}
                 onHover={setHover}
               />
