@@ -433,8 +433,8 @@ function ColorsTab({ settings, update }) {
   );
 }
 
-export function SettingsModal({ open, onClose, settings, onChange }) {
-  const [tab, setTab] = useState('params');
+export function SettingsModal({ open, initialTab = 'params', onClose, settings, onChange }) {
+  const [tab, setTab] = useState(initialTab);
   const { t } = useI18n();
   const update = (patch) => onChange({ ...settings, ...patch });
   const resetTab = () =>

@@ -27,7 +27,7 @@ function Section({ title, value, children }) {
  * Header controls on phones and tablets: a ☰ button that slides a menu in from the left.
  * `modes`, `onModeChange` etc. are the same as in the desktop header.
  */
-export function MobileMenu({ modes, mode, onModeChange, user, accountsEnabled, onData, onCharts, onSettings, onAbout, onSignIn, onSignOut, onDelete }) {
+export function MobileMenu({ modes, mode, onModeChange, user, accountsEnabled, onData, onCharts, onSettings, onAbout, onHelp, onSignIn, onSignOut, onDelete }) {
   const { t, lang, setLang } = useI18n();
   const [open, setOpen] = useState(false);
   const triggerRef = useRef(null);
@@ -165,6 +165,7 @@ export function MobileMenu({ modes, mode, onModeChange, user, accountsEnabled, o
                 ))}
 
               <div className="mt-auto border-t border-slate-100 py-1 text-slate-500">
+                {item(t('help.title'), onHelp)}
                 {item(t('app.about'), onAbout)}
                 <a href={`/privacy?lang=${lang}`} target="_blank" rel="noreferrer" className="block px-5 py-3 text-sm hover:bg-slate-50">
                   {t('auth.privacy')}

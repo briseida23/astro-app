@@ -42,6 +42,7 @@ import { AccountMenu } from './components/AccountMenu';
 import { MobileMenu } from './components/MobileMenu';
 import { ClientsModal } from './components/ClientsModal';
 import { AboutModal } from './components/AboutModal';
+import { HelpModal } from './components/HelpModal';
 import { APP_NAME } from './appInfo';
 import { Tabs } from './components/Tabs';
 import { detectCurrentPlace, placeFields, withoutPlace, withoutClient } from './utils/location';
@@ -220,7 +221,9 @@ export default function App() {
   const [tab, setTab] = useState('dynamics');
   const [dynamics, setDynamics] = useState({ step: 1, unit: 'day' });
   const [birthOpen, setBirthOpen] = useState(false);
+  // false, or the settings tab to open on.
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [lang, setLang] = useState(loadLanguage);
   // Accounts: available only when the site runs with the Worker API (config is null otherwise).
   const [authConfig, setAuthConfig] = useState(null);
@@ -626,8 +629,9 @@ export default function App() {
                 accountsEnabled={Boolean(authConfig)}
                 onData={() => setBirthOpen(true)}
                 onCharts={() => setChartsOpen(true)}
-                onSettings={() => setSettingsOpen(true)}
+                onSettings={() => setSettingsOpen('params')}
                 onAbout={() => setAboutOpen(true)}
+                onHelp={() => setHelpOpen(true)}
                 onSignIn={() => setAuthOpen(true)}
                 onSignOut={signOut}
                 onDelete={deleteAccount}
@@ -641,6 +645,10 @@ export default function App() {
               <p className="mt-1 flex flex-wrap gap-x-2 text-xs tracking-wide text-slate-500">
                 <span>{t('app.subtitle')}</span>
                 {/* On phones About and Privacy live in the slide-out menu. */}
+                <span aria-hidden className="hidden lg:inline">·</span>
+                <button type="button" className="hidden underline lg:inline decoration-slate-300 underline-offset-2 hover:text-slate-900" onClick={() => setHelpOpen(true)}>
+                  {t('help.title')}
+                </button>
                 <span aria-hidden className="hidden lg:inline">·</span>
                 <button type="button" className="hidden underline lg:inline decoration-slate-300 underline-offset-2 hover:text-slate-900" onClick={() => setAboutOpen(true)}>
                   {t('app.about')}
@@ -673,7 +681,7 @@ export default function App() {
                 <span aria-hidden>☰</span> {t('clients.button')}
               </IconButton>
             )}
-            <IconButton onClick={() => setSettingsOpen(true)} label={t('header.settings')}>
+            <IconButton onClick={() => setSettingsOpen('params')} label={t('header.settings')}>
               <span aria-hidden>⚙</span> {t('header.settings')}
             </IconButton>
             <select className="input-sm" value={lang} onChange={(e) => setLang(e.target.value)} aria-label={t('app.language')}>
@@ -844,7 +852,7 @@ export default function App() {
         )}
 
         {/* Balance, planets, aspects and patterns as tabs */}
-        <section className={`card self-start p-4 sm:p-6 ${secondView ? 'lg:col-span-2' : ''}`}>
+        <section id="chart-tabs" className={`card self-start scroll-mt-4 p-4 sm:p-6 ${secondView ? 'lg:col-span-2' : ''}`}>
           <Tabs tabs={tabs} active={activeTab} onChange={setTab} className="-mt-2 mb-5" />
           {activeTab === 'balance' && <BalancePanel balance={balance} elementColors={colors.elements} />}
           {activeTab === 'dynamics' && (
@@ -927,7 +935,25 @@ export default function App() {
         clients={clients}
         onSaveClient={saveClient}
       />
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} settings={settings} onChange={setSettings} />
+      {/* Remounted on each opening so it starts on the requested tab. */}
+      <SettingsModal
+        key={settingsOpen || 'closed'}
+        open={Boolean(settingsOpen)}
+        initialTab={settingsOpen || 'params'}
+        onClose={() => setSettingsOpen(false)}
+        settings={settings}
+        onChange={setSettings}
+      />
+      <HelpModal
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        onOpenSettings={setSettingsOpen}
+        onOpenMode={changeMode}
+        onOpenTab={(id) => {
+          setTab(id);
+          document.getElementById('chart-tabs')?.scrollIntoView({ behavior: 'smooth' });
+        }}
+      />
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} google={Boolean(authConfig?.google)} turnstile={authConfig?.turnstile ?? null} onSignedIn={setUser} />
       <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} user={user} turnstile={authConfig?.turnstile ?? null} />
       <ClientsModal

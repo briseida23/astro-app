@@ -455,6 +455,11 @@ const ru = {
   'search.empty': 'За этот период точных касаний нет.',
   'search.more': 'Показаны первые {n}; сократите период или уточните поиск.',
   'search.open': 'Открыть карту на этот момент',
+  'help.title': 'Справка',
+  'help.contents': 'Содержание',
+  'help.openSettings': 'Настройки → {tab}',
+  'help.openMode': 'Открыть: {mode}',
+  'help.openTab': 'Вкладка «{tab}»',
 };
 
 const uk = {
@@ -911,6 +916,11 @@ const uk = {
   'search.empty': 'За цей період точних дотиків немає.',
   'search.more': 'Показано перші {n}; скоротіть період або уточніть пошук.',
   'search.open': 'Відкрити карту на цей момент',
+  'help.title': 'Довідка',
+  'help.contents': 'Зміст',
+  'help.openSettings': 'Налаштування → {tab}',
+  'help.openMode': 'Відкрити: {mode}',
+  'help.openTab': 'Вкладка «{tab}»',
 };
 
 const en = {
@@ -1367,6 +1377,11 @@ const en = {
   'search.empty': 'No exact contacts in this period.',
   'search.more': 'First {n} shown; shorten the period or narrow the search.',
   'search.open': 'Open the chart at this moment',
+  'help.title': 'Help',
+  'help.contents': 'Contents',
+  'help.openSettings': 'Settings → {tab}',
+  'help.openMode': 'Open: {mode}',
+  'help.openTab': '{tab} tab',
 };
 
 export const TRANSLATIONS = { ru, uk, en };
