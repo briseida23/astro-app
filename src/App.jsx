@@ -290,11 +290,12 @@ export default function App() {
       calculateNatal(
         { date: toUtcDate(birth.date, birth.time, birth.utcOffset), latitude: birth.latitude, longitude: birth.longitude },
         settings.houseSystem,
-        extras
+        extras,
+        settings.nodeType
       ),
     // extrasLoaded: recalculate once the data files arrive.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [birth, settings.houseSystem, extras, extrasLoaded]
+    [birth, settings.houseSystem, extras, settings.nodeType, extrasLoaded]
   );
 
   const natalPlanets = useMemo(() => chartData.planets.filter((p) => visible[p.id]), [chartData, visible]);
@@ -308,8 +309,8 @@ export default function App() {
     const date = toUtcDate(transitMoment.date, transitMoment.time, transitMoment.utcOffset);
     if (Number.isNaN(date.getTime())) return null;
     const place = { latitude: transitLat, longitude: transitLon };
-    return calculateTransitPlanets(date, chartData.houses, place, settings.houseSystem, extras).filter((p) => visible[p.id]);
-  }, [mode, transitMoment, transitLat, transitLon, chartData, visible, settings.houseSystem, extras]);
+    return calculateTransitPlanets(date, chartData.houses, place, settings.houseSystem, extras, settings.nodeType).filter((p) => visible[p.id]);
+  }, [mode, transitMoment, transitLat, transitLon, chartData, visible, settings.houseSystem, extras, settings.nodeType]);
 
   // Transit aspects use their own orb table and formula; the rest of the aspect settings is shared.
   const transitAspectSettings = useMemo(

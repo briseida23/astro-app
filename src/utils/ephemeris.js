@@ -207,15 +207,19 @@ function makePoint(ring, def, longitude, speed, house) {
   };
 }
 
+/** Lunar node calculations offered in the settings: the mean node (default) or the true (osculating) one. */
+export const NODE_TYPES = ['mean', 'true'];
+
 /**
  * Planets plus the additional objects whose ids are in `extras`. An additional object that
  * cannot be calculated (data file missing, date outside its range) is left out.
  */
-function calculatePlanets(jd, ring, cusps, extras) {
+function calculatePlanets(jd, ring, cusps, extras, nodeType) {
   const defs = [...PLANETS, ...EXTRA_OBJECTS.filter((o) => extras.has(o.id))];
   return defs.flatMap((p) => {
     try {
-      const pos = swe.calculatePosition(jd, p.body);
+      const body = p.id === 'node' && nodeType === 'mean' ? LunarPoint.MeanNode : p.body;
+      const pos = swe.calculatePosition(jd, body);
       return [makePoint(ring, p, pos.longitude, pos.longitudeSpeed, houseOf(normalize(pos.longitude), cusps))];
     } catch {
       return [];
@@ -228,7 +232,7 @@ function calculatePlanets(jd, ring, cusps, extras) {
  * @param {{ date: Date, latitude: number, longitude: number }} birthData
  * @param {string} houseSystem one of HOUSE_SYSTEMS ids
  */
-export function calculateNatal(birthData, houseSystem = HouseSystem.Placidus, extras = new Set()) {
+export function calculateNatal(birthData, houseSystem = HouseSystem.Placidus, extras = new Set(), nodeType = 'mean') {
   const { date, latitude, longitude } = birthData;
   const jd = swe.dateToJulianDay(date);
   const houseData = swe.calculateHouses(jd, latitude, longitude, houseSystem);
@@ -243,7 +247,7 @@ export function calculateNatal(birthData, houseSystem = HouseSystem.Placidus, ex
     date,
     latitude,
     longitude,
-    planets: calculatePlanets(jd, 'natal', houses, extras),
+    planets: calculatePlanets(jd, 'natal', houses, extras, nodeType),
     angles,
     houses,
     ascendant: angles[0].longitude,
@@ -259,9 +263,9 @@ const ANGLE_SPEED = 360.9856;
  * ASC and MC for that place are added after the planets.
  * @param {{ latitude: number, longitude: number } | null} place
  */
-export function calculateTransitPlanets(date, natalHouses, place = null, houseSystem = HouseSystem.Placidus, extras = new Set()) {
+export function calculateTransitPlanets(date, natalHouses, place = null, houseSystem = HouseSystem.Placidus, extras = new Set(), nodeType = 'mean') {
   const jd = swe.dateToJulianDay(date);
-  const planets = calculatePlanets(jd, 'transit', natalHouses, extras);
+  const planets = calculatePlanets(jd, 'transit', natalHouses, extras, nodeType);
   if (!place) return planets;
   const houseData = swe.calculateHouses(jd, place.latitude, place.longitude, houseSystem);
   return [

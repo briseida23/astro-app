@@ -20,6 +20,8 @@ export const DEFAULT_ASPECT_COLORS = {
 
 export const DEFAULT_SETTINGS = {
   houseSystem: HouseSystem.Placidus,
+  // Lunar node: 'mean' (classical default) or 'true' (osculating).
+  nodeType: 'mean',
   // Darker, thicker, larger chart for low vision.
   highContrast: false,
   visible: Object.fromEntries([

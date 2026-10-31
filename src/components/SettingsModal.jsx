@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Modal } from './Modal';
 import { Tabs } from './Tabs';
-import { OBJECTS, EXTRA_OBJECTS, EXTRA_GROUPS, ASPECTS, HOUSE_SYSTEMS } from '../utils/ephemeris';
+import { OBJECTS, EXTRA_OBJECTS, EXTRA_GROUPS, ASPECTS, HOUSE_SYSTEMS, NODE_TYPES } from '../utils/ephemeris';
 import { ORB_METHODS, SEPARATING_MODES } from '../utils/aspects';
 import { ELEMENTS } from '../utils/balance';
 import { DEFAULT_SETTINGS } from '../utils/settings';
@@ -13,7 +13,7 @@ const TABS = ['params', 'objects', 'extras', 'orbs', 'method', 'colors'];
 // Which settings keys each tab owns, for "reset tab". Objects and extras share `visible`
 // and each resets only its own entries (see resetTab).
 const TAB_KEYS = {
-  params: ['houseSystem', 'highContrast'],
+  params: ['houseSystem', 'nodeType', 'highContrast'],
   orbs: ['aspects', 'transitOrbPreset'],
   method: ['weights'],
   colors: ['colors'],
@@ -64,6 +64,13 @@ function ParamsTab({ settings, update }) {
         <select className="input" value={settings.houseSystem} onChange={(e) => update({ houseSystem: e.target.value })}>
           {HOUSE_SYSTEMS.map((h) => (
             <option key={h.id} value={h.id}>{t(`houseSystem.${h.key}`)}</option>
+          ))}
+        </select>
+      </Row>
+      <Row label={t('settings.nodeType')} hint={t('settings.nodeTypeHint')}>
+        <select className="input" value={settings.nodeType} onChange={(e) => update({ nodeType: e.target.value })}>
+          {NODE_TYPES.map((id) => (
+            <option key={id} value={id}>{t(`nodeType.${id}`)}</option>
           ))}
         </select>
       </Row>
