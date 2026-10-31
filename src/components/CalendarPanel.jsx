@@ -138,16 +138,16 @@ export function CalendarPanel({ natal, points, moment, options, aspectColors, on
                   title={t('search.open')}
                   className={`flex w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-md px-1.5 py-1.5 text-left transition hover:bg-slate-50 ${past ? 'text-slate-400' : ''}`}
                 >
-                  <span className="w-28 shrink-0 tabular-nums">{day(e.date)}</span>
-                  <span className="w-36 shrink-0">
+                  <span className="shrink-0 tabular-nums sm:w-28">{day(e.date)}</span>
+                  <span className="shrink-0 sm:w-40">
                     <span aria-hidden className="mr-1">{e.kind === 'solar' ? '●' : '◐'}</span>
                     {t(`eclipse.${e.kind}.${e.type}`)}
                   </span>
-                  <span className="inline-flex w-24 shrink-0 items-center gap-1 tabular-nums">
+                  <span className="inline-flex shrink-0 items-center gap-1 tabular-nums sm:w-24">
                     {formatDegree(e.longitude)}
                     <span className="astro text-base">{SIGNS[Math.floor(e.longitude / 30)].glyph}</span>
                   </span>
-                  <span className="w-14 shrink-0 font-display text-base">{t('ingress.house', { n: ROMAN[e.house - 1] })}</span>
+                  <span className="shrink-0 font-display text-base sm:w-16">{t('ingress.house', { n: ROMAN[e.house - 1] })}</span>
                   <span className="flex flex-wrap items-center gap-2">
                     {e.contacts.map((c) => (
                       <Hint key={`${c.point.key}:${c.aspect.id}`} label={`${t(`aspect.${c.aspect.id}`)} ${t('wheel.natalPrefix')}${t(`object.${c.point.id}`)} · ${formatOrb(c.orb)}`}>
