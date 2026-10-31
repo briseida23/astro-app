@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ASPECTS, CONTACT_METHODS, PLANETS, ANGLES, EXTRA_OBJECTS, ROMAN, findContacts, momentAt, toUtcDate } from '../utils/ephemeris';
-import { useI18n } from '../i18n';
+import { useI18n, formatShortDate } from '../i18n';
 import { Glyph } from './Glyph';
 import { Hint } from './Hint';
 
@@ -38,6 +38,7 @@ export function SearchPanel({ natal, points, moment, extras, options, defaultMet
   const moonTransit = method === 'transit' && moverId === 'moon';
   const months = moonTransit ? Math.min(span, MOON_SPAN_MAX) : span;
 
+  const houseTarget = target === 'houses' || target.startsWith('cusp:');
   const result = useMemo(() => {
     const start = toUtcDate(from, '00:00', moment.utcOffset);
     if (Number.isNaN(start.getTime())) return null;
@@ -48,17 +49,17 @@ export function SearchPanel({ natal, points, moment, extras, options, defaultMet
     if (target === 'houses') targets = cusps;
     else if (target.startsWith('cusp:')) targets = cusps.filter((c) => c.key === target);
     else if (target !== 'all') targets = points.filter((p) => p.key === target);
-    const aspects = aspect === 'all' ? ASPECTS : ASPECTS.filter((a) => a.id === aspect);
+    // A house is entered by conjunction; the aspect picker applies to points only.
+    const aspects = aspect === 'all' || houseTarget ? ASPECTS : ASPECTS.filter((a) => a.id === aspect);
     const hits = findContacts(natal, method, moverId, targets, aspects, start, end, options);
     return { hits: hits.slice(0, LIMIT), more: hits.length > LIMIT };
-  }, [natal, points, method, moverId, aspect, target, from, months, moment.utcOffset, options]);
+  }, [natal, points, method, moverId, aspect, target, houseTarget, from, months, moment.utcOffset, options]);
 
   // Progressed and directed contacts are slow: a day is as precise as they get.
   const precise = method === 'transit';
   const formatHit = (date) => {
     const local = momentAt(moment, date.getTime());
-    const [y, m, d] = local.date.split('-').map(Number);
-    const day = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(y, m - 1, d));
+    const day = formatShortDate(local.date, lang);
     return precise ? `${day}, ${local.time}` : day;
   };
   const moverPoint = { ...moverDef, ring: method };
@@ -86,7 +87,7 @@ export function SearchPanel({ natal, points, moment, extras, options, defaultMet
         </label>
         <label className="field">
           <span>{t('search.aspect')}</span>
-          <select className="input" value={aspect} onChange={(e) => setAspect(e.target.value)}>
+          <select className="input" value={houseTarget ? 'all' : aspect} disabled={houseTarget} onChange={(e) => setAspect(e.target.value)}>
             <option value="all">{t('search.allAspects')}</option>
             {ASPECTS.map((a) => (
               <option key={a.id} value={a.id}>{t(`aspect.${a.id}`)}</option>
@@ -148,7 +149,7 @@ export function SearchPanel({ natal, points, moment, extras, options, defaultMet
                     {h.target.cusp ? (
                       <>
                         <span className="text-slate-400">→</span>
-                        <span className="font-display text-base">{t('ingress.house', { n: ROMAN[h.target.cusp - 1] })}</span>
+                        <span className="font-display text-base">{t('ingress.house', { n: ROMAN[h.house - 1] })}</span>
                       </>
                     ) : (
                       <>

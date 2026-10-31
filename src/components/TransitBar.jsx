@@ -3,7 +3,7 @@ import { Modal } from './Modal';
 import { CitySearch, OffsetSelect } from './BirthForm';
 import { offsetForZone, toUtcDate, momentAt } from '../utils/ephemeris';
 import { detectCurrentPlace, placeFromSearch, withoutPlace } from '../utils/location';
-import { useI18n, placeName } from '../i18n';
+import { useI18n, placeName, formatShortDate } from '../i18n';
 
 /** Picks the transit place; `onSelect(null)` means "follow the birth place". */
 function TransitPlaceModal({ open, onClose, onSelect }) {
@@ -62,10 +62,11 @@ export function BarSteps({ prevLabel, nextLabel, onPrev, onNext }) {
 /**
  * ‹ [return date] › for solar and lunar returns: `dates` are the returns around the one shown
  * (`current` is its index); picking one or stepping calls `onPick` with that return's date.
+ * Dates are read on the clock of `moment`'s place, as in the chart's title.
  */
-export function ReturnPicker({ kind, dates, current, onPick }) {
+export function ReturnPicker({ kind, dates, current, moment, onPick }) {
   const { lang, t } = useI18n();
-  const label = (d) => new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', year: 'numeric' }).format(d);
+  const label = (d) => formatShortDate(momentAt(moment, d.getTime()).date, lang);
   return (
     <div className="mb-0.5 flex gap-1">
       <button

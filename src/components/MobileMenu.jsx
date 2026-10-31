@@ -32,6 +32,11 @@ export function MobileMenu({ modes, mode, onModeChange, user, accountsEnabled, o
   const [open, setOpen] = useState(false);
   const triggerRef = useRef(null);
   const drawerRef = useRef(null);
+  const activeModeRef = useRef(null);
+  // The chosen mode in view when the menu opens; the row then scrolls only under the finger.
+  useEffect(() => {
+    if (open) activeModeRef.current?.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -130,7 +135,7 @@ export function MobileMenu({ modes, mode, onModeChange, user, accountsEnabled, o
                 {modes.map((id) => (
                   <button
                     key={id}
-                    ref={mode === id ? (el) => el?.scrollIntoView({ inline: 'center', block: 'nearest' }) : undefined}
+                    ref={mode === id ? activeModeRef : undefined}
                     type="button"
                     onClick={run(() => onModeChange(id))}
                     className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 transition ${mode === id ? 'bg-white font-semibold shadow-sm' : 'text-slate-600'}`}

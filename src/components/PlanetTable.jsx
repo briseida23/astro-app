@@ -21,8 +21,11 @@ function Position({ point }) {
   );
 }
 
-/** Natal points, optionally with a second chart (solar or lunar return, own houses) and the forecast ring. */
-export function PlanetTable({ points, secondPoints, transitPlanets, focus, onHover }) {
+/**
+ * The main chart's points (natal or a return, named by `mainLabel`), optionally with the second
+ * chart's (`secondLabel`, a mode) and the forecast ring.
+ */
+export function PlanetTable({ points, mainLabel = 'natal', secondPoints, secondLabel, transitPlanets, focus, onHover }) {
   const { t } = useI18n();
   const transitById = Object.fromEntries((transitPlanets ?? []).map((p) => [p.id, p]));
   const secondById = Object.fromEntries((secondPoints ?? []).map((p) => [p.id, p]));
@@ -39,10 +42,10 @@ export function PlanetTable({ points, secondPoints, transitPlanets, focus, onHov
           <tr>
             {/* Columns hug their content (w-px); the last one takes the spare width. */}
             <th className="w-px px-3 py-2 font-medium">{t('table.object')}</th>
-            <th className="w-px px-3 py-2 font-medium">{t(compare ? 'table.natal' : 'table.position')}</th>
+            <th className="w-px px-3 py-2 font-medium">{t(compare ? `table.${mainLabel}` : 'table.position')}</th>
             <th className={`${compare ? 'w-px' : ''} px-3 py-2 font-medium`}>{t('table.house')}</th>
             {secondPoints && (
-              <th className={`${transitPlanets ? 'w-px' : ''} px-3 py-2 font-medium`}>{t(`table.${secondPoints[0]?.ring}`)}</th>
+              <th className={`${transitPlanets ? 'w-px' : ''} px-3 py-2 font-medium`}>{t(`table.${secondLabel}`)}</th>
             )}
             {transitPlanets && <th className="px-3 py-2 font-medium">{t(`table.${transitPlanets[0]?.ring ?? 'transit'}`)}</th>}
           </tr>

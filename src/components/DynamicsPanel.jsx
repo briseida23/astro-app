@@ -1,5 +1,5 @@
-import { STEP_UNITS, ROMAN, formatOffset, formatOrb } from '../utils/ephemeris';
-import { useI18n, placeName } from '../i18n';
+import { STEP_UNITS, ROMAN, formatOffset, formatOrb, momentAt } from '../utils/ephemeris';
+import { useI18n, placeName, formatShortDate } from '../i18n';
 import { Glyph } from './Glyph';
 import { Hint } from './Hint';
 
@@ -21,8 +21,6 @@ const formatMoment = (moment, lang) => {
   return `${date}, ${moment.time}`;
 };
 
-/** A Date as "12 бер. 2027 р.". */
-const formatDay = (date, lang) => new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
 
 /** Arrow button with the shift it makes written underneath and a tooltip on hover/focus. */
 function StepButton({ onClick, label, caption, children }) {
@@ -152,7 +150,7 @@ export function DynamicsPanel({ natal, moment, dynamics, onDynamicsChange, onSte
                   ) : (
                     <span className="font-display text-base">{t('ingress.house', { n: ROMAN[i.to - 1] })}</span>
                   )}
-                  <span className="ml-auto tabular-nums text-slate-500">{formatDay(i.date, lang)}</span>
+                  <span className="ml-auto tabular-nums text-slate-500">{formatShortDate(momentAt(moment, i.date.getTime()).date, lang)}</span>
                 </li>
               ))}
             </ul>

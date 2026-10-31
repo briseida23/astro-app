@@ -337,7 +337,7 @@ const progressedToDate = (natal, birthJd, progJd) => new Date(natal.date.getTime
 function nextBoundaries(lon, cusps, backwards = false) {
   const ahead = (target) => (backwards ? normalize(lon - target) : normalize(target - lon)) || 360;
   const sign = backwards ? Math.floor(lon / 30) : (Math.floor(lon / 30) + 1) % 12;
-  const signEdge = backwards ? sign * 30 : sign * 30;
+  const signEdge = sign * 30;
   // Moving backwards a point leaves its sign through the sign's start and enters the one before.
   const signTo = backwards ? (sign + 11) % 12 : sign;
   const house = houseOf(lon, cusps);
@@ -433,7 +433,8 @@ export function calculateDirections(natal, date, { arc: arcType, converse }) {
   const speed = sign / TROPICAL_YEAR;
   return [...natal.planets, ...natal.angles].map((p) => {
     const lon = normalize(p.longitude + sign * arc);
-    return makePoint('directions', p, lon, speed, houseOf(lon, natal.houses));
+    // Converse points all move backwards: an "R" on each would say nothing.
+    return { ...makePoint('directions', p, lon, speed, houseOf(lon, natal.houses)), retrograde: false };
   });
 }
 
@@ -479,7 +480,8 @@ function sampleStep(method, id) {
  * Moments between `from` and `to` (Dates) when object `mover`, moved by `method`, makes one of
  * `aspects` exactly to one of `targets` ({ key, longitude }; a target with `cusp` set, a house number, is
  * that natal cusp and takes only the conjunction: the ingress into that house). Sampled, then refined by
- * bisection to a minute: [{ date, target, aspect, retrograde }], earliest first.
+ * bisection to a minute: [{ date, target, aspect, house, retrograde }], earliest first; `house` is
+ * the house entered at a cusp, which is the one before it when the mover goes backwards.
  * @param {{ houseSystem, pointTypes, directions: { arc, converse } }} options
  */
 export function findContacts(natal, method, mover, targets, aspects, from, to, options) {
@@ -515,7 +517,9 @@ export function findContacts(natal, method, mover, targets, aspects, from, to, o
                 fa = fm;
               } else b = m;
             }
-            hits.push({ date: toDate((a + b) / 2), target, aspect, retrograde: prev > 0 });
+            // Crossing a cusp backwards enters the house before it.
+            const house = target.cusp && (prev > 0 ? ((target.cusp + 10) % 12) + 1 : target.cusp);
+            hits.push({ date: toDate((a + b) / 2), target, aspect, house, retrograde: prev > 0 });
           }
           prev = cur;
         }

@@ -145,14 +145,12 @@ const RETURN_LIST_SPAN = { solar: 5, lunar: 6 };
 /** The moment (on `moment`'s clock) a minute past return `date`, so the bar shows that return and it stays the last one. */
 const atReturn = (moment, date) => momentAt(moment, date.getTime() + 60000);
 
-/** Which lunar node and Lilith the settings ask for. */
-const pointTypesOf = (settings) => ({ nodeType: settings.nodeType, lilithType: settings.lilithType });
 
 /** Points of a forecast method for `date`: transits at `place`, progressions and directions from the birth chart. */
-function forecastPoints(method, natal, date, place, settings, extras) {
-  if (method === 'progressions') return calculateProgressions(natal, date, settings.houseSystem, extras, pointTypesOf(settings));
-  if (method === 'directions') return calculateDirections(natal, date, settings.directions);
-  return calculateTransitPlanets(date, natal.houses, place, settings.houseSystem, extras, pointTypesOf(settings));
+function forecastPoints(method, natal, date, place, { houseSystem, pointTypes, directions }, extras) {
+  if (method === 'progressions') return calculateProgressions(natal, date, houseSystem, extras, pointTypes);
+  if (method === 'directions') return calculateDirections(natal, date, directions);
+  return calculateTransitPlanets(date, natal.houses, place, houseSystem, extras, pointTypes);
 }
 
 /** Forecast aspects with the separating ones past `separatingOrb` hidden or dimmed. */
@@ -374,7 +372,13 @@ export default function App() {
   const extrasKey = EXTRA_OBJECTS.filter((o) => visible[o.id]).map((o) => o.id).join();
   const extras = useMemo(() => new Set(extrasKey ? extrasKey.split(',') : []), [extrasKey]);
 
-  const pointTypes = useMemo(() => pointTypesOf({ nodeType: settings.nodeType, lilithType: settings.lilithType }), [settings.nodeType, settings.lilithType]);
+  const { nodeType, lilithType } = settings;
+  const pointTypes = useMemo(() => ({ nodeType, lilithType }), [nodeType, lilithType]);
+  // What the forecast and search calculations depend on; colours, orbs and weights don't move planets.
+  const calcOptions = useMemo(
+    () => ({ houseSystem: settings.houseSystem, pointTypes, directions: settings.directions }),
+    [settings.houseSystem, pointTypes, settings.directions]
+  );
 
   const chartData = useMemo(
     () =>
@@ -424,8 +428,8 @@ export default function App() {
     const date = toUtcDate(transitMoment.date, transitMoment.time, transitMoment.utcOffset);
     if (Number.isNaN(date.getTime())) return null;
     const place = { latitude: transitLat, longitude: transitLon };
-    return forecastPoints(forecast, chartData, date, place, settings, extras).filter((p) => visible[p.id]);
-  }, [forecast, transitMoment, transitLat, transitLon, chartData, visible, settings, extras]);
+    return forecastPoints(forecast, chartData, date, place, calcOptions, extras).filter((p) => visible[p.id]);
+  }, [forecast, transitMoment, transitLat, transitLon, chartData, visible, calcOptions, extras]);
 
   // Each forecast method has its own orb table and formula; the rest of the aspect settings is shared.
   const orbPreset = settings[ORB_PRESET_KEYS[forecast] ?? ORB_PRESET_KEYS.transit];
@@ -438,8 +442,8 @@ export default function App() {
   const isBiWheel = Boolean(transitPlanets);
   const visibleAspects = transitAspects ?? natalAspects;
   // Progressed lunation: where the progressed Moon stands in its cycle with the progressed Sun.
-  const progressedSun = forecast === 'progressions' && transitPlanets.find((p) => p.id === 'sun');
-  const progressedMoon = forecast === 'progressions' && transitPlanets.find((p) => p.id === 'moon');
+  const progressedSun = forecast === 'progressions' && transitPlanets?.find((p) => p.id === 'sun');
+  const progressedMoon = forecast === 'progressions' && transitPlanets?.find((p) => p.id === 'moon');
   const lunation = progressedSun && progressedMoon ? lunationPhase(progressedSun, progressedMoon) : null;
   // Coming changes of sign and natal house: the progressed Moon's, or every directed point's.
   const ingresses = useMemo(() => {
@@ -465,13 +469,14 @@ export default function App() {
   // One Dynamics step back or forward for the second wheel's own date.
   const stepSecond = (count) => updateSecond(shiftMoment(secondTransit, count * dynamics.step, dynamics.unit));
   const stepAmount = t(`dynamics.preset.${dynamics.unit}`, { n: dynamics.step });
+  const secondPreset = secondMode && settings[ORB_PRESET_KEYS[secondMode]];
   const secondView = useMemo(() => {
     if (!secondMode || !secondRaw.date) return null;
     const date = toUtcDate(secondRaw.date, secondRaw.time, secondRaw.utcOffset);
     if (Number.isNaN(date.getTime())) return null;
     const place = { latitude: secondTransit.latitude, longitude: secondTransit.longitude };
     if (RETURNS[secondMode]) {
-      const chart = calculateReturn(chartData, secondMode, date, place, settings.houseSystem, extras, pointTypes, secondMode);
+      const chart = calculateReturn(chartData, secondMode, date, place, calcOptions.houseSystem, extras, pointTypes, secondMode);
       const planets = chart.planets.filter((p) => visible[p.id]);
       const angles = chart.angles.filter((p) => visible[p.id]);
       const points = [...planets, ...angles];
@@ -480,10 +485,10 @@ export default function App() {
     }
     const base = { chart: chartData, planets: birthPlanets, angles: birthAngles };
     if (secondMode === 'natal') return { ...base, ring: null, points: birthPoints, aspects: findAspects(birthPoints, settings.aspects), moment: birth };
-    const ring = forecastPoints(secondMode, chartData, date, place, settings, extras).filter((p) => visible[p.id]);
-    const preset = { ...settings.aspects, ...settings[ORB_PRESET_KEYS[secondMode]] };
+    const ring = forecastPoints(secondMode, chartData, date, place, calcOptions, extras).filter((p) => visible[p.id]);
+    const preset = { ...settings.aspects, ...secondPreset };
     return { ...base, ring, points: ring, aspects: withSeparating(findAspects(ring, preset, birthPoints), preset), moment: secondTransit };
-  }, [secondMode, secondRaw, secondTransit, chartData, birth, settings, extras, pointTypes, visible, birthPlanets, birthAngles, birthPoints, returnAspectSettings]);
+  }, [secondMode, secondRaw, secondTransit, chartData, birth, calcOptions, settings.aspects, secondPreset, extras, pointTypes, visible, birthPlanets, birthAngles, birthPoints, returnAspectSettings]);
   const secondReturnList = useMemo(
     () => (secondView?.isReturn ? returnsAround(chartData, secondMode, secondView.chart.date, RETURN_LIST_SPAN[secondMode]) : null),
     [secondView, chartData, secondMode]
@@ -529,8 +534,8 @@ export default function App() {
         aspects: new Set(patternAspects.filter((a) => members.has(a.a.key) && members.has(a.b.key)).map((a) => a.id)),
       };
     }
-    // Aspects hovered in the table may belong to the second chart.
-    return pointFocus(hover, secondTableAspects ? [...visibleAspects, ...secondTableAspects] : visibleAspects, natalPlanets);
+    // The table may list the second chart's aspects; their ids can repeat the main chart's (both use natal keys in a return).
+    return pointFocus(hover, hover.second ? secondTableAspects ?? [] : visibleAspects, natalPlanets);
   }, [hover, secondHover, natalPoints, transitPlanets, visibleAspects, secondTableAspects, natalPlanets, patternAspects, patterns]);
 
   // Dynamics comes first; the natal chart also has the element balance, transits show only Dynamics.
@@ -557,14 +562,10 @@ export default function App() {
   const tabs = [
     ...firstTabs,
     { id: 'planets', label: t('tab.planets') },
-    { id: 'aspects', label: t('tab.aspects'), badge: visibleAspects.length },
+    { id: 'aspects', label: t('tab.aspects') },
     { id: 'patterns', label: t('tab.patterns'), badge: patterns.length },
     { id: 'search', label: t('tab.search') },
   ];
-  const searchOptions = useMemo(
-    () => ({ houseSystem: settings.houseSystem, pointTypes, directions: settings.directions }),
-    [settings.houseSystem, pointTypes, settings.directions]
-  );
   // A found contact opens its method at that moment.
   const openContact = (method, ms) => {
     changeMode(method);
@@ -581,6 +582,7 @@ export default function App() {
           kind={returnKind}
           dates={returnList}
           current={RETURN_LIST_SPAN[returnKind]}
+          moment={transit}
           onPick={(date) => updateTransit(atReturn(transit, date))}
         />
       )}
@@ -830,6 +832,7 @@ export default function App() {
                     kind={secondMode}
                     dates={secondReturnList}
                     current={RETURN_LIST_SPAN[secondMode]}
+                    moment={secondTransit}
                     onPick={(date) => updateSecond(atReturn(secondTransit, date))}
                   />
                 ) : (
@@ -871,7 +874,15 @@ export default function App() {
             />
           )}
           {activeTab === 'planets' && (
-            <PlanetTable points={natalPoints} secondPoints={secondView?.points} transitPlanets={transitPlanets} focus={focus} onHover={setHover} />
+            <PlanetTable
+              points={natalPoints}
+              mainLabel={returnKind ?? 'natal'}
+              secondPoints={secondMode === 'natal' && !returnKind ? null : secondView?.points}
+              secondLabel={secondMode}
+              transitPlanets={transitPlanets}
+              focus={focus}
+              onHover={setHover}
+            />
           )}
           {activeTab === 'aspects' && (
             <>
@@ -898,7 +909,7 @@ export default function App() {
                 aspectColors={colors.aspects}
                 isBiWheel={tableTwoRings}
                 focus={focus}
-                onHover={setHover}
+                onHover={showSecondAspects ? (h) => setHover(h && { ...h, second: true }) : setHover}
               />
             </>
           )}
@@ -908,7 +919,7 @@ export default function App() {
               points={birthPoints}
               moment={transit}
               extras={extras}
-              options={searchOptions}
+              options={calcOptions}
               defaultMethod={forecast}
               aspectColors={colors.aspects}
               onPick={openContact}
