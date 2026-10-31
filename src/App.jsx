@@ -5,6 +5,8 @@ import {
   calculateNatal,
   calculateTransitPlanets,
   calculateProgressions,
+  calculateReturn,
+  RETURNS,
   toUtcDate,
   offsetForZone,
   formatOffset,
@@ -106,7 +108,7 @@ function Legend({ aspectColors, t }) {
 }
 
 // Natal chart alone, or with the ring of a forecast method; labels are `mode.<id>`.
-const MODES = ['natal', 'transit', 'progressions'];
+const MODES = ['natal', 'transit', 'progressions', 'solar', 'lunar'];
 
 function IconButton({ onClick, children, label }) {
   return (
@@ -299,15 +301,33 @@ export default function App() {
     [birth, settings.houseSystem, extras, settings.nodeType, extrasLoaded]
   );
 
-  const natalPlanets = useMemo(() => chartData.planets.filter((p) => visible[p.id]), [chartData, visible]);
-  const natalAngles = useMemo(() => chartData.angles.filter((p) => visible[p.id]), [chartData, visible]);
-  const natalPoints = useMemo(() => [...natalPlanets, ...natalAngles], [natalPlanets, natalAngles]);
-  const natalAspects = useMemo(() => findAspects(natalPoints, settings.aspects), [natalPoints, settings.aspects]);
-
   const { latitude: transitLat, longitude: transitLon } = transit;
   // Forecast methods draw an outer ring for the moment in the transit bar: transits at the
   // transit place, progressions for the birth place.
-  const forecast = mode === 'natal' ? null : mode;
+  const forecast = mode === 'transit' || mode === 'progressions' ? mode : null;
+  // Solar and lunar returns replace the chart: the last return before the moment in the bar, at its place.
+  const returnKind = RETURNS[mode] ? mode : null;
+  const returnChart = useMemo(() => {
+    if (!returnKind || !transitMoment.date) return null;
+    const date = toUtcDate(transitMoment.date, transitMoment.time, transitMoment.utcOffset);
+    if (Number.isNaN(date.getTime())) return null;
+    const place = { latitude: transitLat, longitude: transitLon };
+    return calculateReturn(chartData, returnKind, date, place, settings.houseSystem, extras, settings.nodeType);
+  }, [returnKind, transitMoment, transitLat, transitLon, chartData, settings.houseSystem, extras, settings.nodeType]);
+  // The return moment on the clock of its place.
+  const returnMoment = returnChart && momentAt({ ...placeFields(transit), utcOffset: transit.utcOffset }, returnChart.date.getTime());
+  // The chart in the middle of the wheel and in the tables: the birth chart or the return.
+  const mainChart = returnChart ?? chartData;
+  const mainAspectSettings = useMemo(
+    () => (returnKind ? { ...settings.aspects, ...settings.returnOrbPreset } : settings.aspects),
+    [returnKind, settings.aspects, settings.returnOrbPreset]
+  );
+
+  const natalPlanets = useMemo(() => mainChart.planets.filter((p) => visible[p.id]), [mainChart, visible]);
+  const natalAngles = useMemo(() => mainChart.angles.filter((p) => visible[p.id]), [mainChart, visible]);
+  const natalPoints = useMemo(() => [...natalPlanets, ...natalAngles], [natalPlanets, natalAngles]);
+  const natalAspects = useMemo(() => findAspects(natalPoints, mainAspectSettings), [natalPoints, mainAspectSettings]);
+
   const transitPlanets = useMemo(() => {
     if (!forecast || !transitMoment.date) return null;
     const date = toUtcDate(transitMoment.date, transitMoment.time, transitMoment.utcOffset);
@@ -335,7 +355,7 @@ export default function App() {
   const isBiWheel = Boolean(transitPlanets);
   const visibleAspects = transitAspects ?? natalAspects;
 
-  const balance = useMemo(() => calculateBalance(chartData, weights), [chartData, weights]);
+  const balance = useMemo(() => calculateBalance(mainChart, weights), [mainChart, weights]);
   // Natal figures in the natal chart; under transits, the figures transits complete with natal planets.
   const transitPatternSettings = settings.transitPatterns;
   const { patterns, patternAspects } = useMemo(() => {
@@ -502,13 +522,21 @@ export default function App() {
             </button>
             <div className="text-[11px] uppercase tracking-wider text-slate-400">{houseSystem && t(`houseSystem.${houseSystem.key}`)}</div>
           </div>
+          {returnMoment && (
+            <div className="-mt-2 px-1">
+              <div className="font-display text-lg font-semibold">{t(`mode.${returnKind}`)}</div>
+              <div className="text-xs tabular-nums text-slate-500">
+                {placeName(transit, t)} · {formatDate(returnMoment.date, lang)} · {returnMoment.time} · {formatOffset(returnMoment.utcOffset)}
+              </div>
+            </div>
+          )}
 
-          {forecast && (
-            <TransitBar method={forecast} moment={transit} onChange={updateTransit} onPlaceChange={setTransitMoment} onNow={transitNow} />
+          {(forecast || returnKind) && (
+            <TransitBar method={mode} moment={transit} onChange={updateTransit} onPlaceChange={setTransitMoment} onNow={transitNow} />
           )}
 
           <ChartWheel
-            chartData={chartData}
+            chartData={mainChart}
             planets={natalPlanets}
             angles={natalAngles}
             transitPlanets={transitPlanets}
@@ -531,11 +559,11 @@ export default function App() {
           {activeTab === 'dynamics' && (
             <DynamicsPanel
               natal={!isBiWheel}
-              moment={isBiWheel ? transit : birth}
+              moment={mode === 'natal' ? birth : transit}
               dynamics={dynamics}
               onDynamicsChange={setDynamics}
-              onStep={isBiWheel ? stepTransit : stepBirth}
-              onNow={isBiWheel ? transitNow : natalNow}
+              onStep={mode === 'natal' ? stepBirth : stepTransit}
+              onNow={mode === 'natal' ? natalNow : transitNow}
               aspects={visibleAspects}
               aspectColors={colors.aspects}
             />

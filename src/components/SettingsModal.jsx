@@ -14,7 +14,7 @@ const TABS = ['params', 'objects', 'extras', 'orbs', 'method', 'colors'];
 // and each resets only its own entries (see resetTab).
 const TAB_KEYS = {
   params: ['houseSystem', 'nodeType', 'highContrast'],
-  orbs: ['aspects', ...Object.values(ORB_PRESET_KEYS)],
+  orbs: ['aspects', 'returnOrbPreset', ...Object.values(ORB_PRESET_KEYS)],
   method: ['weights'],
   colors: ['colors'],
 };
@@ -230,10 +230,11 @@ function OrbsTab({ settings, update }) {
   const [chart, setChart] = useState('natal');
   const aspects = settings.aspects;
   const setAspects = (patch) => update({ aspects: { ...aspects, ...patch } });
-  const forecast = chart !== 'natal';
-  const presetKey = ORB_PRESET_KEYS[chart];
-  const orbSource = forecast ? settings[presetKey] : aspects;
-  const setOrbSource = (patch) => (forecast ? update({ [presetKey]: { ...orbSource, ...patch } }) : setAspects(patch));
+  // Forecast methods (aspects to the natal chart) have separating aspects and the forecast Moon.
+  const forecast = chart in ORB_PRESET_KEYS;
+  const presetKey = chart === 'returns' ? 'returnOrbPreset' : ORB_PRESET_KEYS[chart];
+  const orbSource = presetKey ? settings[presetKey] : aspects;
+  const setOrbSource = (patch) => (presetKey ? update({ [presetKey]: { ...orbSource, ...patch } }) : setAspects(patch));
   const setOrb = (objectId, aspectId, value) =>
     setOrbSource({ orbs: { ...orbSource.orbs, [objectId]: { ...orbSource.orbs[objectId], [aspectId]: value } } });
   const methods = ORB_METHODS.filter((m) => forecast || !m.transitOnly);
@@ -242,7 +243,7 @@ function OrbsTab({ settings, update }) {
     <div className="space-y-5">
       <Row label={t('settings.orbChart')} hint={t(`settings.orbChart.${chart}Hint`)}>
         <Segmented
-          options={['natal', ...Object.keys(ORB_PRESET_KEYS)].map((id) => ({ id, label: t(`settings.orbChart.${id}`) }))}
+          options={['natal', ...Object.keys(ORB_PRESET_KEYS), 'returns'].map((id) => ({ id, label: t(`settings.orbChart.${id}`) }))}
           value={chart}
           onChange={setChart}
         />

@@ -315,6 +315,39 @@ export function calculateProgressions(natal, date, houseSystem = HouseSystem.Pla
   ];
 }
 
+// Return methods: the body whose return to its natal longitude starts the chart, and its mean speed (°/day).
+export const RETURNS = {
+  solar: { body: Planet.Sun, speed: 0.98561 },
+  lunar: { body: Planet.Moon, speed: 13.17640 },
+};
+
+/**
+ * The last solar or lunar return at or before `date`: the moment the body is back at its natal
+ * longitude, refined by Newton's method. Returns the chart cast for that moment at `place`.
+ * @param {ReturnType<typeof calculateNatal>} natal
+ * @param {'solar' | 'lunar'} kind
+ */
+export function calculateReturn(natal, kind, date, place, houseSystem = HouseSystem.Placidus, extras = new Set(), nodeType = 'mean') {
+  const { body, speed } = RETURNS[kind];
+  const natalLon = swe.calculatePosition(swe.dateToJulianDay(natal.date), body).longitude;
+  const targetJd = swe.dateToJulianDay(date);
+  const solve = (guess) => {
+    let jd = guess;
+    for (let i = 0; i < 12; i++) {
+      const pos = swe.calculatePosition(jd, body);
+      const step = signedDiff(pos.longitude, natalLon) / pos.longitudeSpeed;
+      jd -= step;
+      if (Math.abs(step) < 1e-7) break;
+    }
+    return jd;
+  };
+  // How far the body has gone since its last return, at its mean speed.
+  let jd = solve(targetJd - normalize(swe.calculatePosition(targetJd, body).longitude - natalLon) / speed);
+  if (jd > targetJd) jd = solve(jd - 360 / speed);
+  const returnDate = new Date(date.getTime() + (jd - targetJd) * 86400000);
+  return calculateNatal({ date: returnDate, latitude: place.latitude, longitude: place.longitude }, houseSystem, extras, nodeType);
+}
+
 /** Wall-clock { date, time } in `timeZone` at the UTC instant `ms`. */
 function wallClock(ms, timeZone) {
   const parts = Object.fromEntries(

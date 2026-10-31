@@ -106,6 +106,23 @@ export const DEFAULT_PROGRESSION_ORB_SETTINGS = {
   separatingOrb: 0.2,
 };
 
+// Solar and lunar returns: aspects inside the return chart, narrower than natal ones.
+const RETURN_ORBS = { sun: 4, moon: 4 };
+const RETURN_POINT_ORB = 1.5;
+const RETURN_PLANET_ORB = 3;
+
+/** Orbs of aspects inside a solar or lunar return chart: luminaries 4°, planets and angles 3°, points 1.5°. */
+export const DEFAULT_RETURN_ORB_SETTINGS = {
+  method: 'average',
+  orbs: Object.fromEntries(
+    ALL_OBJECTS.map((o) => {
+      const orb = RETURN_ORBS[o.id] ?? (PLANET_IDS.has(o.id) || ANGLE_IDS.has(o.id) ? RETURN_PLANET_ORB : RETURN_POINT_ORB);
+      return [o.id, Object.fromEntries(ASPECTS.map((a) => [a.id, orb]))];
+    })
+  ),
+  include: { angles: true, nodes: true, extras: false },
+};
+
 /** Forecast method → settings key of its orb preset. */
 export const ORB_PRESET_KEYS = { transit: 'transitOrbPreset', progressions: 'progressionOrbPreset' };
 
