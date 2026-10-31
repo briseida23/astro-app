@@ -607,7 +607,8 @@ export function orbWindows(natal, method, items, at, options) {
 export const RECT_EVENTS = {
   marriage: { weight: 10, houses: [7], points: ['venus', 'jupiter', 'ascendant'] },
   divorce: { weight: 8, houses: [7], points: ['uranus', 'saturn', 'ascendant'] },
-  child: { weight: 9, houses: [5], points: ['moon', 'venus', 'mc'] },
+  // The Sun rules the 5th house by nature: children too.
+  child: { weight: 9, houses: [5], points: ['moon', 'venus', 'sun', 'mc'] },
   move: { weight: 8, houses: [4, 9], points: ['uranus', 'jupiter', 'mc', 'ascendant'] },
   career: { weight: 8, houses: [10], points: ['mc', 'saturn', 'sun'] },
   health: { weight: 7, houses: [1, 6, 8], points: ['mars', 'pluto', 'ascendant'] },

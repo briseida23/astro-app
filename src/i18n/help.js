@@ -44,8 +44,9 @@ const ru = [
       { term: 'Аспекты', text: 'Список аспектов с орбисом; A — сходящийся, S — расходящийся. При двух кругах переключатель показывает аспекты основной или второй карты.' },
       { term: 'Фигуры', text: 'Тау-квадраты, большие трины, йоды и другие конфигурации. Для транзитов можно оставить контуры фигур на круге.' },
       { term: 'Поиск', text: 'Когда транзитная, прогрессивная или дирекционная планета сделает точный аспект к натальной точке или войдёт в дом. Выберите метод, планету, аспект, цель и период; щелчок по строке открывает карту на этот момент. R отмечает касание в ретроградном движении — так видны тройные прохождения.' },
+      { term: 'События и ректификация', text: 'Во вкладке «События» у сохранённого клиента хранятся даты свадеб, переездов, рождения детей и других событий; щелчок открывает прогноз на эту дату. Ниже — ректификация: время рождения перебирается в окне, на даты событий символические дирекции проверяются к сигнификаторам события (орбис до 15′ — полный вес, до 30′ — 70%, до 1° — 30%). Нужно хотя бы 3–5 событий.' },
     ],
-    links: [{ tab: 'search' }, { tab: 'dynamics' }],
+    links: [{ tab: 'search' }, { tab: 'events' }, { tab: 'dynamics' }],
   },
   {
     id: 'settings',
@@ -125,8 +126,9 @@ const uk = [
       { term: 'Аспекти', text: 'Список аспектів з орбісом; A — сходжий, S — розбіжний. Із двома колами перемикач показує аспекти основної або другої карти.' },
       { term: 'Фігури', text: 'Тау-квадрати, великі трини, йоди та інші конфігурації. Для транзитів можна залишити контури фігур на колі.' },
       { term: 'Пошук', text: 'Коли транзитна, прогресивна чи дирекційна планета зробить точний аспект до натальної точки або увійде в дім. Оберіть метод, планету, аспект, ціль і період; клік по рядку відкриває карту на цей момент. R позначає дотик у ретроградному русі — так видно потрійні проходження.' },
+      { term: 'Події та ректифікація', text: 'У вкладці «Події» у збереженого клієнта зберігаються дати весіль, переїздів, народження дітей та інших подій; клік відкриває прогноз на цю дату. Нижче — ректифікація: час народження перебирається у вікні, на дати подій символічні дирекції перевіряються до сигніфікаторів події (орбіс до 15′ — повна вага, до 30′ — 70%, до 1° — 30%). Потрібно хоча б 3–5 подій.' },
     ],
-    links: [{ tab: 'search' }, { tab: 'dynamics' }],
+    links: [{ tab: 'search' }, { tab: 'events' }, { tab: 'dynamics' }],
   },
   {
     id: 'settings',
@@ -206,8 +208,9 @@ const en = [
       { term: 'Aspects', text: 'Aspects with their orbs; A is applying, S separating. With two wheels a switch shows the main or the second chart’s aspects.' },
       { term: 'Patterns', text: 'T-squares, grand trines, yods and other configurations. Transit pattern outlines can stay drawn on the wheel.' },
       { term: 'Search', text: 'When a transiting, progressed or directed planet makes an exact aspect to a natal point or enters a house. Choose the method, planet, aspect, target and period; click a row to open the chart at that moment. R marks a contact made in retrograde motion, which shows triple passes.' },
+      { term: 'Events and rectification', text: 'The Events tab keeps a saved client’s dates of marriages, moves, children’s births and other events; click one to open the forecast for that date. Below it, rectification tries birth times in a window and checks symbolic directions at each event’s date against the event’s significators (within 15′ full weight, 30′ 70%, 1° 30%). It needs at least 3–5 events.' },
     ],
-    links: [{ tab: 'search' }, { tab: 'dynamics' }],
+    links: [{ tab: 'search' }, { tab: 'events' }, { tab: 'dynamics' }],
   },
   {
     id: 'settings',

@@ -14,6 +14,7 @@ const FEATURES = [
   ['☀️', 'returns'],
   ['🌗', 'twoWheels'],
   ['🔍', 'search'],
+  ['🕰️', 'rectification'],
   ['🎯', 'school'],
   ['⚖️', 'balance'],
   ['👥', 'clients'],
