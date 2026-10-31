@@ -119,6 +119,21 @@ const subscribeWide = (onChange) => {
 };
 const isWide = () => window.matchMedia(WIDE).matches;
 
+/** A saved moment: one that was "now" (never moved by hand) is "now" again after a reload. */
+const restoreMoment = (saved) => (saved.live ? momentAt(saved, Date.now()) : saved);
+
+/**
+ * A forecast moment with its place: its own place once one is chosen. Until then it follows the
+ * birth place: the stored instant is shown on the birth place's clock, and edits never store that
+ * place, so changing the birth city later moves this place along with it.
+ */
+function placedMoment(moment, birth) {
+  if (moment.latitude != null) return moment;
+  const merged = { ...moment, ...placeFields(birth) };
+  const ms = toUtcDate(moment.date, moment.time, moment.utcOffset).getTime();
+  return Number.isNaN(ms) ? merged : momentAt(merged, ms);
+}
+
 /** Points of a forecast method for `date`: transits at `place`, progressions and directions from the birth chart. */
 function forecastPoints(method, natal, date, place, settings, extras) {
   if (method === 'progressions') return calculateProgressions(natal, date, settings.houseSystem, extras, settings.nodeType);
@@ -177,11 +192,9 @@ export default function App() {
   // Which chart the aspects table lists when there are two: 'main' or 'second'.
   const [aspectTarget, setAspectTarget] = useState('main');
   // A transit moment that was "now" (never moved by hand) is "now" again after a reload.
-  const [transitMoment, setTransitMoment] = useState(() => {
-    const saved = savedSession?.transitMoment;
-    if (!saved) return nowLocal();
-    return saved.live ? momentAt(saved, Date.now()) : saved;
-  });
+  const [transitMoment, setTransitMoment] = useState(() => (savedSession?.transitMoment ? restoreMoment(savedSession.transitMoment) : nowLocal()));
+  // The second wheel's own moment once its date is changed; null while it follows the main one.
+  const [secondOwnMoment, setSecondOwnMoment] = useState(() => (savedSession?.secondMoment ? restoreMoment(savedSession.secondMoment) : null));
   const [settings, setSettings] = useState(loadSettings);
   const [hover, setHover] = useState(null);
   const [tab, setTab] = useState('dynamics');
@@ -316,18 +329,13 @@ export default function App() {
     saveLanguage(lang);
     document.documentElement.lang = lang;
   }, [lang]);
-  useEffect(() => saveSession({ birth, mode, second, transitMoment }), [birth, mode, second, transitMoment]);
+  useEffect(
+    () => saveSession({ birth, mode, second, transitMoment, secondMoment: secondOwnMoment }),
+    [birth, mode, second, transitMoment, secondOwnMoment]
+  );
 
-  // Transits use their own place once one is chosen. Until then they follow the birth place:
-  // the stored instant is shown on the birth place's clock, and edits never store that place,
-  // so changing the birth city later moves the transit place along with it.
   const hasTransitPlace = transitMoment.latitude != null;
-  const transit = useMemo(() => {
-    if (hasTransitPlace) return transitMoment;
-    const merged = { ...transitMoment, ...placeFields(birth) };
-    const ms = toUtcDate(transitMoment.date, transitMoment.time, transitMoment.utcOffset).getTime();
-    return Number.isNaN(ms) ? merged : momentAt(merged, ms);
-  }, [hasTransitPlace, transitMoment, birth]);
+  const transit = useMemo(() => placedMoment(transitMoment, birth), [transitMoment, birth]);
   const updateTransit = (m, live = false) => setTransitMoment({ ...(hasTransitPlace ? m : withoutPlace(m)), live });
   const transitNow = () => updateTransit(momentAt(transit, Date.now()), true);
   const stepTransit = (count) => updateTransit(shiftMoment(transit, count * dynamics.step, dynamics.unit));
@@ -411,25 +419,30 @@ export default function App() {
   const birthPlanets = useMemo(() => chartData.planets.filter((p) => visible[p.id]), [chartData, visible]);
   const birthAngles = useMemo(() => chartData.angles.filter((p) => visible[p.id]), [chartData, visible]);
   const birthPoints = useMemo(() => [...birthPlanets, ...birthAngles], [birthPlanets, birthAngles]);
+  // The second wheel's moment: its own once its date bar is used, else the main one.
+  const secondRaw = secondOwnMoment ?? transitMoment;
+  const secondTransit = useMemo(() => placedMoment(secondRaw, birth), [secondRaw, birth]);
+  const updateSecond = (m, live = false) => setSecondOwnMoment({ ...(secondRaw.latitude != null ? m : withoutPlace(m)), live });
+  const secondNow = () => updateSecond(momentAt(secondTransit, Date.now()), true);
   const secondView = useMemo(() => {
-    if (!secondMode || !transitMoment.date) return null;
-    const date = toUtcDate(transitMoment.date, transitMoment.time, transitMoment.utcOffset);
+    if (!secondMode || !secondRaw.date) return null;
+    const date = toUtcDate(secondRaw.date, secondRaw.time, secondRaw.utcOffset);
     if (Number.isNaN(date.getTime())) return null;
-    const place = { latitude: transitLat, longitude: transitLon };
+    const place = { latitude: secondTransit.latitude, longitude: secondTransit.longitude };
     if (RETURNS[secondMode]) {
       const chart = calculateReturn(chartData, secondMode, date, place, settings.houseSystem, extras, settings.nodeType, secondMode);
       const planets = chart.planets.filter((p) => visible[p.id]);
       const angles = chart.angles.filter((p) => visible[p.id]);
       const points = [...planets, ...angles];
-      const moment = momentAt({ ...placeFields(transit), utcOffset: transit.utcOffset }, chart.date.getTime());
+      const moment = momentAt({ ...placeFields(secondTransit), utcOffset: secondTransit.utcOffset }, chart.date.getTime());
       return { chart, planets, angles, ring: null, points, aspects: findAspects(points, returnAspectSettings), moment, isReturn: true };
     }
     const base = { chart: chartData, planets: birthPlanets, angles: birthAngles };
     if (secondMode === 'natal') return { ...base, ring: null, points: birthPoints, aspects: findAspects(birthPoints, settings.aspects), moment: birth };
     const ring = forecastPoints(secondMode, chartData, date, place, settings, extras).filter((p) => visible[p.id]);
     const preset = { ...settings.aspects, ...settings[ORB_PRESET_KEYS[secondMode]] };
-    return { ...base, ring, points: ring, aspects: withSeparating(findAspects(ring, preset, birthPoints), preset), moment: transit };
-  }, [secondMode, transitMoment, transitLat, transitLon, transit, chartData, birth, settings, extras, visible, birthPlanets, birthAngles, birthPoints, returnAspectSettings]);
+    return { ...base, ring, points: ring, aspects: withSeparating(findAspects(ring, preset, birthPoints), preset), moment: secondTransit };
+  }, [secondMode, secondRaw, secondTransit, chartData, birth, settings, extras, visible, birthPlanets, birthAngles, birthPoints, returnAspectSettings]);
   // The aspects table can list the second chart instead: the main forecast to a return, or the second chart's own aspects.
   const secondTableAspects = useMemo(() => {
     if (!secondView) return null;
@@ -698,9 +711,15 @@ export default function App() {
               highContrast={settings.highContrast}
             />
             {/* The second chart's date bar sits under its wheel like the main one, so both wheels start
-                at the same height; both bars set the same moment. */}
+                at the same height. Its date is its own once changed, until "same as main". */}
             {secondMode !== 'natal' && (
-              <TransitBar method={secondMode} moment={transit} onChange={updateTransit} onPlaceChange={setTransitMoment} onNow={transitNow} />
+              <TransitBar method={secondMode} moment={secondTransit} onChange={updateSecond} onPlaceChange={setSecondOwnMoment} onNow={secondNow}>
+                {secondOwnMoment && (
+                  <button type="button" className="btn-ghost mb-1" onClick={() => setSecondOwnMoment(null)}>
+                    {t('second.sameMoment')}
+                  </button>
+                )}
+              </TransitBar>
             )}
           </section>
         )}
