@@ -599,6 +599,117 @@ export function orbWindows(natal, method, items, at, options) {
   });
 }
 
+/**
+ * Rectification by events (Erika Royals' method): each kind of event has a weight and its
+ * significators, the natal houses (cusps) and points it is read by. ASC and MC stand for their
+ * axes: an aspect to the ASC is one to the DSC as well, to the MC one to the IC.
+ */
+export const RECT_EVENTS = {
+  marriage: { weight: 10, houses: [7], points: ['venus', 'jupiter', 'ascendant'] },
+  divorce: { weight: 8, houses: [7], points: ['uranus', 'saturn', 'ascendant'] },
+  child: { weight: 9, houses: [5], points: ['moon', 'venus', 'mc'] },
+  move: { weight: 8, houses: [4, 9], points: ['uranus', 'jupiter', 'mc', 'ascendant'] },
+  career: { weight: 8, houses: [10], points: ['mc', 'saturn', 'sun'] },
+  health: { weight: 7, houses: [1, 6, 8], points: ['mars', 'pluto', 'ascendant'] },
+  accident: { weight: 7, houses: [1, 8], points: ['mars', 'uranus', 'pluto', 'ascendant'] },
+  loss: { weight: 7, houses: [8, 12], points: ['saturn', 'pluto', 'moon'] },
+  education: { weight: 6, houses: [3, 9], points: ['jupiter', 'mercury', 'mc'] },
+  other: { weight: 5, houses: [], points: ['ascendant', 'mc'] },
+};
+const RECT_PLANETS = PLANETS.slice(0, 10);
+// Slow transits to the angles: an optional check, counted at half weight.
+const RECT_TRANSITS = PLANETS.slice(6, 10);
+const RECT_TRANSIT_FACTOR = 0.5;
+const ANGLE_IDS = new Set(['ascendant', 'mc']);
+
+/** Share of an event's weight a contact earns by its orb: 15′ full, 30′ 70%, 1° 30%, wider nothing. */
+const tier = (orb) => (orb <= 0.25 ? 1 : orb <= 0.5 ? 0.7 : orb <= 1 ? 0.3 : 0);
+
+/** Best rectification candidates first: highest score, then the closest contacts. */
+export const byRectScore = (a, b) => b.score - a.score || a.orbs - b.orbs;
+
+/** Major aspects of each mover ({ id, longitude }) to each target within 1°: [{ mover, target, aspect, orb, share }]. */
+function rectContacts(movers, targets, keep = () => true) {
+  const found = [];
+  for (const m of movers) {
+    for (const f of targets) {
+      if (m.id === f.id || !keep(m, f)) continue;
+      const sep = Math.abs(signedDiff(m.longitude, f.longitude));
+      for (const aspect of ASPECTS) {
+        const orb = Math.abs(sep - aspect.angle);
+        if (orb <= 1) found.push({ mover: m.id, target: f.id, aspect: aspect.id, orb, share: tier(orb) });
+      }
+    }
+  }
+  return found;
+}
+
+// Only contacts that move with the birth time tell times apart: those of an angle, a cusp or the Moon.
+const timeBound = (m, f) => [m, f].some((p) => ANGLE_IDS.has(p.id) || p.cusp || p.id === 'moon');
+
+/**
+ * Scores every birth time from `from` to `to` (Dates) `stepSeconds` apart at the place `birth`
+ * ({ latitude, longitude }) against `events` ([{ date: Date, kind }]): at each event's date the
+ * natal points are directed by `arc` (symbolic 1° a year by default), and directed angles and
+ * planets that meet the event's natal significators, or directed significators that meet the natal
+ * ASC or MC, earn the event's weight by orb; with `transits`, slow planets on the angles count too.
+ * Each event earns at most its weight, by its best contact. Returns [{ date, score, orbs, percent,
+ * matches: [{ event, method, mover, target, aspect, orb, points }] }] in time order: `orbs` sums each
+ * event's closest orb (1° when none), `percent` is the score against the sum of the events' weights.
+ */
+export function rectify(birth, from, to, stepSeconds, events, { houseSystem, arc = 'symbolic', transits = false }) {
+  const fromJd = swe.dateToJulianDay(from);
+  const steps = Math.floor((to.getTime() - from.getTime()) / (stepSeconds * 1000));
+  const eventJds = events.map((e) => swe.dateToJulianDay(e.date));
+  const configs = events.map((e) => RECT_EVENTS[e.kind] ?? RECT_EVENTS.other);
+  const maxScore = configs.reduce((sum, c) => sum + c.weight, 0) || 1;
+  // The slow planets at each event's moment do not depend on the birth time.
+  const transitPoints = transits ? eventJds.map((jd) => RECT_TRANSITS.map((p) => ({ id: p.id, longitude: swe.calculatePosition(jd, p.body).longitude }))) : null;
+  const results = [];
+  for (let i = 0; i <= steps; i++) {
+    const jd = fromJd + (i * stepSeconds) / 86400;
+    const houses = swe.calculateHouses(jd, birth.latitude, birth.longitude, houseSystem);
+    const angles = [
+      { id: 'ascendant', longitude: houses.ascendant },
+      { id: 'mc', longitude: houses.mc },
+    ];
+    const planets = RECT_PLANETS.map((p) => ({ id: p.id, longitude: swe.calculatePosition(jd, p.body).longitude }));
+    const natal = [...planets, ...angles];
+    const matches = [];
+    events.forEach((event, e) => {
+      const config = configs[e];
+      const significators = [
+        ...natal.filter((p) => config.points.includes(p.id)),
+        ...config.houses.map((n) => ({ id: `cusp${n}`, cusp: n, longitude: houses.cusps[n] })),
+      ];
+      const shift = directionArc(jd, (eventJds[e] - jd) / TROPICAL_YEAR, arc);
+      const directed = natal.map((p) => ({ id: p.id, longitude: p.longitude + shift }));
+      const add = (method, factor) => (c) => matches.push({ event: e, method, ...c, points: c.share * config.weight * factor });
+      // Directed angles and planets to the event's natal significators…
+      rectContacts(directed, significators, timeBound).forEach(add('directions', 1));
+      // …and the event's directed significators to the natal angles not among them (those were counted above).
+      const otherAngles = angles.filter((p) => !config.points.includes(p.id));
+      rectContacts(directed.filter((p) => config.points.includes(p.id) && !ANGLE_IDS.has(p.id)), otherAngles).forEach(add('directions', 1));
+      if (transitPoints) rectContacts(transitPoints[e], angles).forEach(add('transit', RECT_TRANSIT_FACTOR));
+    });
+    // An event earns at most its weight, by its closest contact; the sum of those orbs breaks ties
+    // between times that explain the events equally well.
+    let score = 0;
+    let orbs = 0;
+    events.forEach((_, e) => {
+      const own = matches.filter((m) => m.event === e);
+      if (own.length === 0) {
+        orbs += 1;
+        return;
+      }
+      score += Math.max(...own.map((m) => m.points));
+      orbs += Math.min(...own.map((m) => m.orb));
+    });
+    results.push({ date: new Date(from.getTime() + i * stepSeconds * 1000), score, orbs, percent: (score / maxScore) * 100, matches });
+  }
+  return results;
+}
+
 // Return methods: the body whose return to its natal longitude starts the chart, and its mean speed (°/day).
 export const RETURNS = {
   solar: { body: Planet.Sun, speed: 0.98561 },

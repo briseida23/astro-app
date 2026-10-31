@@ -39,6 +39,7 @@ import { TransitBar, BarSteps, ReturnPicker } from './components/TransitBar';
 import { DynamicsPanel } from './components/DynamicsPanel';
 import { SearchPanel } from './components/SearchPanel';
 import { EventsPanel } from './components/EventsPanel';
+import { RectificationPanel } from './components/RectificationPanel';
 import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
 import { AccountMenu } from './components/AccountMenu';
@@ -974,6 +975,18 @@ export default function App() {
               onOpen={openEvent}
               onSaveClient={() => setChartsOpen(true)}
             />
+          )}
+          {activeTab === 'events' && openClient && clientEvents.length > 0 && (
+            <div className="mt-6">
+              <RectificationPanel
+                key={openClient.id}
+                birth={birth}
+                events={clientEvents}
+                houseSystem={settings.houseSystem}
+                // The birth moment moves to the chosen time; it is saved with the client's form as usual.
+                onApply={(ms) => setBirth((b) => momentAt(b, ms))}
+              />
+            </div>
           )}
           {activeTab === 'patterns' && (
             <PatternsPanel
