@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Modal } from './Modal';
 import { Tabs } from './Tabs';
 import { OBJECTS, EXTRA_OBJECTS, EXTRA_GROUPS, ASPECTS, HOUSE_SYSTEMS, NODE_TYPES, LILITH_TYPES } from '../utils/ephemeris';
-import { ORB_METHODS, SEPARATING_MODES, ORB_PRESET_KEYS } from '../utils/aspects';
+import { ORB_METHODS, SEPARATING_MODES, ORB_PRESET_KEYS, FAST_IDS } from '../utils/aspects';
 import { ELEMENTS } from '../utils/balance';
 import { DEFAULT_SETTINGS } from '../utils/settings';
 import { useI18n } from '../i18n';
@@ -21,7 +21,7 @@ const TAB_KEYS = {
 const TAB_OBJECTS = { objects: OBJECTS, extras: EXTRA_OBJECTS };
 
 // Point groups that can be switched on for aspects (planets and Chiron always count).
-const INCLUDE_GROUPS = ['angles', 'nodes', 'extras', 'moon'];
+const INCLUDE_GROUPS = ['angles', 'nodes', 'extras'];
 
 
 // Aspects that share one colour.
@@ -288,7 +288,7 @@ function OrbsTab({ settings, update }) {
       )}
       <Row label={t('settings.include')} hint={t(`settings.include.${chart}Hint`)}>
         <div className="flex flex-col items-start gap-1.5">
-          {INCLUDE_GROUPS.filter((g) => forecast || g !== 'moon').map((g) => (
+          {INCLUDE_GROUPS.map((g) => (
             <label key={g} className="flex cursor-pointer items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -296,11 +296,48 @@ function OrbsTab({ settings, update }) {
                 checked={Boolean(orbSource.include[g])}
                 onChange={(e) => setOrbSource({ include: { ...orbSource.include, [g]: e.target.checked } })}
               />
-              {t(g === 'moon' && chart !== 'transit' ? `settings.include.${chart}Moon` : `settings.include.${g}`)}
+              {t(`settings.include.${g}`)}
             </label>
           ))}
         </div>
       </Row>
+      {forecast && (
+        <Row label={t(`settings.fast.${chart}`)} hint={t('settings.fastHint')}>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex gap-1">
+              {FAST_IDS.map((id) => {
+                const on = orbSource.include[id] !== false;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-pressed={on}
+                    title={t(`object.${id}`)}
+                    onClick={() => setOrbSource({ include: { ...orbSource.include, [id]: !on } })}
+                    className={`astro flex h-9 w-9 items-center justify-center rounded-lg border text-base transition ${
+                      on ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300'
+                    }`}
+                  >
+                    {OBJECTS.find((o) => o.id === id).glyph}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-3 text-xs">
+              {[['fastAll', true], ['slowOnly', false]].map(([key, value]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className="text-slate-600 underline decoration-slate-300 underline-offset-2 hover:text-slate-900"
+                  onClick={() => setOrbSource({ include: { ...orbSource.include, ...Object.fromEntries(FAST_IDS.map((id) => [id, value])) } })}
+                >
+                  {t(`settings.${key}`)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </Row>
+      )}
       <Row label={t('settings.exact')} hint={t('settings.exactHint')}>
         <label className="flex items-center gap-2 text-sm">
           <input

@@ -11,10 +11,16 @@ const CORE_IDS = new Set([...PLANET_IDS, 'chiron']);
 const ANGLE_IDS = new Set(['ascendant', 'mc']);
 const NODE_IDS = new Set(['node', 'southNode', 'lilith']);
 
-/** Whether point `p` may form aspects under `include` ({ angles, nodes, extras, moon? }). */
+/** Forecast planets that can be left out per method: they move fast and add short-lived aspects. */
+export const FAST_IDS = ['sun', 'moon', 'mercury', 'venus', 'mars'];
+
+/**
+ * Whether point `p` may form aspects under `include` ({ angles, nodes, extras, sun?, moon?, … }):
+ * a forecast Sun, Moon, Mercury, Venus or Mars only unless its own flag is false.
+ */
 function takesPart(p, include) {
-  // The forecast Moon is optional: the transiting one (~13°/day) sets the mood of the day, not events.
-  if (p.ring !== 'natal' && p.id === 'moon') return include.moon !== false;
+  // The transiting Moon (~13°/day) sets the mood of the day, not events; the others can be dropped for long-range work.
+  if (p.ring !== 'natal' && FAST_IDS.includes(p.id)) return include[p.id] !== false;
   if (CORE_IDS.has(p.id)) return true;
   if (ANGLE_IDS.has(p.id)) return include.angles;
   if (NODE_IDS.has(p.id)) return include.nodes;

@@ -36,7 +36,6 @@ const ru = {
   'settings.orbChart.directions': 'Дирекций',
   'settings.orbChart.directionsHint': 'Дирекции к наталу: 1° для всех точек, только мажорные аспекты',
   'settings.include.directionsHint': 'Планеты и Хирон учитываются всегда. Дирекционные ASC/MC — при точном времени рождения',
-  'settings.include.directionsMoon': 'Дирекционная Луна',
   'second.label': 'Вторая карта',
   'returns.prev.solar': 'Предыдущий соляр',
   'returns.next.solar': 'Следующий соляр',
@@ -261,8 +260,6 @@ const ru = {
   'settings.include.angles': 'ASC и MC',
   'settings.include.nodes': 'Узлам и Лилит',
   'settings.include.extras': 'Доп. объектам (Селена, астероиды…)',
-  'settings.include.moon': 'Транзитная Луна',
-  'settings.include.progressionsMoon': 'Прогрессивная Луна',
   'settings.exact': 'Точный аспект',
   'settings.exactHint': 'Орбис не больше этой доли от допустимого — линия толще',
   'settings.aspectToggle': '{aspect} — учитывать',
@@ -468,6 +465,12 @@ const ru = {
   'help.openSettings': 'Настройки → {tab}',
   'help.openMode': 'Открыть: {mode}',
   'help.openTab': 'Вкладка «{tab}»',
+  'settings.fast.transit': 'Быстрые транзитные планеты',
+  'settings.fast.progressions': 'Быстрые прогрессивные планеты',
+  'settings.fast.directions': 'Быстрые дирекционные планеты',
+  'settings.fastHint': 'Солнце, Луна, Меркурий, Венера, Марс: выключите для долгосрочного прогноза',
+  'settings.fastAll': 'Все',
+  'settings.slowOnly': 'Только медленные (Юпитер–Плутон)',
 };
 
 const uk = {
@@ -505,7 +508,6 @@ const uk = {
   'settings.orbChart.directions': 'Дирекцій',
   'settings.orbChart.directionsHint': 'Дирекції до наталу: 1° для всіх точок, лише мажорні аспекти',
   'settings.include.directionsHint': 'Планети й Хірон враховуються завжди. Дирекційні ASC/MC — за точного часу народження',
-  'settings.include.directionsMoon': 'Дирекційний Місяць',
   'second.label': 'Друга карта',
   'returns.prev.solar': 'Попередній соляр',
   'returns.next.solar': 'Наступний соляр',
@@ -730,8 +732,6 @@ const uk = {
   'settings.include.angles': 'ASC і MC',
   'settings.include.nodes': 'Вузлів і Ліліт',
   'settings.include.extras': 'Дод. обʼєктів (Селена, астероїди…)',
-  'settings.include.moon': 'Транзитний Місяць',
-  'settings.include.progressionsMoon': 'Прогресивний Місяць',
   'settings.exact': 'Точний аспект',
   'settings.exactHint': 'Орбіс не більший за цю частку від допустимого — лінія товща',
   'settings.aspectToggle': '{aspect} — враховувати',
@@ -937,6 +937,12 @@ const uk = {
   'help.openSettings': 'Налаштування → {tab}',
   'help.openMode': 'Відкрити: {mode}',
   'help.openTab': 'Вкладка «{tab}»',
+  'settings.fast.transit': 'Швидкі транзитні планети',
+  'settings.fast.progressions': 'Швидкі прогресивні планети',
+  'settings.fast.directions': 'Швидкі дирекційні планети',
+  'settings.fastHint': 'Сонце, Місяць, Меркурій, Венера, Марс: вимкніть для довгострокового прогнозу',
+  'settings.fastAll': 'Усі',
+  'settings.slowOnly': 'Лише повільні (Юпітер–Плутон)',
 };
 
 const en = {
@@ -974,7 +980,6 @@ const en = {
   'settings.orbChart.directions': 'Directions',
   'settings.orbChart.directionsHint': 'Directions to the natal chart: 1° for every point, major aspects only',
   'settings.include.directionsHint': 'Planets and Chiron always count. Directed ASC/MC need an exact birth time',
-  'settings.include.directionsMoon': 'Directed Moon',
   'second.label': 'Second chart',
   'returns.prev.solar': 'Previous solar return',
   'returns.next.solar': 'Next solar return',
@@ -1199,8 +1204,6 @@ const en = {
   'settings.include.angles': 'ASC and MC',
   'settings.include.nodes': 'Nodes and Lilith',
   'settings.include.extras': 'More objects (Selena, asteroids…)',
-  'settings.include.moon': 'Transiting Moon',
-  'settings.include.progressionsMoon': 'Progressed Moon',
   'settings.exact': 'Exact aspect',
   'settings.exactHint': 'Orb within this share of the allowed orb — drawn with a thicker line',
   'settings.aspectToggle': '{aspect} — include',
@@ -1406,6 +1409,12 @@ const en = {
   'help.openSettings': 'Settings → {tab}',
   'help.openMode': 'Open: {mode}',
   'help.openTab': '{tab} tab',
+  'settings.fast.transit': 'Fast transiting planets',
+  'settings.fast.progressions': 'Fast progressed planets',
+  'settings.fast.directions': 'Fast directed planets',
+  'settings.fastHint': 'Sun, Moon, Mercury, Venus, Mars: switch off for long-range forecasts',
+  'settings.fastAll': 'All',
+  'settings.slowOnly': 'Slow only (Jupiter–Pluto)',
 };
 
 export const TRANSLATIONS = { ru, uk, en };
