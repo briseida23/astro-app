@@ -468,12 +468,46 @@ function moverLongitude(natal, method, id, { houseSystem, pointTypes, directions
   return (jd) => normalize(natalPoint.longitude + sign * directionArc(birthJd, (jd - birthJd) / TROPICAL_YEAR, directions.arc));
 }
 
+// Transits: days between samples. A contact is missed only if the planet crosses the degree and
+// comes back within one step, which takes a station: the Sun and Moon never turn back, the rest
+// get a step well under the time they spend near a station.
+const TRANSIT_STEP = { sun: 10, moon: 2, mercury: 1, venus: 2, mars: 3, jupiter: 5, saturn: 6, uranus: 8, neptune: 8, pluto: 8, chiron: 6 };
+
 // Days between samples when looking for contacts: short enough that no contact slips between two.
 function sampleStep(method, id) {
-  if (method === 'directions') return 30;
-  if (method === 'progressions') return id === 'moon' ? 5 : 30;
-  if (id === 'moon') return 0.25;
-  return ['sun', 'mercury', 'venus', 'mars'].includes(id) ? 1 : 2;
+  // Directed points and the progressed Moon only move forward; progressed planets turn within months.
+  if (method === 'directions') return 60;
+  if (method === 'progressions') return id === 'moon' ? 30 : 60;
+  return TRANSIT_STEP[id] ?? 2;
+}
+
+/**
+ * Root of `fn` between a and b, where fa and fb (its values there) have opposite signs, to about
+ * half a minute: the Illinois variant of regula falsi, which needs two to four evaluations where
+ * halving the interval down to a minute needs ten to twenty.
+ */
+function findRoot(a, b, fa, fb, fn) {
+  // Done once the value is within half a minute's worth of the mean motion across the interval.
+  const tolerance = Math.abs(fb - fa) / Math.abs(b - a) / 2880;
+  let side = 0;
+  for (let i = 0; i < 50; i++) {
+    const c = (a * fb - b * fa) / (fb - fa);
+    if (Math.abs(b - a) < 1 / 1440) return c;
+    const fc = fn(c);
+    if (Math.abs(fc) <= tolerance) return c;
+    if ((fc < 0) === (fb < 0)) {
+      b = c;
+      fb = fc;
+      if (side === -1) fa /= 2;
+      side = -1;
+    } else {
+      a = c;
+      fa = fc;
+      if (side === 1) fb /= 2;
+      side = 1;
+    }
+  }
+  return (a + b) / 2;
 }
 
 /**
@@ -481,7 +515,7 @@ function sampleStep(method, id) {
  * `aspects` exactly to one of `targets` ({ key, longitude }; a target with `cusp` set, a house number, is
  * that natal cusp and one with `signStart`, a sign index, that sign's first degree: both take only the
  * conjunction, the ingress into that house or sign). Sampled, then refined by
- * bisection to a minute: [{ date, target, aspect, house, sign, retrograde }], earliest first; `house`
+ * root finding to seconds: [{ date, target, aspect, house, sign, retrograde }], earliest first; `house`
  * and `sign` are the ones entered at a boundary: the one before it when the mover goes backwards.
  * @param {{ houseSystem, pointTypes, directions: { arc, converse } }} options
  */
@@ -508,21 +542,11 @@ export function findContacts(natal, method, mover, targets, aspects, from, to, o
           const cur = signedDiff(lons[i], goal);
           // A change of sign near the goal, not the jump on the opposite side.
           if ((prev < 0) !== (cur < 0) && Math.abs(prev - cur) < 90) {
-            let a = jds[i - 1];
-            let b = jds[i];
-            let fa = prev;
-            while (b - a > 1 / 1440) {
-              const m = (a + b) / 2;
-              const fm = signedDiff(lonAt(m), goal);
-              if ((fm < 0) === (fa < 0)) {
-                a = m;
-                fa = fm;
-              } else b = m;
-            }
+            const jd = findRoot(jds[i - 1], jds[i], prev, cur, (t) => signedDiff(lonAt(t), goal));
             // Crossing a cusp or a sign's start backwards enters the house or sign before it.
             const house = target.cusp && (prev > 0 ? ((target.cusp + 10) % 12) + 1 : target.cusp);
             const sign = target.signStart != null ? SIGNS[prev > 0 ? (target.signStart + 11) % 12 : target.signStart] : undefined;
-            hits.push({ date: toDate((a + b) / 2), target, aspect, house, sign, retrograde: prev > 0 });
+            hits.push({ date: toDate(jd), target, aspect, house, sign, retrograde: prev > 0 });
           }
           prev = cur;
         }
@@ -546,18 +570,6 @@ function maxSpeed(method, id, pointTypes) {
 // How far around the moment to look for the edges of an orb, in days.
 const WINDOW_HORIZON = { transit: 3 * 365, progressions: 40 * 365, directions: 40 * 365 };
 
-/** Root of `fn` between a and b (fa = fn(a), opposite signs at the ends), to a minute. */
-function bisect(a, b, fa, fn) {
-  while (Math.abs(b - a) > 1 / 1440) {
-    const m = (a + b) / 2;
-    const fm = fn(m);
-    if ((fm < 0) === (fa < 0)) {
-      a = m;
-      fa = fm;
-    } else b = m;
-  }
-  return (a + b) / 2;
-}
 
 /**
  * The orb window around `at` of forecast aspects to fixed points. Each item is { mover, target,
@@ -589,8 +601,8 @@ export function orbWindows(natal, method, items, at, options) {
       for (let t = step; t <= WINDOW_HORIZON[method]; t += step) {
         const jd1 = atJd + dir * t;
         const f1 = f(jd1);
-        if (exact === null && (f0 < 0) !== (f1 < 0) && Math.abs(f0 - f1) < 90) exact = bisect(jd0, jd1, f0, f);
-        if (Math.abs(f1) > orb) return { edge: bisect(jd0, jd1, Math.abs(f0) - orb, outside), exact };
+        if (exact === null && (f0 < 0) !== (f1 < 0) && Math.abs(f0 - f1) < 90) exact = findRoot(jd0, jd1, f0, f1, f);
+        if (Math.abs(f1) > orb) return { edge: findRoot(jd0, jd1, Math.abs(f0) - orb, Math.abs(f1) - orb, outside), exact };
         jd0 = jd1;
         f0 = f1;
       }

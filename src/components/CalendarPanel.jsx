@@ -35,10 +35,11 @@ export function CalendarPanel({ natal, points, moment, options, aspectColors, on
   }, [natal, planets, from, span, moment.utcOffset, options]);
   const shown = kind === 'all' ? ingresses : ingresses.filter((i) => i.kind === kind);
 
+  // Two years either side do not depend on the hour: stepping the time leaves the list alone.
   const eclipses = useMemo(() => {
-    const date = toUtcDate(moment.date, moment.time, moment.utcOffset);
+    const date = toUtcDate(moment.date, '12:00', moment.utcOffset);
     return Number.isNaN(date.getTime()) ? [] : eclipsesAround(natal, date, ECLIPSE_YEARS, points);
-  }, [natal, points, moment.date, moment.time, moment.utcOffset]);
+  }, [natal, points, moment.date, moment.utcOffset]);
   const now = toUtcDate(moment.date, moment.time, moment.utcOffset).getTime();
 
   const day = (date) => formatShortDate(momentAt(moment, date.getTime()).date, lang);

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useSyncExternalStore } from 'react';
+import { useState, useMemo, useEffect, useRef, useSyncExternalStore, lazy, Suspense } from 'react';
 import {
   ASPECTS,
   HOUSE_SYSTEMS,
@@ -41,13 +41,15 @@ import { SearchPanel } from './components/SearchPanel';
 import { EventsPanel } from './components/EventsPanel';
 import { RectificationPanel } from './components/RectificationPanel';
 import { CalendarPanel } from './components/CalendarPanel';
+
+// The help guide (its texts in three languages) loads the first time it is opened.
+const HelpModal = lazy(() => import('./components/HelpModal').then((m) => ({ default: m.HelpModal })));
 import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
 import { AccountMenu } from './components/AccountMenu';
 import { MobileMenu } from './components/MobileMenu';
 import { ClientsModal } from './components/ClientsModal';
 import { AboutModal } from './components/AboutModal';
-import { HelpModal } from './components/HelpModal';
 import { APP_NAME } from './appInfo';
 import { Tabs } from './components/Tabs';
 import { detectCurrentPlace, placeFields, withoutPlace, withoutClient } from './utils/location';
@@ -239,6 +241,8 @@ export default function App() {
   // Id of the user whose account settings have been loaded: only then are changes saved back,
   // so local values never overwrite the account's before it has been read.
   const [syncedUserId, setSyncedUserId] = useState(null);
+  // The settings and language last read from or written to the account, as JSON.
+  const syncedData = useRef(null);
   const syncReady = Boolean(user) && syncedUserId === user.id;
   // Saved clients (name + birth data) of the signed-in user, newest first; null while signed out.
   const [clientsOf, setClientsOf] = useState({ userId: null, list: [] });
@@ -268,6 +272,8 @@ export default function App() {
         if (cancelled) return;
         if (data?.settings) setSettings(normalizeSettings(data.settings));
         if (data?.lang && LANGUAGES.some((l) => l.id === data.lang)) setLang(data.lang);
+        // What the account already holds, so loading it does not send it straight back.
+        if (data?.settings) syncedData.current = JSON.stringify({ settings: normalizeSettings(data.settings), lang: data.lang });
         setSyncedUserId(user.id);
       })
       .catch(() => {});
@@ -310,8 +316,16 @@ export default function App() {
   const syncTimer = useRef(null);
   useEffect(() => {
     if (!user || !syncReady) return;
+    // Only real changes are written: the same settings again cost a database write for nothing.
+    const body = JSON.stringify({ settings, lang });
+    if (body === syncedData.current) return;
     clearTimeout(syncTimer.current);
-    syncTimer.current = setTimeout(() => api.saveSettings({ settings, lang }).catch(() => {}), 800);
+    syncTimer.current = setTimeout(() => {
+      api
+        .saveSettings({ settings, lang })
+        .then(() => (syncedData.current = body))
+        .catch(() => {});
+    }, 800);
     return () => clearTimeout(syncTimer.current);
   }, [user, syncReady, settings, lang]);
 
@@ -1034,16 +1048,20 @@ export default function App() {
         settings={settings}
         onChange={setSettings}
       />
-      <HelpModal
-        open={helpOpen}
-        onClose={() => setHelpOpen(false)}
-        onOpenSettings={setSettingsOpen}
-        onOpenMode={changeMode}
-        onOpenTab={(id) => {
-          setTab(id);
-          document.getElementById('chart-tabs')?.scrollIntoView({ behavior: 'smooth' });
-        }}
-      />
+      {helpOpen && (
+        <Suspense fallback={null}>
+          <HelpModal
+            open
+            onClose={() => setHelpOpen(false)}
+            onOpenSettings={setSettingsOpen}
+            onOpenMode={changeMode}
+            onOpenTab={(id) => {
+              setTab(id);
+              document.getElementById('chart-tabs')?.scrollIntoView({ behavior: 'smooth' });
+            }}
+          />
+        </Suspense>
+      )}
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} google={Boolean(authConfig?.google)} turnstile={authConfig?.turnstile ?? null} onSignedIn={setUser} />
       <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} user={user} turnstile={authConfig?.turnstile ?? null} />
       <ClientsModal
