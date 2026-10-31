@@ -714,7 +714,7 @@ export default function App() {
           />
           {secondView && forecastBar}
           <Legend aspectColors={colors.aspects} t={t} />
-          {isBiWheel && <TransitEvents patterns={patterns} aspects={patternAspects} hover={hover} onHover={setHover} />}
+          {isBiWheel && <TransitEvents method={forecast} patterns={patterns} aspects={patternAspects} hover={hover} onHover={setHover} />}
         </section>
 
         {secondView && (
@@ -813,6 +813,7 @@ export default function App() {
               aspects={visibleAspects}
               aspectColors={colors.aspects}
               lunation={lunation}
+              showPlace={mode !== 'progressions' && mode !== 'directions'}
             />
           )}
           {activeTab === 'planets' && (
@@ -849,6 +850,7 @@ export default function App() {
           )}
           {activeTab === 'patterns' && (
             <PatternsPanel
+              method={forecast}
               patterns={patterns}
               hover={hover}
               onHover={setHover}

@@ -45,7 +45,7 @@ function StepButton({ onClick, label, caption, children }) {
 }
 
 /** Moves the transit moment (or, with `natal`, the birth moment) back and forth by a chosen interval. */
-export function DynamicsPanel({ natal, moment, dynamics, onDynamicsChange, onStep, onNow, aspects, aspectColors, lunation }) {
+export function DynamicsPanel({ natal, moment, dynamics, onDynamicsChange, onStep, onNow, aspects, aspectColors, lunation, showPlace = true }) {
   const { lang, t } = useI18n();
   const { step, unit } = dynamics;
   const set = (patch) => onDynamicsChange({ ...dynamics, ...patch });
@@ -67,7 +67,8 @@ export function DynamicsPanel({ natal, moment, dynamics, onDynamicsChange, onSte
       <div className="rounded-xl bg-slate-50 px-4 py-3 text-center">
         <div className="font-display text-xl font-semibold tabular-nums">{formatMoment(moment, lang)}</div>
         <div className="mt-0.5 text-xs text-slate-500">
-          {formatOffset(moment.utcOffset)} · {placeName(moment, t)}
+          {formatOffset(moment.utcOffset)}
+          {showPlace && ` · ${placeName(moment, t)}`}
         </div>
         {lunation && (
           <div className="mt-2 text-sm">

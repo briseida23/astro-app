@@ -3,6 +3,9 @@ import { useI18n } from '../i18n';
 import { Glyph } from './Glyph';
 import { Hint } from './Hint';
 
+/** Text key for a forecast method: transits use the plain key, other methods `key.<method>`. */
+const methodKey = (key, method) => (method && method !== 'transit' ? `${key}.${method}` : key);
+
 /** The transit member of a figure, its widest orb to the natal members and whether it is still closing in. */
 function transitContact(pattern, aspects) {
   const transit = pattern.members.find((m) => m.ring !== 'natal');
@@ -18,12 +21,12 @@ function transitContact(pattern, aspects) {
 }
 
 /** Figures completed by transits, as event cards under the wheel. */
-export function TransitEvents({ patterns, aspects, hover, onHover }) {
+export function TransitEvents({ method, patterns, aspects, hover, onHover }) {
   const { t } = useI18n();
   if (patterns.length === 0) return null;
   return (
     <div className="space-y-2">
-      <h3 className="px-1 text-[11px] font-medium uppercase tracking-wider text-slate-400">{t('events.title')}</h3>
+      <h3 className="px-1 text-[11px] font-medium uppercase tracking-wider text-slate-400">{t(methodKey('events.title', method))}</h3>
       {patterns.map((pattern, i) => {
         const { transit, natal, orb, applying } = transitContact(pattern, aspects);
         const active = hover?.type === 'pattern' && hover.index === i;
@@ -63,7 +66,7 @@ export function TransitEvents({ patterns, aspects, hover, onHover }) {
 }
 
 /** Switch and orb for the figures transits complete with natal planets. */
-function TransitPatternControls({ settings, onChange }) {
+function TransitPatternControls({ method, settings, onChange }) {
   const { t } = useI18n();
   return (
     <div className="mb-4 space-y-2 rounded-xl bg-slate-50 px-4 py-3">
@@ -79,10 +82,10 @@ function TransitPatternControls({ settings, onChange }) {
             <span className="h-6 w-11 rounded-full bg-slate-200 transition peer-checked:bg-slate-900 peer-focus-visible:ring-4 peer-focus-visible:ring-slate-200" />
             <span className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition peer-checked:translate-x-5" />
           </span>
-          {t('patterns.transitToggle')}
+          {t(methodKey('patterns.transitToggle', method))}
         </label>
         <label className={`flex items-center gap-2 text-sm text-slate-600 ${settings.enabled ? '' : 'opacity-40'}`}>
-          {t('patterns.transitOrb')}
+          {t(methodKey('patterns.transitOrb', method))}
           <input
             type="number"
             className="input-sm w-16 text-right"
@@ -109,7 +112,7 @@ function TransitPatternControls({ settings, onChange }) {
         />
         {t('patterns.contours')}
       </label>
-      <p className="text-xs text-slate-500">{t('patterns.transitHint')}</p>
+      <p className="text-xs text-slate-500">{t(methodKey('patterns.transitHint', method))}</p>
     </div>
   );
 }
@@ -118,12 +121,14 @@ function TransitPatternControls({ settings, onChange }) {
  * Aspect figures. With `transitSettings` (transit mode) the list holds figures made of transit
  * and natal planets, and the switch/orb for them are shown on top.
  */
-export function PatternsPanel({ patterns, hover, onHover, transitSettings, onTransitSettingsChange }) {
+export function PatternsPanel({ method, patterns, hover, onHover, transitSettings, onTransitSettingsChange }) {
   const { t } = useI18n();
   const ringLabel = (p) => (transitSettings ? t(`wheel.${p.ring}Prefix`) : '');
-  const controls = transitSettings && <TransitPatternControls settings={transitSettings} onChange={onTransitSettingsChange} />;
+  const controls = transitSettings && <TransitPatternControls method={method} settings={transitSettings} onChange={onTransitSettingsChange} />;
   if (patterns.length === 0) {
-    const empty = transitSettings ? (transitSettings.enabled ? 'patterns.transitEmpty' : 'patterns.transitOff') : 'patterns.empty';
+    const empty = transitSettings
+      ? methodKey(transitSettings.enabled ? 'patterns.transitEmpty' : 'patterns.transitOff', method)
+      : 'patterns.empty';
     return (
       <>
         {controls}
