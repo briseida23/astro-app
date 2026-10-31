@@ -479,6 +479,40 @@ export default function App() {
   ];
   const houseSystem = HOUSE_SYSTEMS.find((h) => h.id === settings.houseSystem);
 
+  // The date (and place) of the forecast or return; with two wheels it goes under the main wheel
+  // so both wheels start at the same height.
+  const forecastBar = (forecast || returnKind) && (
+    <TransitBar method={mode} moment={transit} onChange={updateTransit} onPlaceChange={setTransitMoment} onNow={transitNow}>
+      {mode === 'directions' && (
+        <>
+          <label className="field">
+            <span>{t('directions.arc')}</span>
+            <select
+              className="input-sm"
+              value={settings.directions.arc}
+              onChange={(e) => setSettings((s) => ({ ...s, directions: { ...s.directions, arc: e.target.value } }))}
+            >
+              {Object.keys(DIRECTION_ARCS).map((id) => (
+                <option key={id} value={id}>{t(`directions.arc.${id}`)}</option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>{t('directions.direction')}</span>
+            <select
+              className="input-sm"
+              value={settings.directions.converse ? 'converse' : 'direct'}
+              onChange={(e) => setSettings((s) => ({ ...s, directions: { ...s.directions, converse: e.target.value === 'converse' } }))}
+            >
+              <option value="direct">{t('directions.direct')}</option>
+              <option value="converse">{t('directions.converse')}</option>
+            </select>
+          </label>
+        </>
+      )}
+    </TransitBar>
+  );
+
   return (
     <I18nContext.Provider value={i18n}>
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A]">
@@ -580,15 +614,22 @@ export default function App() {
             </button>
             <div className="flex items-center gap-3">
               {wide && !returnKind && (
-                <label className="flex items-center gap-2 text-xs text-slate-500">
-                  {t('second.label')}
-                  <select className="input-sm" value={second} onChange={(e) => setSecond(e.target.value)}>
-                    <option value="none">{t('second.none')}</option>
-                    {Object.keys(RETURNS).map((id) => (
-                      <option key={id} value={id}>{t(`mode.${id}`)}</option>
-                    ))}
-                  </select>
-                </label>
+                <div role="group" aria-label={t('second.label')} className="flex items-center gap-1.5 text-xs">
+                  <span className="text-slate-500">{t('second.label')}</span>
+                  {Object.keys(RETURNS).map((id) => (
+                    <button
+                      key={id}
+                      type="button"
+                      aria-pressed={second === id}
+                      onClick={() => setSecond(second === id ? 'none' : id)}
+                      className={`rounded-full px-2.5 py-1 font-medium transition ${
+                        second === id ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      {second === id ? '✓' : '+'} {t(`mode.${id}`)}
+                    </button>
+                  ))}
+                </div>
               )}
               <div className="text-[11px] uppercase tracking-wider text-slate-400">{houseSystem && t(`houseSystem.${houseSystem.key}`)}</div>
             </div>
@@ -602,37 +643,7 @@ export default function App() {
             </div>
           )}
 
-          {(forecast || returnKind) && (
-            <TransitBar method={mode} moment={transit} onChange={updateTransit} onPlaceChange={setTransitMoment} onNow={transitNow}>
-              {mode === 'directions' && (
-                <>
-                  <label className="field">
-                    <span>{t('directions.arc')}</span>
-                    <select
-                      className="input-sm"
-                      value={settings.directions.arc}
-                      onChange={(e) => setSettings((s) => ({ ...s, directions: { ...s.directions, arc: e.target.value } }))}
-                    >
-                      {Object.keys(DIRECTION_ARCS).map((id) => (
-                        <option key={id} value={id}>{t(`directions.arc.${id}`)}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="field">
-                    <span>{t('directions.direction')}</span>
-                    <select
-                      className="input-sm"
-                      value={settings.directions.converse ? 'converse' : 'direct'}
-                      onChange={(e) => setSettings((s) => ({ ...s, directions: { ...s.directions, converse: e.target.value === 'converse' } }))}
-                    >
-                      <option value="direct">{t('directions.direct')}</option>
-                      <option value="converse">{t('directions.converse')}</option>
-                    </select>
-                  </label>
-                </>
-              )}
-            </TransitBar>
-          )}
+          {!secondChart && forecastBar}
 
           <ChartWheel
             chartData={mainChart}
@@ -647,6 +658,7 @@ export default function App() {
             onHover={setHover}
             highContrast={settings.highContrast}
           />
+          {secondChart && forecastBar}
           <Legend aspectColors={colors.aspects} t={t} />
           {isBiWheel && <TransitEvents patterns={patterns} aspects={patternAspects} hover={hover} onHover={setHover} />}
         </section>
@@ -659,10 +671,6 @@ export default function App() {
                 {placeName(transit, t)} · {formatDate(secondMoment.date, lang)} · {secondMoment.time} · {formatOffset(secondMoment.utcOffset)}
               </div>
             </div>
-            {/* Without a forecast bar in the main card the return's date and place are chosen here. */}
-            {!forecast && (
-              <TransitBar method={secondKind} moment={transit} onChange={updateTransit} onPlaceChange={setTransitMoment} onNow={transitNow} />
-            )}
             <ChartWheel
               chartData={secondChart}
               planets={secondPlanets}
@@ -676,6 +684,11 @@ export default function App() {
               onHover={setSecondHover}
               highContrast={settings.highContrast}
             />
+            {/* Without a forecast bar in the main card the return's date and place are chosen here,
+                under the wheel, so both wheels start at the same height. */}
+            {!forecast && (
+              <TransitBar method={secondKind} moment={transit} onChange={updateTransit} onPlaceChange={setTransitMoment} onNow={transitNow} />
+            )}
           </section>
         )}
 
