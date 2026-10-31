@@ -697,9 +697,9 @@ export default function App() {
               onHover={setSecondHover}
               highContrast={settings.highContrast}
             />
-            {/* Without a date bar in the main card the second chart's date and place are chosen here,
-                under the wheel, so both wheels start at the same height. */}
-            {!forecastBar && secondMode !== 'natal' && (
+            {/* The second chart's date bar sits under its wheel like the main one, so both wheels start
+                at the same height; both bars set the same moment. */}
+            {secondMode !== 'natal' && (
               <TransitBar method={secondMode} moment={transit} onChange={updateTransit} onPlaceChange={setTransitMoment} onNow={transitNow} />
             )}
           </section>
