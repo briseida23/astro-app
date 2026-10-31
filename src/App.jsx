@@ -704,7 +704,7 @@ export default function App() {
 
       {/* With a second wheel both wheels share the top row and the tabs take the full width below. */}
       <main
-        className={`mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 ${
+        className={`mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] gap-6 px-4 py-6 sm:px-6 ${
           secondView ? 'lg:grid-cols-2' : 'lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]'
         }`}
       >

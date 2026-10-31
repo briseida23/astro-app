@@ -21,6 +21,14 @@ body {
 }
 
 @layer components {
+  /* Scrolls without showing a scrollbar (rows of chips on phones). */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   .card {
     @apply rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.08)];
   }

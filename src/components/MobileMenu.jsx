@@ -113,7 +113,7 @@ export function MobileMenu({ modes, mode, onModeChange, user, accountsEnabled, o
               role="dialog"
               aria-modal="true"
               aria-label={t('menu.open')}
-              className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] animate-[slide-in-left_200ms_ease-out] flex-col overflow-y-auto bg-white shadow-2xl"
+              className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] animate-[slide-in-left_200ms_ease-out] flex-col overflow-y-auto overflow-x-hidden bg-white shadow-2xl"
             >
               <div className="flex items-center justify-between px-5 py-4">
                 <span className="flex items-center gap-2 font-display text-2xl font-semibold">
@@ -125,13 +125,15 @@ export function MobileMenu({ modes, mode, onModeChange, user, accountsEnabled, o
                 </button>
               </div>
 
-              <div className="mx-5 mb-3 flex rounded-lg bg-slate-100 p-0.5 text-sm">
+              {/* The modes don't fit the drawer's width: they scroll sideways on their own, the drawer stays put. */}
+              <div className="no-scrollbar mx-5 mb-3 flex overflow-x-auto overscroll-x-contain rounded-lg bg-slate-100 p-0.5 text-sm">
                 {modes.map((id) => (
                   <button
                     key={id}
+                    ref={mode === id ? (el) => el?.scrollIntoView({ inline: 'center', block: 'nearest' }) : undefined}
                     type="button"
                     onClick={run(() => onModeChange(id))}
-                    className={`flex-1 rounded-md px-3 py-1.5 transition ${mode === id ? 'bg-white font-semibold shadow-sm' : 'text-slate-600'}`}
+                    className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 transition ${mode === id ? 'bg-white font-semibold shadow-sm' : 'text-slate-600'}`}
                   >
                     {t(`mode.${id}`)}
                   </button>
