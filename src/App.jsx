@@ -35,6 +35,7 @@ import { PatternsPanel, TransitEvents } from './components/PatternsPanel';
 import { BirthModal } from './components/BirthForm';
 import { TransitBar, BarSteps, ReturnPicker } from './components/TransitBar';
 import { DynamicsPanel } from './components/DynamicsPanel';
+import { SearchPanel } from './components/SearchPanel';
 import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
 import { AccountMenu } from './components/AccountMenu';
@@ -555,7 +556,17 @@ export default function App() {
     { id: 'planets', label: t('tab.planets') },
     { id: 'aspects', label: t('tab.aspects'), badge: visibleAspects.length },
     { id: 'patterns', label: t('tab.patterns'), badge: patterns.length },
+    { id: 'search', label: t('tab.search') },
   ];
+  const searchOptions = useMemo(
+    () => ({ houseSystem: settings.houseSystem, pointTypes, directions: settings.directions }),
+    [settings.houseSystem, pointTypes, settings.directions]
+  );
+  // A found contact opens its method at that moment.
+  const openContact = (method, ms) => {
+    changeMode(method);
+    updateTransit(momentAt(transit, ms));
+  };
   const houseSystem = HOUSE_SYSTEMS.find((h) => h.id === settings.houseSystem);
 
   // The date (and place) of the forecast or return; with two wheels it goes under the main wheel
@@ -882,6 +893,18 @@ export default function App() {
                 onHover={setHover}
               />
             </>
+          )}
+          {activeTab === 'search' && (
+            <SearchPanel
+              natal={chartData}
+              points={birthPoints}
+              moment={transit}
+              extras={extras}
+              options={searchOptions}
+              defaultMethod={forecast}
+              aspectColors={colors.aspects}
+              onPick={openContact}
+            />
           )}
           {activeTab === 'patterns' && (
             <PatternsPanel

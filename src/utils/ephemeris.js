@@ -310,6 +310,16 @@ export function calculateProgressions(natal, date, houseSystem = HouseSystem.Pla
   const birthJd = swe.dateToJulianDay(natal.date);
   const jd = birthJd + (swe.dateToJulianDay(date) - birthJd) / TROPICAL_YEAR;
   const planets = calculatePlanets(jd, 'progressions', natal.houses, extras, pointTypes);
+  const { ascendant, mc, speed } = progressedAngles(natal, birthJd, jd, houseSystem);
+  return [
+    ...planets,
+    makePoint('progressions', ANGLES[0], ascendant, speed, houseOf(ascendant, natal.houses)),
+    makePoint('progressions', ANGLES[1], mc, speed, houseOf(mc, natal.houses)),
+  ];
+}
+
+/** Progressed ASC and MC for the progressed Julian day `jd`, and their speed (the progressed Sun's, about 1° a year). */
+function progressedAngles(natal, birthJd, jd, houseSystem) {
   const sun = swe.calculatePosition(jd, Planet.Sun);
   const arc = signedDiff(sun.longitude, swe.calculatePosition(birthJd, Planet.Sun).longitude);
   // Mean obliquity of the ecliptic at birth; enough for turning the MC into sidereal time.
@@ -317,12 +327,7 @@ export function calculateProgressions(natal, date, houseSystem = HouseSystem.Pla
   const mc = normalize(natal.mc + arc);
   const armcShift = signedDiff(rightAscension(mc, eps), rightAscension(natal.mc, eps));
   const houseData = swe.calculateHouses(birthJd + armcShift / ANGLE_SPEED, natal.latitude, natal.longitude, houseSystem);
-  // The angles move with the solar arc: about 1° a year, the progressed Sun's speed.
-  return [
-    ...planets,
-    makePoint('progressions', ANGLES[0], houseData.ascendant, sun.longitudeSpeed, houseOf(normalize(houseData.ascendant), natal.houses)),
-    makePoint('progressions', ANGLES[1], mc, sun.longitudeSpeed, houseOf(mc, natal.houses)),
-  ];
+  return { ascendant: normalize(houseData.ascendant), mc, speed: sun.longitudeSpeed };
 }
 
 /** The real date whose secondary progression is the progressed Julian day `progJd`. */
@@ -422,12 +427,7 @@ export const DIRECTION_ARCS = { symbolic: 1, naibod: 0.985647, solar: null };
  */
 export function calculateDirections(natal, date, { arc: arcType, converse }) {
   const birthJd = swe.dateToJulianDay(natal.date);
-  const years = (swe.dateToJulianDay(date) - birthJd) / TROPICAL_YEAR;
-  const perYear = DIRECTION_ARCS[arcType];
-  const arc =
-    perYear === null
-      ? signedDiff(swe.calculatePosition(birthJd + years, Planet.Sun).longitude, swe.calculatePosition(birthJd, Planet.Sun).longitude)
-      : years * perYear;
+  const arc = directionArc(birthJd, (swe.dateToJulianDay(date) - birthJd) / TROPICAL_YEAR, arcType);
   const sign = converse ? -1 : 1;
   // About 1° a year either way: enough for applying/separating.
   const speed = sign / TROPICAL_YEAR;
@@ -435,6 +435,94 @@ export function calculateDirections(natal, date, { arc: arcType, converse }) {
     const lon = normalize(p.longitude + sign * arc);
     return makePoint('directions', p, lon, speed, houseOf(lon, natal.houses));
   });
+}
+
+/** The direction arc after `years` of life: 1°/Naibod a year, or the solar arc (progressed minus natal Sun). */
+function directionArc(birthJd, years, arcType) {
+  const perYear = DIRECTION_ARCS[arcType];
+  if (perYear !== null) return years * perYear;
+  return signedDiff(swe.calculatePosition(birthJd + years, Planet.Sun).longitude, swe.calculatePosition(birthJd, Planet.Sun).longitude);
+}
+
+// Methods whose points can be searched for exact contacts with the natal chart.
+export const CONTACT_METHODS = ['transit', 'progressions', 'directions'];
+
+/**
+ * The longitude of object `id` moved by `method`, as a function of the Julian day; null if it
+ * cannot be calculated (an angle in transits, an object missing from the natal chart).
+ */
+function moverLongitude(natal, method, id, { houseSystem, pointTypes, directions }) {
+  const birthJd = swe.dateToJulianDay(natal.date);
+  const def = [...PLANETS, ...EXTRA_OBJECTS].find((p) => p.id === id);
+  const bodyLon = (jd) => normalize(swe.calculatePosition(jd, bodyOf(def, pointTypes)).longitude + (def.opposite ? 180 : 0));
+  const progJd = (jd) => birthJd + (jd - birthJd) / TROPICAL_YEAR;
+  if (method === 'transit') return def ? bodyLon : null;
+  if (method === 'progressions') {
+    if (def) return (jd) => bodyLon(progJd(jd));
+    return (jd) => progressedAngles(natal, birthJd, progJd(jd), houseSystem)[id];
+  }
+  const natalPoint = [...natal.planets, ...natal.angles].find((p) => p.id === id);
+  if (!natalPoint) return null;
+  const sign = directions.converse ? -1 : 1;
+  return (jd) => normalize(natalPoint.longitude + sign * directionArc(birthJd, (jd - birthJd) / TROPICAL_YEAR, directions.arc));
+}
+
+// Days between samples when looking for contacts: short enough that no contact slips between two.
+function sampleStep(method, id) {
+  if (method === 'directions') return 30;
+  if (method === 'progressions') return id === 'moon' ? 5 : 30;
+  if (id === 'moon') return 0.25;
+  return ['sun', 'mercury', 'venus', 'mars'].includes(id) ? 1 : 2;
+}
+
+/**
+ * Moments between `from` and `to` (Dates) when object `mover`, moved by `method`, makes one of
+ * `aspects` exactly to one of `targets` ({ key, longitude }; a target with `cusp` set, a house number, is
+ * that natal cusp and takes only the conjunction: the ingress into that house). Sampled, then refined by
+ * bisection to a minute: [{ date, target, aspect, retrograde }], earliest first.
+ * @param {{ houseSystem, pointTypes, directions: { arc, converse } }} options
+ */
+export function findContacts(natal, method, mover, targets, aspects, from, to, options) {
+  const lonAt = moverLongitude(natal, method, mover, options);
+  if (!lonAt) return [];
+  const fromJd = swe.dateToJulianDay(from);
+  const toJd = swe.dateToJulianDay(to);
+  const step = sampleStep(method, mover);
+  const jds = [];
+  for (let jd = fromJd; jd < toJd; jd += step) jds.push(jd);
+  jds.push(toJd);
+  const lons = jds.map(lonAt);
+  const toDate = (jd) => new Date(from.getTime() + (jd - fromJd) * 86400000);
+  const hits = [];
+  for (const target of targets) {
+    for (const aspect of target.cusp ? aspects.filter((a) => a.angle === 0) : aspects) {
+      // Both sides of the target, once for the conjunction and the opposition.
+      const goals = aspect.angle % 180 === 0 ? [target.longitude + aspect.angle] : [target.longitude + aspect.angle, target.longitude - aspect.angle];
+      for (const goal of goals) {
+        let prev = signedDiff(lons[0], goal);
+        for (let i = 1; i < jds.length; i++) {
+          const cur = signedDiff(lons[i], goal);
+          // A change of sign near the goal, not the jump on the opposite side.
+          if ((prev < 0) !== (cur < 0) && Math.abs(prev - cur) < 90) {
+            let a = jds[i - 1];
+            let b = jds[i];
+            let fa = prev;
+            while (b - a > 1 / 1440) {
+              const m = (a + b) / 2;
+              const fm = signedDiff(lonAt(m), goal);
+              if ((fm < 0) === (fa < 0)) {
+                a = m;
+                fa = fm;
+              } else b = m;
+            }
+            hits.push({ date: toDate((a + b) / 2), target, aspect, retrograde: prev > 0 });
+          }
+          prev = cur;
+        }
+      }
+    }
+  }
+  return hits.sort((x, y) => x.date - y.date);
 }
 
 // Return methods: the body whose return to its natal longitude starts the chart, and its mean speed (°/day).
