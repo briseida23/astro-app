@@ -529,6 +529,76 @@ export function findContacts(natal, method, mover, targets, aspects, from, to, o
   return hits.sort((x, y) => x.date - y.date);
 }
 
+// Fastest daily motion of each transiting object (°/day), so that sampling at half an orb's crossing time misses nothing.
+const MAX_SPEED = { moon: 15.5, mercury: 2.3, venus: 1.3, sun: 1.02, mars: 0.8, jupiter: 0.25, saturn: 0.14, uranus: 0.07, neptune: 0.04, pluto: 0.04, node: 0.07, southNode: 0.07, lilith: 0.12, chiron: 0.15, trueLilith: 7 };
+
+/** Fastest motion of `id` moved by `method`, in degrees per real day. */
+function maxSpeed(method, id, pointTypes) {
+  // Directions and progressed angles move by the solar arc, at most ~1.02° a year.
+  if (method === 'directions' || ANGLES.some((a) => a.id === id)) return 1.1 / TROPICAL_YEAR;
+  const speed = id === 'lilith' && pointTypes.lilithType === 'true' ? MAX_SPEED.trueLilith : MAX_SPEED[id] ?? 1;
+  return method === 'progressions' ? speed / TROPICAL_YEAR : speed;
+}
+
+// How far around the moment to look for the edges of an orb, in days.
+const WINDOW_HORIZON = { transit: 3 * 365, progressions: 40 * 365, directions: 40 * 365 };
+
+/** Root of `fn` between a and b (fa = fn(a), opposite signs at the ends), to a minute. */
+function bisect(a, b, fa, fn) {
+  while (Math.abs(b - a) > 1 / 1440) {
+    const m = (a + b) / 2;
+    const fm = fn(m);
+    if ((fm < 0) === (fa < 0)) {
+      a = m;
+      fa = fm;
+    } else b = m;
+  }
+  return (a + b) / 2;
+}
+
+/**
+ * The orb window around `at` of forecast aspects to fixed points. Each item is { mover, target,
+ * angle, orb }: object `mover` moved by `method`, the target's longitude, the aspect angle and the
+ * allowed orb. Returns per item { enter, exact, lastExact, exit } (Dates; null when beyond the
+ * horizon), or null if the mover cannot be calculated. `exact` is the next exact moment inside
+ * the window, `lastExact` the latest before `at`.
+ */
+export function orbWindows(natal, method, items, at, options) {
+  const atJd = swe.dateToJulianDay(at);
+  const toDate = (jd) => (jd === null ? null : new Date(at.getTime() + (jd - atJd) * 86400000));
+  const tracks = new Map();
+  return items.map(({ mover, target, angle, orb }) => {
+    if (!tracks.has(mover)) tracks.set(mover, moverLongitude(natal, method, mover, options));
+    const lonAt = tracks.get(mover);
+    if (!lonAt) return null;
+    const lon0 = lonAt(atJd);
+    // The side of the target the mover is on now.
+    const goals = angle % 180 === 0 ? [target + angle] : [target + angle, target - angle];
+    const goal = goals.reduce((best, g) => (Math.abs(signedDiff(lon0, g)) < Math.abs(signedDiff(lon0, best)) ? g : best));
+    const f = (jd) => signedDiff(lonAt(jd), goal);
+    const outside = (jd) => Math.abs(f(jd)) - orb;
+    const step = Math.max(orb, 0.05) / (2 * maxSpeed(method, mover, options.pointTypes));
+    // Walk away from the moment until the orb is left, noting the first exact contact on the way.
+    const scan = (dir) => {
+      let jd0 = atJd;
+      let f0 = f(atJd);
+      let exact = null;
+      for (let t = step; t <= WINDOW_HORIZON[method]; t += step) {
+        const jd1 = atJd + dir * t;
+        const f1 = f(jd1);
+        if (exact === null && (f0 < 0) !== (f1 < 0) && Math.abs(f0 - f1) < 90) exact = bisect(jd0, jd1, f0, f);
+        if (Math.abs(f1) > orb) return { edge: bisect(jd0, jd1, Math.abs(f0) - orb, outside), exact };
+        jd0 = jd1;
+        f0 = f1;
+      }
+      return { edge: null, exact };
+    };
+    const ahead = scan(1);
+    const behind = scan(-1);
+    return { enter: toDate(behind.edge), exact: toDate(ahead.exact), lastExact: toDate(behind.exact), exit: toDate(ahead.edge) };
+  });
+}
+
 // Return methods: the body whose return to its natal longitude starts the chart, and its mean speed (°/day).
 export const RETURNS = {
   solar: { body: Planet.Sun, speed: 0.98561 },

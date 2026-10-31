@@ -2,6 +2,7 @@ import { STEP_UNITS, ROMAN, formatOffset, formatOrb, momentAt } from '../utils/e
 import { useI18n, placeName, formatShortDate } from '../i18n';
 import { Glyph } from './Glyph';
 import { Hint } from './Hint';
+import { OrbWindowNote } from './AspectTable';
 
 const PRESETS = [
   { step: 1, unit: 'minute' },
@@ -46,7 +47,7 @@ function StepButton({ onClick, label, caption, children }) {
 }
 
 /** Moves the transit moment (or, with `natal`, the birth moment) back and forth by a chosen interval. */
-export function DynamicsPanel({ natal, moment, dynamics, onDynamicsChange, onStep, onNow, aspects, aspectColors, lunation, ingresses, showPlace = true }) {
+export function DynamicsPanel({ natal, moment, dynamics, onDynamicsChange, onStep, onNow, aspects, aspectColors, lunation, ingresses, windows, showPlace = true }) {
   const { lang, t } = useI18n();
   const { step, unit } = dynamics;
   const set = (patch) => onDynamicsChange({ ...dynamics, ...patch });
@@ -177,7 +178,8 @@ export function DynamicsPanel({ natal, moment, dynamics, onDynamicsChange, onSte
                 <Hint label={`${natal ? '' : t('wheel.natalPrefix')}${t(`object.${a.b.id}`)}`}>
                   <Glyph of={a.b} className="inline-block w-6 text-center" symbolClass="astro text-base" />
                 </Hint>
-                <span className="ml-auto tabular-nums text-slate-500">{formatOrb(a.orb)}</span>
+                <OrbWindowNote orbWindow={windows?.get(a.id)} applying={a.applying} moment={moment} className="ml-auto" />
+                <span className={`${windows?.get(a.id) ? 'ml-3' : 'ml-auto'} tabular-nums text-slate-500`}>{formatOrb(a.orb)}</span>
                 <Hint label={t(a.applying ? 'aspects.applying' : 'aspects.separating')}>
                   <span className={`w-4 text-xs font-semibold ${a.applying ? 'text-emerald-700' : 'text-slate-400'}`}>{a.applying ? 'A' : 'S'}</span>
                 </Hint>

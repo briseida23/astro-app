@@ -1,10 +1,33 @@
-import { formatOrb, ROMAN } from '../utils/ephemeris';
-import { useI18n } from '../i18n';
+import { formatOrb, ROMAN, momentAt } from '../utils/ephemeris';
+import { useI18n, formatShortDate } from '../i18n';
 import { Glyph } from './Glyph';
 import { Hint } from './Hint';
 
+/**
+ * When a forecast aspect is exact (applying) or leaves its orb (separating), with the whole window
+ * in a tooltip. `orbWindow` is from orbWindows; dates are read on `moment`'s clock, with the time
+ * when the window is shorter than three days (the transiting Moon, Mercury at a station…).
+ */
+export function OrbWindowNote({ orbWindow, applying, moment, className = '' }) {
+  const { lang, t } = useI18n();
+  if (!orbWindow) return null;
+  const short = orbWindow.enter && orbWindow.exit && orbWindow.exit - orbWindow.enter < 3 * 86400000;
+  const format = (date) => {
+    if (!date) return t('window.beyond');
+    const local = momentAt(moment, date.getTime());
+    return short ? `${formatShortDate(local.date, lang)}, ${local.time}` : formatShortDate(local.date, lang);
+  };
+  const note = applying && orbWindow.exact ? t('window.exact', { date: format(orbWindow.exact) }) : t('window.exit', { date: format(orbWindow.exit) });
+  const exact = orbWindow.exact ?? orbWindow.lastExact;
+  const full = t('window.full', { enter: format(orbWindow.enter), exact: exact ? format(exact) : t('window.noExact'), exit: format(orbWindow.exit) });
+  return (
+    <span className={`whitespace-nowrap text-[11px] tabular-nums text-slate-500 ${className}`} title={full}>
+      {note}
+    </span>
+  );
+}
 
-export function AspectTable({ aspects, aspectColors, isBiWheel, focus, onHover }) {
+export function AspectTable({ aspects, aspectColors, isBiWheel, focus, onHover, windows, moment }) {
   const { t } = useI18n();
   // An aspect is read with the houses of both planets: transits are placed in the natal houses.
   const houseOf = (p) => (p.house ? ROMAN[p.house - 1] : '');
@@ -60,6 +83,7 @@ export function AspectTable({ aspects, aspectColors, isBiWheel, focus, onHover }
               <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">{formatOrb(a.orb)}</td>
               <td className={`px-3 py-2 text-xs ${a.applying ? 'text-emerald-700' : 'text-slate-400'}`}>
                 {t(a.applying ? 'aspects.applying' : 'aspects.separating')}
+                <OrbWindowNote orbWindow={windows?.get(a.id)} applying={a.applying} moment={moment} className="block" />
               </td>
             </tr>
           ))}

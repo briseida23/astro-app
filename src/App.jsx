@@ -21,6 +21,8 @@ import {
   pad,
   EXTRA_OBJECTS,
   extrasReady,
+  CONTACT_METHODS,
+  orbWindows,
 } from './utils/ephemeris';
 import { findAspects, ORB_PRESET_KEYS } from './utils/aspects';
 import { calculateBalance } from './utils/balance';
@@ -542,6 +544,23 @@ export default function App() {
   const dynamicsTab = { id: 'dynamics', label: t('tab.dynamics') };
   const firstTabs = forecast ? [dynamicsTab] : [dynamicsTab, { id: 'balance', label: t('tab.balance') }];
   const activeTab = tab === 'balance' && forecast ? 'dynamics' : tab;
+  // When forecast aspects became or become exact and leave their orb: for the aspect table, or the
+  // near-exact list in Dynamics. A second chart's forecast ring runs on its own date.
+  const windowsMoment = activeTab === 'aspects' && showSecondAspects && secondView.ring ? secondTransit : transit;
+  const aspectWindows = useMemo(() => {
+    if (activeTab !== 'aspects' && activeTab !== 'dynamics') return null;
+    const list = activeTab === 'aspects' ? tableAspects : visibleAspects.filter((a) => a.orb < 1);
+    const date = toUtcDate(windowsMoment.date, windowsMoment.time, windowsMoment.utcOffset);
+    if (Number.isNaN(date.getTime())) return null;
+    const windows = new Map();
+    for (const method of CONTACT_METHODS) {
+      const own = list.filter((a) => a.a.ring === method);
+      if (own.length === 0) continue;
+      const items = own.map((a) => ({ mover: a.a.id, target: a.b.longitude, angle: a.angle, orb: a.allowed }));
+      orbWindows(chartData, method, items, date, calcOptions).forEach((w, i) => w && windows.set(own[i].id, w));
+    }
+    return windows;
+  }, [activeTab, tableAspects, visibleAspects, windowsMoment, chartData, calcOptions]);
   // Transits draw only transit-to-natal aspects, so a hovered figure adds its missing lines
   // (natal pairs, transit-to-transit pairs) to the wheel.
   // With "contours" on, every transit figure stays drawn, not only the hovered one.
@@ -870,6 +889,7 @@ export default function App() {
               aspectColors={colors.aspects}
               lunation={lunation}
               ingresses={ingresses}
+              windows={aspectWindows}
               showPlace={mode !== 'progressions' && mode !== 'directions'}
             />
           )}
@@ -909,6 +929,8 @@ export default function App() {
                 aspectColors={colors.aspects}
                 isBiWheel={tableTwoRings}
                 focus={focus}
+                windows={aspectWindows}
+                moment={windowsMoment}
                 onHover={showSecondAspects ? (h) => setHover(h && { ...h, second: true }) : setHover}
               />
             </>

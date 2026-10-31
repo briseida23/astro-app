@@ -471,6 +471,11 @@ const ru = {
   'settings.fastHint': 'Солнце, Луна, Меркурий, Венера, Марс: выключите для долгосрочного прогноза',
   'settings.fastAll': 'Все',
   'settings.slowOnly': 'Только медленные (Юпитер–Плутон)',
+  'window.exact': 'точно {date}',
+  'window.exit': 'выход {date}',
+  'window.beyond': 'не скоро',
+  'window.noExact': 'без точного касания',
+  'window.full': 'Вход в орбис: {enter} · точно: {exact} · выход: {exit}',
 };
 
 const uk = {
@@ -943,6 +948,11 @@ const uk = {
   'settings.fastHint': 'Сонце, Місяць, Меркурій, Венера, Марс: вимкніть для довгострокового прогнозу',
   'settings.fastAll': 'Усі',
   'settings.slowOnly': 'Лише повільні (Юпітер–Плутон)',
+  'window.exact': 'точно {date}',
+  'window.exit': 'вихід {date}',
+  'window.beyond': 'не скоро',
+  'window.noExact': 'без точного дотику',
+  'window.full': 'Вхід в орбіс: {enter} · точно: {exact} · вихід: {exit}',
 };
 
 const en = {
@@ -1415,6 +1425,11 @@ const en = {
   'settings.fastHint': 'Sun, Moon, Mercury, Venus, Mars: switch off for long-range forecasts',
   'settings.fastAll': 'All',
   'settings.slowOnly': 'Slow only (Jupiter–Pluto)',
+  'window.exact': 'exact {date}',
+  'window.exit': 'leaves {date}',
+  'window.beyond': 'not soon',
+  'window.noExact': 'no exact contact',
+  'window.full': 'Enters orb: {enter} · exact: {exact} · leaves: {exit}',
 };
 
 export const TRANSLATIONS = { ru, uk, en };
