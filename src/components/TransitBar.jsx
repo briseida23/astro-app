@@ -45,6 +45,20 @@ function TransitPlaceModal({ open, onClose, onSelect }) {
   );
 }
 
+/** A ‹ › pair for the date bar: one step back or forward (a step, or the previous/next return). */
+export function BarSteps({ prevLabel, nextLabel, onPrev, onNext }) {
+  return (
+    <div className="mb-0.5 flex gap-1">
+      <button type="button" className="input-sm px-3 hover:border-slate-300" onClick={onPrev} aria-label={prevLabel} title={prevLabel}>
+        ‹
+      </button>
+      <button type="button" className="input-sm px-3 hover:border-slate-300" onClick={onNext} aria-label={nextLabel} title={nextLabel}>
+        ›
+      </button>
+    </div>
+  );
+}
+
 /**
  * Date, time, zone and place of the forecast moment. `onChange` gets date/time/zone edits,
  * `onPlaceChange` a moment with a newly chosen place. Progressions and directions come from the

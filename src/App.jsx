@@ -6,6 +6,7 @@ import {
   calculateTransitPlanets,
   calculateProgressions,
   calculateReturn,
+  findReturn,
   calculateDirections,
   lunationPhase,
   DIRECTION_ARCS,
@@ -30,7 +31,7 @@ import { AspectTable } from './components/AspectTable';
 import { BalancePanel } from './components/BalancePanel';
 import { PatternsPanel, TransitEvents } from './components/PatternsPanel';
 import { BirthModal } from './components/BirthForm';
-import { TransitBar } from './components/TransitBar';
+import { TransitBar, BarSteps } from './components/TransitBar';
 import { DynamicsPanel } from './components/DynamicsPanel';
 import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
@@ -132,6 +133,17 @@ function placedMoment(moment, birth) {
   const merged = { ...moment, ...placeFields(birth) };
   const ms = toUtcDate(moment.date, moment.time, moment.utcOffset).getTime();
   return Number.isNaN(ms) ? merged : momentAt(merged, ms);
+}
+
+/**
+ * The moment (on `moment`'s clock) of the return before or after `shown`, the return on screen:
+ * a minute past it, so the date bar shows the return itself and it stays the last one.
+ */
+function returnJump(natal, kind, shown, moment, direction) {
+  const periodMs = (360 / RETURNS[kind].speed) * 86400000;
+  // The last return before a minute ago is the previous one; before half a cycle past the next, the next.
+  const probe = new Date(shown.date.getTime() + (direction < 0 ? -60000 : 1.5 * periodMs));
+  return momentAt(moment, findReturn(natal, kind, probe).getTime() + 60000);
 }
 
 /** Points of a forecast method for `date`: transits at `place`, progressions and directions from the birth chart. */
@@ -424,6 +436,9 @@ export default function App() {
   const secondTransit = useMemo(() => placedMoment(secondRaw, birth), [secondRaw, birth]);
   const updateSecond = (m, live = false) => setSecondOwnMoment({ ...(secondRaw.latitude != null ? m : withoutPlace(m)), live });
   const secondNow = () => updateSecond(momentAt(secondTransit, Date.now()), true);
+  // One Dynamics step back or forward for the second wheel's own date.
+  const stepSecond = (count) => updateSecond(shiftMoment(secondTransit, count * dynamics.step, dynamics.unit));
+  const stepAmount = t(`dynamics.preset.${dynamics.unit}`, { n: dynamics.step });
   const secondView = useMemo(() => {
     if (!secondMode || !secondRaw.date) return null;
     const date = toUtcDate(secondRaw.date, secondRaw.time, secondRaw.utcOffset);
@@ -515,6 +530,14 @@ export default function App() {
   // so both wheels start at the same height.
   const forecastBar = (forecast || returnKind) && (
     <TransitBar method={mode} moment={transit} onChange={updateTransit} onPlaceChange={setTransitMoment} onNow={transitNow}>
+      {returnChart && (
+        <BarSteps
+          prevLabel={t(`returns.prev.${returnKind}`)}
+          nextLabel={t(`returns.next.${returnKind}`)}
+          onPrev={() => updateTransit(returnJump(chartData, returnKind, returnChart, transit, -1))}
+          onNext={() => updateTransit(returnJump(chartData, returnKind, returnChart, transit, 1))}
+        />
+      )}
       {mode === 'directions' && (
         <>
           <label className="field">
@@ -697,18 +720,37 @@ export default function App() {
         {secondView && (
           <section className="card flex flex-col gap-4 p-4 sm:p-6 lg:self-start">
             <div className="px-1">
-              {/* The title is the chart picker: any mode but the main one, or none to close the wheel. */}
-              <select
-                aria-label={t('second.label')}
-                className="-ml-1 cursor-pointer rounded-md bg-transparent py-0.5 pl-1 pr-1 font-display text-xl font-semibold hover:bg-slate-50"
-                value={secondMode}
-                onChange={(e) => setSecond(e.target.value)}
-              >
-                {MODES.filter((id) => id !== mode).map((id) => (
-                  <option key={id} value={id}>{t(`mode.${id}`)}</option>
-                ))}
-                <option value="none">{t('second.close')}</option>
-              </select>
+              <div className="flex items-start justify-between gap-2">
+                {/* The title is the chart picker: any mode but the main one. */}
+                <div className="relative -ml-2 inline-flex items-center">
+                  <select aria-label={t('second.label')} className="select-title" value={secondMode} onChange={(e) => setSecond(e.target.value)}>
+                    {MODES.filter((id) => id !== mode).map((id) => (
+                      <option key={id} value={id}>{t(`mode.${id}`)}</option>
+                    ))}
+                  </select>
+                  <svg
+                    aria-hidden
+                    viewBox="0 0 24 24"
+                    className="pointer-events-none absolute right-2 h-4 w-4 text-slate-500"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2.2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </div>
+                <button
+                  type="button"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
+                  onClick={() => setSecond('none')}
+                  aria-label={t('second.close')}
+                  title={t('second.close')}
+                >
+                  ✕
+                </button>
+              </div>
               <div className="text-xs tabular-nums text-slate-500">
                 {placeName(secondView.moment, t)} · {formatDate(secondView.moment.date, lang)} · {secondView.moment.time} ·{' '}
                 {formatOffset(secondView.moment.utcOffset)}
@@ -731,6 +773,21 @@ export default function App() {
                 at the same height. Its date is its own once changed, until "same as main". */}
             {secondMode !== 'natal' && (
               <TransitBar method={secondMode} moment={secondTransit} onChange={updateSecond} onPlaceChange={setSecondOwnMoment} onNow={secondNow}>
+                {secondView.isReturn ? (
+                  <BarSteps
+                    prevLabel={t(`returns.prev.${secondMode}`)}
+                    nextLabel={t(`returns.next.${secondMode}`)}
+                    onPrev={() => updateSecond(returnJump(chartData, secondMode, secondView.chart, secondTransit, -1))}
+                    onNext={() => updateSecond(returnJump(chartData, secondMode, secondView.chart, secondTransit, 1))}
+                  />
+                ) : (
+                  <BarSteps
+                    prevLabel={t('dynamics.back', { amount: stepAmount })}
+                    nextLabel={t('dynamics.forward', { amount: stepAmount })}
+                    onPrev={() => stepSecond(-1)}
+                    onNext={() => stepSecond(1)}
+                  />
+                )}
                 {secondOwnMoment && (
                   <button type="button" className="btn-ghost mb-1" onClick={() => setSecondOwnMoment(null)}>
                     {t('second.sameMoment')}

@@ -33,6 +33,10 @@ body {
   .input-sm {
     @apply rounded-md border border-slate-200 bg-white px-2 py-1 text-sm tabular-nums text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100;
   }
+  /* A heading that is also a dropdown: the title text, a chevron, a frame on hover and focus. */
+  .select-title {
+    @apply cursor-pointer appearance-none rounded-lg border border-transparent bg-transparent py-0.5 pr-8 pl-2 font-display text-xl font-semibold text-slate-900 outline-none transition [field-sizing:content] hover:border-slate-200 hover:bg-slate-50 focus:border-slate-400 focus:ring-4 focus:ring-slate-100;
+  }
   .btn-primary {
     @apply rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300;
   }

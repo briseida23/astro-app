@@ -358,13 +358,12 @@ export const RETURNS = {
 };
 
 /**
- * The last solar or lunar return at or before `date`: the moment the body is back at its natal
- * longitude, refined by Newton's method. Returns the chart cast for that moment at `place`;
- * `ring` names its points ("natal" when it stands in for the birth chart).
+ * The moment of the last solar or lunar return at or before `date`: the body back at its natal
+ * longitude, refined by Newton's method.
  * @param {ReturnType<typeof calculateNatal>} natal
  * @param {'solar' | 'lunar'} kind
  */
-export function calculateReturn(natal, kind, date, place, houseSystem = HouseSystem.Placidus, extras = new Set(), nodeType = 'mean', ring = 'natal') {
+export function findReturn(natal, kind, date) {
   const { body, speed } = RETURNS[kind];
   const natalLon = swe.calculatePosition(swe.dateToJulianDay(natal.date), body).longitude;
   const targetJd = swe.dateToJulianDay(date);
@@ -381,7 +380,15 @@ export function calculateReturn(natal, kind, date, place, houseSystem = HouseSys
   // How far the body has gone since its last return, at its mean speed.
   let jd = solve(targetJd - normalize(swe.calculatePosition(targetJd, body).longitude - natalLon) / speed);
   if (jd > targetJd) jd = solve(jd - 360 / speed);
-  const returnDate = new Date(date.getTime() + (jd - targetJd) * 86400000);
+  return new Date(date.getTime() + (jd - targetJd) * 86400000);
+}
+
+/**
+ * The chart of the last solar or lunar return at or before `date`, cast at `place`;
+ * `ring` names its points ("natal" when it stands in for the birth chart).
+ */
+export function calculateReturn(natal, kind, date, place, houseSystem = HouseSystem.Placidus, extras = new Set(), nodeType = 'mean', ring = 'natal') {
+  const returnDate = findReturn(natal, kind, date);
   return calculateNatal({ date: returnDate, latitude: place.latitude, longitude: place.longitude }, houseSystem, extras, nodeType, ring);
 }
 
