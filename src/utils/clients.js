@@ -12,3 +12,8 @@ export function clientMatches(client, query, lang, t) {
   const text = [client.name, placeName(b, t), b.date, `${d}.${m}.${y}`, formatShortDate(b.date, lang)].join(' ').toLowerCase();
   return q.split(/\s+/).every((word) => text.includes(word));
 }
+
+// Kinds of life events; the ones tied to the angles (relationships, home, career, body) matter most for rectification.
+export const EVENT_KINDS = ['marriage', 'divorce', 'child', 'move', 'career', 'health', 'accident', 'loss', 'education', 'other'];
+// One client's events have to fit a saved chart (16 KB with the birth data).
+export const MAX_EVENTS = 100;

@@ -34,9 +34,10 @@ const APP_TABLES = [
    )`,
 ];
 
-// Limits that keep one account from filling the free database: real birth data is under 1 KB.
+// Limits that keep one account from filling the free database: real birth data is under 1 KB,
+// a client with its life events (up to 100) under 16 KB.
 const MAX_SETTINGS = 32 * 1024;
-const MAX_CHART = 4 * 1024;
+const MAX_CHART = 16 * 1024;
 const MAX_CHARTS = 500;
 const MAX_NAME = 120;
 const MAX_MESSAGE = 4000;

@@ -38,6 +38,7 @@ import { BirthModal } from './components/BirthForm';
 import { TransitBar, BarSteps, ReturnPicker } from './components/TransitBar';
 import { DynamicsPanel } from './components/DynamicsPanel';
 import { SearchPanel } from './components/SearchPanel';
+import { EventsPanel } from './components/EventsPanel';
 import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
 import { AccountMenu } from './components/AccountMenu';
@@ -290,8 +291,10 @@ export default function App() {
     const { clientId, name } = b;
     const data = withoutClient(b);
     if (clientId) {
-      const { updatedAt } = await api.updateChart(clientId, name, { birth: data });
-      const saved = { id: clientId, name, data: { birth: data }, updatedAt };
+      // Keep what else the client holds (its events).
+      const chartData = { ...clients?.find((c) => c.id === clientId)?.data, birth: data };
+      const { updatedAt } = await api.updateChart(clientId, name, chartData);
+      const saved = { id: clientId, name, data: chartData, updatedAt };
       setClients((list) => [saved, ...list.filter((c) => c.id !== clientId)]);
       return b;
     }
@@ -584,7 +587,22 @@ export default function App() {
     { id: 'aspects', label: t('tab.aspects') },
     { id: 'patterns', label: t('tab.patterns'), badge: patterns.length },
     { id: 'search', label: t('tab.search') },
+    { id: 'events', label: t('tab.events') },
   ];
+  // The open client's life events, kept with its saved chart.
+  const openClient = clients?.find((c) => c.id === birth.clientId);
+  const clientEvents = openClient?.data.events ?? [];
+  const saveEvents = async (events) => {
+    const data = { ...openClient.data, events };
+    const { updatedAt } = await api.updateChart(openClient.id, openClient.name, data);
+    setClients((list) => list.map((c) => (c.id === openClient.id ? { ...c, data, updatedAt } : c)));
+  };
+  // An event opens the forecast (transits unless one is open) for its date and time at the transit place.
+  const openEvent = (ev) => {
+    const time = ev.time || '12:00';
+    changeMode(forecast ?? 'transit');
+    updateTransit({ ...transit, date: ev.date, time, utcOffset: transit.timeZone ? offsetForZone(transit.timeZone, ev.date, time) : transit.utcOffset });
+  };
   // A found contact opens its method at that moment.
   const openContact = (method, ms) => {
     changeMode(method);
@@ -945,6 +963,16 @@ export default function App() {
               defaultMethod={forecast}
               aspectColors={colors.aspects}
               onPick={openContact}
+            />
+          )}
+          {activeTab === 'events' && (
+            <EventsPanel
+              events={clientEvents}
+              saved={Boolean(openClient)}
+              signedIn={Boolean(user)}
+              onSave={saveEvents}
+              onOpen={openEvent}
+              onSaveClient={() => setChartsOpen(true)}
             />
           )}
           {activeTab === 'patterns' && (
