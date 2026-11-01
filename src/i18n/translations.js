@@ -434,7 +434,7 @@ const ru = {
   'about.feature.search': 'Поиск точных касаний',
   'about.feature.search.text': 'Когда транзит, прогрессия или дирекция станет точной к натальной точке или войдёт в дом — список дат с ретроградными проходами; щелчок открывает карту на этот момент.',
   'about.feature.rectification': 'Ректификация по событиям',
-  'about.feature.rectification.text': 'События клиента с датами и перебор времени рождения: дирекции к сигнификаторам события, гистограмма вариантов и лучшее время в один клик.',
+  'about.feature.rectification.text': 'События клиента с датами и перебор времени рождения: дирекции к сигнификаторам события, гистограмма, сравнение двух дуг и проверка каждого контакта на круге.',
   // Feedback form in the "About" window
   'feedback.kind.idea': 'Идея',
   'feedback.kind.bug': 'Ошибка',
@@ -523,8 +523,6 @@ const ru = {
   'rect.cusp': 'куспид {n}',
   'rect.more': 'и ещё {n}',
   'rect.noContact': 'нет контакта до 1°',
-  'rect.apply': 'Установить {time}',
-  'rect.applyHint': 'Время рождения в карте сменится; сохраните клиента, чтобы оставить его. Тонкую подгонку удобно делать в «Динамике» шагом 1 минута.',
   'tab.calendar': 'Календарь',
   'calendar.ingresses': 'Ингрессии транзитных планет',
   'calendar.kind': 'Показывать',
@@ -568,6 +566,11 @@ const ru = {
   'rect.compare': 'Сравнение кандидатов',
   'rect.compareHint': 'Лучший контакт каждого события для каждого времени; жирным — орбис до 15′. Щелчок по времени открывает его разбор.',
   'rect.accuracyAll': 'Точность {n}',
+  'rect.show': 'на круге',
+  'rect.showHint': 'Показать этот контакт на круге: время кандидата, дирекции на дату события',
+  'rect.showNote': '«на круге» откроет дирекции этой дуги на дату события со временем кандидата и подсветит контакт; карта клиента не меняется. Чтобы оставить новое время, исправьте его в данных клиента.',
+  'rect.previewBanner': 'Проверка ректификации: время рождения {time} (у клиента {recorded})',
+  'rect.previewBack': 'Вернуть {time}',
 };
 
 const uk = {
@@ -1003,7 +1006,7 @@ const uk = {
   'about.feature.search': 'Пошук точних дотиків',
   'about.feature.search.text': 'Коли транзит, прогресія чи дирекція стане точною до натальної точки або увійде в дім — список дат із ретроградними проходженнями; клік відкриває карту на цей момент.',
   'about.feature.rectification': 'Ректифікація за подіями',
-  'about.feature.rectification.text': 'Події клієнта з датами й перебір часу народження: дирекції до сигніфікаторів події, гістограма варіантів і найкращий час в один клік.',
+  'about.feature.rectification.text': 'Події клієнта з датами й перебір часу народження: дирекції до сигніфікаторів події, гістограма, порівняння двох дуг і перевірка кожного контакту на колі.',
   // Feedback form in the "About" window
   'feedback.kind.idea': 'Ідея',
   'feedback.kind.bug': 'Помилка',
@@ -1092,8 +1095,6 @@ const uk = {
   'rect.cusp': 'куспід {n}',
   'rect.more': 'і ще {n}',
   'rect.noContact': 'немає контакту до 1°',
-  'rect.apply': 'Встановити {time}',
-  'rect.applyHint': 'Час народження в карті зміниться; збережіть клієнта, щоб залишити його. Тонке підганяння зручно робити в «Динаміці» кроком 1 хвилина.',
   'tab.calendar': 'Календар',
   'calendar.ingresses': 'Інгресії транзитних планет',
   'calendar.kind': 'Показувати',
@@ -1137,6 +1138,11 @@ const uk = {
   'rect.compare': 'Порівняння кандидатів',
   'rect.compareHint': 'Найкращий контакт кожної події для кожного часу; жирним — орбіс до 15′. Клік по часу відкриває його розбір.',
   'rect.accuracyAll': 'Точність {n}',
+  'rect.show': 'на колі',
+  'rect.showHint': 'Показати цей контакт на колі: час кандидата, дирекції на дату події',
+  'rect.showNote': '«на колі» відкриє дирекції цієї дуги на дату події з часом кандидата й підсвітить контакт; карта клієнта не змінюється. Щоб залишити новий час, виправте його в даних клієнта.',
+  'rect.previewBanner': 'Перевірка ректифікації: час народження {time} (у клієнта {recorded})',
+  'rect.previewBack': 'Повернути {time}',
 };
 
 const en = {
@@ -1572,7 +1578,7 @@ const en = {
   'about.feature.search': 'Exact contact search',
   'about.feature.search.text': 'When a transit, progression or direction becomes exact to a natal point or enters a house: a list of dates with retrograde passes; click one to open the chart at that moment.',
   'about.feature.rectification': 'Rectification by events',
-  'about.feature.rectification.text': 'Client events with dates and a birth-time search: directions to each event’s significators, a histogram of the candidates and the best time in one click.',
+  'about.feature.rectification.text': 'Client events with dates and a birth-time search: directions to each event’s significators, a histogram, both arcs compared and every contact checked on the wheel.',
   // Feedback form in the "About" window
   'feedback.kind.idea': 'Idea',
   'feedback.kind.bug': 'Bug',
@@ -1661,8 +1667,6 @@ const en = {
   'rect.cusp': 'cusp {n}',
   'rect.more': 'and {n} more',
   'rect.noContact': 'no contact within 1°',
-  'rect.apply': 'Set {time}',
-  'rect.applyHint': 'The chart’s birth time changes; save the client to keep it. Fine-tune in Dynamics with a 1-minute step.',
   'tab.calendar': 'Calendar',
   'calendar.ingresses': 'Transit ingresses',
   'calendar.kind': 'Show',
@@ -1706,6 +1710,11 @@ const en = {
   'rect.compare': 'Candidates compared',
   'rect.compareHint': 'Each event’s best contact for each time; bold within 15′. Click a time to open its details.',
   'rect.accuracyAll': 'Accuracy {n}',
+  'rect.show': 'on wheel',
+  'rect.showHint': 'Show this contact on the wheel: the candidate time, directions at the event’s date',
+  'rect.showNote': '“On wheel” opens that arc’s directions at the event’s date with the candidate time and lights the contact; the client’s chart stays as it is. To keep the new time, change it in the client’s data.',
+  'rect.previewBanner': 'Rectification check: birth time {time} (the client’s is {recorded})',
+  'rect.previewBack': 'Back to {time}',
 };
 
 export const TRANSLATIONS = { ru, uk, en };

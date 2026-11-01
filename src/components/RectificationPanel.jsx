@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import { ASPECTS, DIRECTION_ARCS, ROMAN, formatOrb, momentAt, shiftMoment, toUtcDate } from '../utils/ephemeris';
+import { ASPECTS, DIRECTION_ARCS, ROMAN, formatOrb, momentAtOffset, shiftMoment, toUtcDate } from '../utils/ephemeris';
 import { useI18n, formatShortDate } from '../i18n';
 
 const STEPS = [60, 120, 300];
@@ -48,13 +48,15 @@ const contactsOf = (run, event) => run.matches.filter((m) => m.event === event).
  * Rectification of the birth time by the client's events: the window and step to try, the
  * direction arc (or both the symbolic and the solar arc, to compare) and an optional transit
  * check; runs in a worker. Shows the score of every time as a histogram per arc, the best times
- * from different peaks, every contact that explains each event, and the candidates side by side;
- * `onApply(ms)` sets the birth time.
+ * from different peaks, every contact that explains each event, and the candidates side by side.
+ * `onShow({ ms, arc, event, contact })` shows a contact on the wheel: that birth time, that arc, at
+ * the event's date.
  */
-export function RectificationPanel({ birth, events, houseSystem, onApply }) {
+export function RectificationPanel({ birth, events, houseSystem, onShow }) {
   const { lang, t } = useI18n();
-  const start = shiftMoment(birth, -60, 'minute');
-  const end = shiftMoment(birth, 60, 'minute');
+  // An hour either side of the recorded time, on the offset it was entered with.
+  const start = shiftMoment({ ...birth, timeZone: null }, -60, 'minute');
+  const end = shiftMoment({ ...birth, timeZone: null }, 60, 'minute');
   const [from, setFrom] = useState(start.time);
   const [to, setTo] = useState(end.time);
   const [step, setStep] = useState(60);
@@ -101,7 +103,8 @@ export function RectificationPanel({ birth, events, houseSystem, onApply }) {
   const results = useMemo(() => (byArc ? combine(byArc, arcs) : null), [byArc, arcs]);
   const best = useMemo(() => (results ? peaks(results, TOP) : []), [results]);
   const recorded = toUtcDate(birth.date, birth.time, birth.utcOffset).getTime();
-  const clock = (date) => momentAt(birth, date.getTime()).time;
+  // On the birth's own offset, the one the window was entered in.
+  const clock = (date) => momentAtOffset(birth, date.getTime()).time;
   const offsetLabel = (date) => {
     const min = Math.round((date - recorded) / 60000);
     return min === 0 ? t('rect.asRecorded') : t('rect.offset', { n: `${min > 0 ? '+' : '−'}${Math.abs(min)}` });
@@ -112,6 +115,17 @@ export function RectificationPanel({ birth, events, houseSystem, onApply }) {
       {pointName(m.mover, t(`wheel.${m.method}Prefix`))} <span className="astro">{ASPECT_GLYPH[m.aspect]}</span> {pointName(m.target, t('wheel.natalPrefix'))}{' '}
       <span className="tabular-nums text-slate-500">{formatOrb(m.orb)}</span>
     </>
+  );
+  // "on the wheel": the contact of candidate `c` under `arc` for event number `index`.
+  const showButton = (c, arc, index, m) => (
+    <button
+      type="button"
+      title={t('rect.showHint')}
+      onClick={() => onShow({ ms: c.date.getTime(), arc, event: events[index], contact: { method: m.method, mover: m.mover, target: m.target } })}
+      className="ml-1.5 rounded-md border border-slate-200 px-1.5 py-px text-[11px] font-normal text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+    >
+      ◎ {t('rect.show')}
+    </button>
   );
   const scores = (r) => r.parts.map((p) => `${Math.round(p.percent)}%`).join(' / ');
   const toggle = (key) =>
@@ -270,7 +284,10 @@ export function RectificationPanel({ birth, events, houseSystem, onApply }) {
                               ) : (
                                 <ul className="space-y-0.5">
                                   {shown.map((m, i) => (
-                                    <li key={i} className={i ? 'text-slate-500' : ''}>{contactText(m)}</li>
+                                    <li key={i} className={i ? 'text-slate-500' : ''}>
+                                      {contactText(m)}
+                                      {showButton(candidate, arc, index, m)}
+                                    </li>
                                   ))}
                                 </ul>
                               )}
@@ -285,12 +302,7 @@ export function RectificationPanel({ birth, events, houseSystem, onApply }) {
                       </Fragment>
                     ))}
                   </div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <button type="button" className="btn-primary" onClick={() => onApply(candidate.date.getTime())}>
-                      {t('rect.apply', { time: clock(candidate.date) })}
-                    </button>
-                    <span className="text-xs text-slate-500">{t('rect.applyHint')}</span>
-                  </div>
+                  <p className="text-xs text-slate-500">{t('rect.showNote')}</p>
                 </div>
               )}
 
@@ -325,7 +337,14 @@ export function RectificationPanel({ birth, events, houseSystem, onApply }) {
                                   return (
                                     <div key={arc} className={`whitespace-nowrap text-xs ${top && top.orb <= 0.25 ? 'font-semibold text-slate-900' : 'text-slate-600'}`}>
                                       {several && <span className="font-normal text-slate-400">{t(`rect.arcTag.${arc}`)} </span>}
-                                      {top ? contactText(top) : <span className="text-slate-400">—</span>}
+                                      {top ? (
+                                        <>
+                                          {contactText(top)}
+                                          {showButton(c, arc, index, top)}
+                                        </>
+                                      ) : (
+                                        <span className="text-slate-400">—</span>
+                                      )}
                                     </div>
                                   );
                                 })}

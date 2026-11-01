@@ -989,6 +989,14 @@ const fromWall = (d) => ({
   time: `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`,
 });
 
+/**
+ * The moment `ms` (UTC) on `moment`'s own clock, its UTC offset as entered (a birth time typed with
+ * a hand-set offset stays on that offset even where the time zone would say otherwise).
+ */
+export function momentAtOffset(moment, ms) {
+  return { ...momentAt({ ...moment, timeZone: null }, ms), timeZone: moment.timeZone };
+}
+
 /** The moment `ms` (UTC) as local date/time of `moment`'s zone (its time zone if known, else its fixed offset). */
 export function momentAt(moment, ms) {
   if (moment.timeZone) {

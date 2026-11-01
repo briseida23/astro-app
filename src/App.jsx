@@ -23,6 +23,7 @@ import {
   extrasReady,
   CONTACT_METHODS,
   orbWindowsCached,
+  momentAtOffset,
 } from './utils/ephemeris';
 import { findAspects, ORB_PRESET_KEYS } from './utils/aspects';
 import { calculateBalance } from './utils/balance';
@@ -240,6 +241,9 @@ export default function App() {
   const [tab, setTab] = useState(() => tabIdsOf(savedSession?.mode ?? 'natal')[0]);
   // The eclipse hovered in the Calendar tab, marked on the main wheel.
   const [eclipseMark, setEclipseMark] = useState(null);
+  // A rectification candidate shown on the wheel: { birth (the chart it was made for), ms (the
+  // candidate birth time), arc, contact: { method, mover, target } }. The client's own birth data stay.
+  const [rectPreview, setRectPreview] = useState(null);
   const [dynamics, setDynamics] = useState({ step: 1, unit: 'day' });
   const [birthOpen, setBirthOpen] = useState(false);
   // false, or the settings tab to open on.
@@ -414,22 +418,29 @@ export default function App() {
   const { nodeType, lilithType } = settings;
   const pointTypes = useMemo(() => ({ nodeType, lilithType }), [nodeType, lilithType]);
   // What the forecast and search calculations depend on; colours, orbs and weights don't move planets.
+  // A preview belongs to the chart it was opened from; opening another chart ends it.
+  const preview = rectPreview?.birth === birth ? rectPreview : null;
+  const chartBirth = useMemo(() => (preview ? momentAtOffset(birth, preview.ms) : birth), [preview, birth]);
+  const directions = useMemo(
+    () => (preview?.arc ? { arc: preview.arc, converse: false } : settings.directions),
+    [preview, settings.directions]
+  );
   const calcOptions = useMemo(
-    () => ({ houseSystem: settings.houseSystem, pointTypes, directions: settings.directions }),
-    [settings.houseSystem, pointTypes, settings.directions]
+    () => ({ houseSystem: settings.houseSystem, pointTypes, directions }),
+    [settings.houseSystem, pointTypes, directions]
   );
 
   const chartData = useMemo(
     () =>
       calculateNatal(
-        { date: toUtcDate(birth.date, birth.time, birth.utcOffset), latitude: birth.latitude, longitude: birth.longitude },
+        { date: toUtcDate(chartBirth.date, chartBirth.time, chartBirth.utcOffset), latitude: chartBirth.latitude, longitude: chartBirth.longitude },
         settings.houseSystem,
         extras,
         pointTypes
       ),
     // extrasLoaded: recalculate once the data files arrive.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [birth, settings.houseSystem, extras, pointTypes, extrasLoaded]
+    [chartBirth, settings.houseSystem, extras, pointTypes, extrasLoaded]
   );
 
   const { latitude: transitLat, longitude: transitLon } = transit;
@@ -488,10 +499,10 @@ export default function App() {
   const ingresses = useMemo(() => {
     if (!transitPlanets || (forecast !== 'progressions' && forecast !== 'directions')) return null;
     const date = toUtcDate(transitMoment.date, transitMoment.time, transitMoment.utcOffset);
-    if (forecast === 'directions') return directionIngresses(chartData, date, settings.directions, transitPlanets);
+    if (forecast === 'directions') return directionIngresses(chartData, date, directions, transitPlanets);
     const moon = transitPlanets.find((p) => p.id === 'moon');
     return moon ? progressedMoonIngresses(chartData, date, moon) : null;
-  }, [forecast, transitPlanets, transitMoment, chartData, settings.directions]);
+  }, [forecast, transitPlanets, transitMoment, chartData, directions]);
 
   // The second wheel shows any other mode for the same moment: the birth chart, a forecast ring
   // around it, or a solar or lunar return with its own houses (at the transit place).
@@ -523,11 +534,11 @@ export default function App() {
       return { chart, planets, angles, ring: null, points, aspects: findAspects(points, returnAspectSettings), moment, isReturn: true };
     }
     const base = { chart: chartData, planets: birthPlanets, angles: birthAngles };
-    if (secondMode === 'natal') return { ...base, ring: null, points: birthPoints, aspects: findAspects(birthPoints, settings.aspects), moment: birth };
+    if (secondMode === 'natal') return { ...base, ring: null, points: birthPoints, aspects: findAspects(birthPoints, settings.aspects), moment: chartBirth };
     const ring = forecastPoints(secondMode, chartData, date, place, calcOptions, extras).filter((p) => visible[p.id]);
     const preset = { ...settings.aspects, ...secondPreset };
     return { ...base, ring, points: ring, aspects: withSeparating(findAspects(ring, preset, birthPoints), preset), moment: secondTransit };
-  }, [secondMode, secondRaw, secondTransit, chartData, birth, calcOptions, settings.aspects, secondPreset, extras, pointTypes, visible, birthPlanets, birthAngles, birthPoints, returnAspectSettings]);
+  }, [secondMode, secondRaw, secondTransit, chartData, chartBirth, calcOptions, settings.aspects, secondPreset, extras, pointTypes, visible, birthPlanets, birthAngles, birthPoints, returnAspectSettings]);
   const secondReturnList = useMemo(
     () => (secondView?.isReturn ? returnsAround(chartData, secondMode, secondView.chart.date, RETURN_LIST_SPAN[secondMode]) : null),
     [secondView, chartData, secondMode]
@@ -562,7 +573,15 @@ export default function App() {
 
   // What to highlight on the wheel and in the tables for the current hover target.
   const focus = useMemo(() => {
-    // A planet hovered in the second wheel lights up the same object here.
+    // A planet hovered in the second wheel lights up the same object here; else a previewed
+    // rectification contact stays lit: its aspect line, or the planet and the house of a cusp.
+    if (!hover && !secondHover && preview?.contact) {
+      const { method, mover, target } = preview.contact;
+      const moverKey = `${method}:${mover}`;
+      if (target.startsWith('cusp')) return { planets: new Set([moverKey]), house: Number(target.slice(4)) - 1, aspects: new Set() };
+      const aspect = visibleAspects.find((a) => a.a.key === moverKey && a.b.key === `natal:${target}`);
+      return { planets: new Set([moverKey, `natal:${target}`]), aspects: new Set(aspect ? [aspect.id] : []) };
+    }
     if (!hover) return sameObjectFocus(secondHover, [...natalPoints, ...(transitPlanets ?? [])]);
     if (hover.type === 'pattern') {
       const pattern = patterns[hover.index];
@@ -575,7 +594,7 @@ export default function App() {
     }
     // The table may list the second chart's aspects; their ids can repeat the main chart's (both use natal keys in a return).
     return pointFocus(hover, hover.second ? secondTableAspects ?? [] : visibleAspects, natalPlanets);
-  }, [hover, secondHover, natalPoints, transitPlanets, visibleAspects, secondTableAspects, natalPlanets, patternAspects, patterns]);
+  }, [hover, secondHover, preview, natalPoints, transitPlanets, visibleAspects, secondTableAspects, natalPlanets, patternAspects, patterns]);
 
   const activeTab = activeTabOf(mode, tab);
   // When forecast aspects became or become exact and leave their orb: for the aspect table, or the
@@ -621,10 +640,17 @@ export default function App() {
     const { updatedAt } = await api.updateChart(openClient.id, openClient.name, data);
     setClients((list) => list.map((c) => (c.id === openClient.id ? { ...c, data, updatedAt } : c)));
   };
+  // A rectification contact on the wheel: the candidate time in place of the birth time, the method
+  // (directions with that arc, or transits) at the event's moment, and the contact lit.
+  const showContact = ({ ms, arc, event, contact }) => {
+    setRectPreview({ birth, ms, arc: contact.method === 'directions' ? arc : null, contact });
+    openEvent(event, contact.method);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   // An event opens the forecast (transits unless one is open) for its date and time at the transit place.
-  const openEvent = (ev) => {
+  const openEvent = (ev, method = forecast ?? 'transit') => {
     const time = ev.time || '12:00';
-    changeMode(forecast ?? 'transit');
+    changeMode(method);
     updateTransit({ ...transit, date: ev.date, time, utcOffset: transit.timeZone ? offsetForZone(transit.timeZone, ev.date, time) : transit.utcOffset });
   };
   // Aspect settings of every forecast method, for the aspect calendar.
@@ -663,8 +689,11 @@ export default function App() {
             <span>{t('directions.arc')}</span>
             <select
               className="input-sm"
-              value={settings.directions.arc}
-              onChange={(e) => setSettings((s) => ({ ...s, directions: { ...s.directions, arc: e.target.value } }))}
+              value={directions.arc}
+              onChange={(e) => {
+                setRectPreview((p) => p && { ...p, arc: null });
+                setSettings((s) => ({ ...s, directions: { ...s.directions, arc: e.target.value } }));
+              }}
             >
               {Object.keys(DIRECTION_ARCS).map((id) => (
                 <option key={id} value={id}>{t(`directions.arc.${id}`)}</option>
@@ -675,8 +704,11 @@ export default function App() {
             <span>{t('directions.direction')}</span>
             <select
               className="input-sm"
-              value={settings.directions.converse ? 'converse' : 'direct'}
-              onChange={(e) => setSettings((s) => ({ ...s, directions: { ...s.directions, converse: e.target.value === 'converse' } }))}
+              value={directions.converse ? 'converse' : 'direct'}
+              onChange={(e) => {
+                setRectPreview((p) => p && { ...p, arc: null });
+                setSettings((s) => ({ ...s, directions: { ...s.directions, converse: e.target.value === 'converse' } }));
+              }}
             >
               <option value="direct">{t('directions.direct')}</option>
               <option value="converse">{t('directions.converse')}</option>
@@ -801,7 +833,7 @@ export default function App() {
                   <div className="font-display text-xl font-semibold">{birth.name || placeName(birth, t)}</div>
                   <div className="text-xs tabular-nums text-slate-500">
                     {birth.name && `${placeName(birth, t)} · `}
-                    {formatDate(birth.date, lang)} · {birth.time} · {formatOffset(birth.utcOffset)}
+                    {formatDate(chartBirth.date, lang)} · {chartBirth.time} · {formatOffset(chartBirth.utcOffset)}
                   </div>
                 </>
               )}
@@ -820,6 +852,15 @@ export default function App() {
               <div className="text-[11px] uppercase tracking-wider text-slate-400">{houseSystem && t(`houseSystem.${houseSystem.key}`)}</div>
             </div>
           </div>
+
+          {preview && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              <span>{t('rect.previewBanner', { time: chartBirth.time, recorded: birth.time })}</span>
+              <button type="button" className="btn-ghost text-amber-900 underline decoration-amber-300 underline-offset-2" onClick={() => setRectPreview(null)}>
+                {t('rect.previewBack', { time: birth.time })}
+              </button>
+            </div>
+          )}
 
           {!secondView && forecastBar}
 
@@ -1031,8 +1072,7 @@ export default function App() {
                 birth={birth}
                 events={clientEvents}
                 houseSystem={settings.houseSystem}
-                // The birth moment moves to the chosen time; it is saved with the client's form as usual.
-                onApply={(ms) => setBirth((b) => momentAt(b, ms))}
+                onShow={showContact}
               />
             </div>
           )}
