@@ -582,6 +582,9 @@ const ru = {
   'lifeEvents.kind.jobLoss': 'Потеря работы, банкротство',
   'lifeEvents.kind.finance': 'Крупный доход, покупка бизнеса',
   'lifeEvents.kind.crisis': 'Психологический кризис, госпитализация',
+  'field.gender': 'Пол',
+  'gender.female': 'Женщина',
+  'gender.male': 'Мужчина',
 };
 
 const uk = {
@@ -1165,6 +1168,9 @@ const uk = {
   'lifeEvents.kind.jobLoss': 'Втрата роботи, банкрутство',
   'lifeEvents.kind.finance': 'Великий дохід, купівля бізнесу',
   'lifeEvents.kind.crisis': 'Психологічна криза, госпіталізація',
+  'field.gender': 'Стать',
+  'gender.female': 'Жінка',
+  'gender.male': 'Чоловік',
 };
 
 const en = {
@@ -1748,6 +1754,9 @@ const en = {
   'lifeEvents.kind.jobLoss': 'Job loss, bankruptcy',
   'lifeEvents.kind.finance': 'Large income, business bought',
   'lifeEvents.kind.crisis': 'Psychological crisis, hospital stay',
+  'field.gender': 'Sex',
+  'gender.female': 'Woman',
+  'gender.male': 'Man',
 };
 
 export const TRANSLATIONS = { ru, uk, en };

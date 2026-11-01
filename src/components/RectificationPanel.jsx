@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { ASPECTS, DIRECTION_ARCS, ROMAN, formatOrb, momentAtOffset, shiftMoment, toUtcDate } from '../utils/ephemeris';
 import { useI18n, formatShortDate } from '../i18n';
+import { DEFAULT_GENDER } from '../utils/clients';
 
 const STEPS = [60, 120, 300];
 const TOP = 5;
@@ -96,7 +97,7 @@ export function RectificationPanel({ birth, events, houseSystem, onShow }) {
       to: toDate,
       stepSeconds: step,
       events: events.map((e) => ({ kind: e.kind, date: toUtcDate(e.date, e.time || '12:00', birth.utcOffset) })),
-      options: { houseSystem, transits, personal },
+      options: { houseSystem, transits, personal, gender: birth.gender ?? DEFAULT_GENDER },
       arcs,
     });
   };

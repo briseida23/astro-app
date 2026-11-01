@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Modal } from './Modal';
 import { offsetForZone, formatOffset } from '../utils/ephemeris';
 import { placeFromSearch, withoutClient } from '../utils/location';
-import { clientMatches } from '../utils/clients';
+import { clientMatches, GENDERS, DEFAULT_GENDER } from '../utils/clients';
 import { useI18n, placeName, formatShortDate } from '../i18n';
 
 const OFFSETS = [
@@ -267,6 +267,24 @@ function BirthForm({ birth, clients, onSaveClient, onSubmit }) {
           <span>{t('field.timezone')}</span>
           <OffsetSelect value={draft.utcOffset} onChange={(utcOffset) => set({ utcOffset })} />
         </label>
+      </div>
+
+      {/* Read in rectification: the Sun and Mars mark marriage in a woman's chart, the Moon in a man's. */}
+      <div className="field">
+        <span>{t('field.gender')}</span>
+        <div className="flex w-fit rounded-lg bg-slate-100 p-1 text-sm">
+          {GENDERS.map((g) => (
+            <button
+              key={g}
+              type="button"
+              aria-pressed={(draft.gender ?? DEFAULT_GENDER) === g}
+              onClick={() => setDraft((d) => ({ ...d, gender: g }))}
+              className={`rounded-md px-3 py-1 normal-case tracking-normal transition ${(draft.gender ?? DEFAULT_GENDER) === g ? 'bg-white font-semibold text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+            >
+              {t(`gender.${g}`)}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="field">

@@ -631,7 +631,8 @@ export function orbWindows(natal, method, items, at, options) {
  * sextile; `'strict'`: by square or opposition only.
  */
 export const RECT_EVENTS = {
-  marriage: { weight: 10, houses: [7, 1], points: ['venus', 'jupiter'] },
+  // The partner: the Sun and Mars in a woman's chart, the Moon in a man's.
+  marriage: { weight: 10, houses: [7, 1], points: ['venus', 'jupiter'], byGender: { female: ['sun', 'mars'], male: ['moon'] } },
   divorce: { weight: 8, houses: [7, 1], points: ['uranus', 'pluto', 'saturn', 'mars'], hard: true },
   // The Sun rules the 5th house by nature: children too.
   child: { weight: 9, houses: [5], points: ['moon', 'venus', 'sun', 'mc'] },
@@ -709,11 +710,11 @@ const timeBound = (m, f) => [m, f].some((p) => ANGLE_IDS.has(p.id) || p.cusp || 
  * planets that meet the event's natal significators, or directed significators that meet the natal
  * ASC or MC, earn the event's weight by orb; with `transits`, slow planets on the angles count too.
  * With `personal` the rulers of the event's houses and the planets in them count as significators
- * too. Each event earns at most its weight, by its best contact. Returns [{ date, score, orbs, percent,
+ * too; `gender` ('female' or 'male') adds the partner's planets to a marriage. Each event earns at most its weight, by its best contact. Returns [{ date, score, orbs, percent,
  * matches: [{ event, method, mover, target, aspect, orb, points }] }] in time order: `orbs` sums each
  * event's closest orb (1° when none), `percent` is the score against the sum of the events' weights.
  */
-export function rectify(birth, from, to, stepSeconds, events, { houseSystem, arc = 'symbolic', transits = false, personal = false }) {
+export function rectify(birth, from, to, stepSeconds, events, { houseSystem, arc = 'symbolic', transits = false, personal = false, gender = 'female' }) {
   const fromJd = swe.dateToJulianDay(from);
   const steps = Math.floor((to.getTime() - from.getTime()) / (stepSeconds * 1000));
   const eventJds = events.map((e) => swe.dateToJulianDay(e.date));
@@ -740,6 +741,7 @@ export function rectify(birth, from, to, stepSeconds, events, { houseSystem, arc
       // The event's points, plus the rulers of its houses and the planets standing in them.
       const points = new Set([
         ...config.points,
+        ...(config.byGender?.[gender] ?? []),
         ...(personal ? config.houses.map((n) => SIGN_RULERS[Math.floor(normalize(houses.cusps[n]) / 30)]) : []),
         ...(personal ? planets.filter((p) => config.houses.includes(houseOfPlanet[p.id])).map((p) => p.id) : []),
       ]);

@@ -13,6 +13,10 @@ export function clientMatches(client, query, lang, t) {
   return q.split(/\s+/).every((word) => text.includes(word));
 }
 
+// A client's sex, for rectification; clients saved without one count as women.
+export const GENDERS = ['female', 'male'];
+export const DEFAULT_GENDER = 'female';
+
 // Kinds of life events; the ones tied to the angles (relationships, home, career, body) matter most for rectification.
 export const EVENT_KINDS = ['marriage', 'divorce', 'child', 'childSon', 'childDaughter', 'move', 'moveAbroad', 'career', 'jobLoss', 'finance', 'health', 'accident', 'crisis', 'fatherDeath', 'motherDeath', 'loss', 'education', 'other'];
 // One client's events have to fit a saved chart (16 KB with the birth data).
