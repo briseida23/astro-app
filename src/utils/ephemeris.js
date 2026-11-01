@@ -823,18 +823,27 @@ export function transitIngresses(natal, ids, from, to, options) {
 /** A Julian day (UT) as a Date. */
 const jdToDate = (jd) => new Date((jd - 2440587.5) * 86400000);
 
-// Eclipses touch natal points by conjunction and opposition within 3°, by square within 2°.
-const ECLIPSE_ORBS = { conjunction: 3, opposition: 3, square: 2 };
+// Eclipses (Erika Royals): conjunction within 2°, the other major aspects within 1.5°, to the ten
+// planets, the angles and the nodes only (not Chiron, Lilith or asteroids: background noise), and
+// conjunctions to the intermediate house cusps.
+const ECLIPSE_ORBS = { conjunction: 2, opposition: 1.5, square: 1.5, trine: 1.5 };
+const ECLIPSE_POINTS = new Set([...PLANETS.slice(0, 10).map((p) => p.id), 'ascendant', 'mc', 'node', 'southNode']);
+// Cusps 1, 4, 7 and 10 are the angles' own axes, already met by the angles.
+const ECLIPSE_CUSPS = [2, 3, 5, 6, 8, 9, 11, 12];
 
 /**
  * Solar and lunar eclipses within `years` of `date`: [{ kind: 'solar' | 'lunar', type, date,
- * longitude, house, contacts: [{ point, aspect, orb }] }], earliest first. The longitude is the
- * Sun's for a solar eclipse and the Moon's for a lunar one; `house` is the natal house it falls in
- * and `contacts` its aspects to `points` (natal points).
+ * longitude, house, node: 'north' | 'south', contacts: [{ point?, cusp?, aspect, orb }] }],
+ * earliest first. The longitude is the Sun's for a solar eclipse and the Moon's for a lunar one;
+ * `node` is the lunar node it falls on (new beginnings at the North, completion at the South);
+ * `contacts` are its aspects to the natal `points` that count and conjunctions to house cusps,
+ * conjunctions first.
  */
-export function eclipsesAround(natal, date, years, points) {
+export function eclipsesAround(natal, date, years, points, pointTypes = POINT_TYPES) {
   const center = swe.dateToJulianDay(date);
   const to = center + years * TROPICAL_YEAR;
+  const targets = points.filter((p) => ECLIPSE_POINTS.has(p.id));
+  const northNode = PLANETS.find((p) => p.id === 'node');
   const list = [];
   for (const kind of ['solar', 'lunar']) {
     let jd = center - years * TROPICAL_YEAR;
@@ -846,11 +855,26 @@ export function eclipsesAround(natal, date, years, points) {
         kind === 'solar'
           ? e.isTotal() ? 'total' : e.isAnnular() ? 'annular' : e.isHybrid() ? 'hybrid' : 'partial'
           : e.isTotal() ? 'total' : e.isPartial() ? 'partial' : 'penumbral';
-      const contacts = points.flatMap((point) => {
-        const sep = Math.abs(signedDiff(longitude, point.longitude));
-        return ASPECTS.filter((a) => ECLIPSE_ORBS[a.id] && Math.abs(sep - a.angle) <= ECLIPSE_ORBS[a.id]).map((aspect) => ({ point, aspect, orb: Math.abs(sep - aspect.angle) }));
+      const nodeLon = swe.calculatePosition(e.maximum, bodyOf(northNode, pointTypes)).longitude;
+      const contacts = [
+        ...targets.flatMap((point) => {
+          const sep = Math.abs(signedDiff(longitude, point.longitude));
+          return ASPECTS.filter((a) => ECLIPSE_ORBS[a.id] && Math.abs(sep - a.angle) <= ECLIPSE_ORBS[a.id]).map((aspect) => ({ point, aspect, orb: Math.abs(sep - aspect.angle) }));
+        }),
+        ...ECLIPSE_CUSPS.flatMap((cusp) => {
+          const orb = Math.abs(signedDiff(longitude, natal.houses[cusp - 1]));
+          return orb <= ECLIPSE_ORBS.conjunction ? [{ cusp, aspect: ASPECTS[0], orb }] : [];
+        }),
+      ];
+      list.push({
+        kind,
+        type,
+        date: jdToDate(e.maximum),
+        longitude,
+        house: houseOf(longitude, natal.houses),
+        node: Math.abs(signedDiff(longitude, nodeLon)) < 90 ? 'north' : 'south',
+        contacts: contacts.sort((a, b) => (a.aspect.angle === 0) === (b.aspect.angle === 0) ? a.orb - b.orb : a.aspect.angle === 0 ? -1 : 1),
       });
-      list.push({ kind, type, date: jdToDate(e.maximum), longitude, house: houseOf(longitude, natal.houses), contacts: contacts.sort((a, b) => a.orb - b.orb) });
       jd = e.maximum + 1;
     }
   }

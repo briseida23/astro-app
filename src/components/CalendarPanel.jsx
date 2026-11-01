@@ -40,13 +40,12 @@ export function CalendarPanel({ natal, points, moment, extras, presets, options,
   // Two years either side do not depend on the hour: stepping the time leaves the list alone.
   const eclipses = useMemo(() => {
     const date = toUtcDate(moment.date, '12:00', moment.utcOffset);
-    return Number.isNaN(date.getTime()) ? [] : eclipsesAround(natal, date, ECLIPSE_YEARS, points);
-  }, [natal, points, moment.date, moment.utcOffset]);
+    return Number.isNaN(date.getTime()) ? [] : eclipsesAround(natal, date, ECLIPSE_YEARS, points, options.pointTypes);
+  }, [natal, points, moment.date, moment.utcOffset, options.pointTypes]);
   const now = toUtcDate(moment.date, moment.time, moment.utcOffset).getTime();
 
   const day = (date) => formatShortDate(momentAt(moment, date.getTime()).date, lang);
   const toggle = (id) => setPlanets((list) => (list.includes(id) ? list.filter((p) => p !== id) : [...list, id]));
-  const heading = 'mb-2 text-[11px] font-medium uppercase tracking-wider text-slate-400';
 
   return (
     <div className="space-y-8">
@@ -153,9 +152,12 @@ export function CalendarPanel({ natal, points, moment, extras, presets, options,
                   className={`flex w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-md px-1.5 py-1.5 text-left transition hover:bg-slate-50 ${past ? 'text-slate-400' : ''}`}
                 >
                   <span className="shrink-0 tabular-nums sm:w-28">{day(e.date)}</span>
-                  <span className="shrink-0 sm:w-40">
+                  <span className="shrink-0 whitespace-nowrap">
                     <span aria-hidden className="mr-1">{e.kind === 'solar' ? '●' : '◐'}</span>
                     {t(`eclipse.${e.kind}.${e.type}`)}
+                    <Hint label={t(`eclipse.node.${e.node}`)}>
+                      <span className="astro ml-1.5 text-base text-slate-500">{e.node === 'north' ? '☊' : '☋'}</span>
+                    </Hint>
                   </span>
                   <span className="inline-flex shrink-0 items-center gap-1 tabular-nums sm:w-24">
                     {formatDegree(e.longitude)}
@@ -163,23 +165,32 @@ export function CalendarPanel({ natal, points, moment, extras, presets, options,
                   </span>
                   <span className="shrink-0 font-display text-base sm:w-16">{t('ingress.house', { n: ROMAN[e.house - 1] })}</span>
                   <span className="flex flex-wrap items-center gap-2">
-                    {e.contacts.map((c) => (
-                      <Hint key={`${c.point.key}:${c.aspect.id}`} label={`${t(`aspect.${c.aspect.id}`)} ${t('wheel.natalPrefix')}${t(`object.${c.point.id}`)} · ${formatOrb(c.orb)}`}>
-                        <span className="inline-flex items-center">
-                          <span className="astro text-base" style={{ color: c.aspect.id === 'opposition' ? undefined : aspectColors[c.aspect.id] }}>
-                            {c.aspect.glyph}
+                    {e.contacts.map((c) => {
+                      const target = c.cusp ? t('rect.cusp', { n: ROMAN[c.cusp - 1] }) : `${t('wheel.natalPrefix')}${t(`object.${c.point.id}`)}`;
+                      // A conjunction is the eclipse sitting on the point: the strongest contact, shown filled.
+                      const conjunction = c.aspect.angle === 0;
+                      return (
+                        <Hint key={`${c.cusp ?? c.point.key}:${c.aspect.id}`} label={`${t(`aspect.${c.aspect.id}`)} ${target} · ${formatOrb(c.orb)}`}>
+                          <span className={`inline-flex items-center rounded-md ${conjunction ? 'bg-slate-900 px-1 text-white' : ''}`}>
+                            <span className="astro text-base" style={conjunction || c.aspect.id === 'opposition' ? undefined : { color: aspectColors[c.aspect.id] }}>
+                              {c.aspect.glyph}
+                            </span>
+                            {c.cusp ? (
+                              <span className="inline-block min-w-6 text-center font-display text-sm">{ROMAN[c.cusp - 1]}</span>
+                            ) : (
+                              <Glyph of={c.point} className="inline-block w-6 text-center" symbolClass="astro text-base" />
+                            )}
                           </span>
-                          <Glyph of={c.point} className="inline-block w-6 text-center" symbolClass="astro text-base" />
-                        </span>
-                      </Hint>
-                    ))}
+                        </Hint>
+                      );
+                    })}
                   </span>
                 </button>
               </li>
             );
           })}
         </ul>
-        <p className={heading}>{t('calendar.eclipseOrbs')}</p>
+        <p className="text-xs leading-relaxed text-slate-500">{t('calendar.eclipseOrbs')}</p>
       </section>
     </div>
   );

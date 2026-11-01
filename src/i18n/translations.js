@@ -534,7 +534,7 @@ const ru = {
   'calendar.noIngresses': 'За этот период ингрессий выбранных планет нет.',
   'calendar.eclipses': 'Затмения',
   'calendar.eclipsesLead': 'За {n} года до и после даты карты: градус, натальный дом и аспекты к натальным точкам. Наведите — затмение отметится на круге.',
-  'calendar.eclipseOrbs': 'Орбисы: соединение и оппозиция 3°, квадрат 2°',
+  'calendar.eclipseOrbs': 'Соединение до 2° (выделено), оппозиция, квадрат и трин до 1,5° — к планетам, ASC, MC и узлам; соединения с куспидами домов. ☊ / ☋ — на каком узле затмение: Северный — новые задачи и рост, Южный — завершение этапа.',
   'eclipse.solar.total': 'Полное солнечное',
   'eclipse.solar.annular': 'Кольцеобразное солнечное',
   'eclipse.solar.hybrid': 'Гибридное солнечное',
@@ -553,6 +553,8 @@ const ru = {
   'timeline.short.progressions': 'прог.',
   'timeline.short.directions': 'дир.',
   'timeline.short.natal': 'нат.',
+  'eclipse.node.north': 'На Северном узле: новые задачи, расширение',
+  'eclipse.node.south': 'На Южном узле: завершение этапа, отдача долгов',
 };
 
 const uk = {
@@ -1088,7 +1090,7 @@ const uk = {
   'calendar.noIngresses': 'За цей період інгресій обраних планет немає.',
   'calendar.eclipses': 'Затемнення',
   'calendar.eclipsesLead': 'За {n} роки до і після дати карти: градус, натальний дім і аспекти до натальних точок. Наведіть — затемнення позначиться на колі.',
-  'calendar.eclipseOrbs': 'Орбіси: з’єднання й опозиція 3°, квадрат 2°',
+  'calendar.eclipseOrbs': 'З’єднання до 2° (виділено), опозиція, квадрат і трин до 1,5° — до планет, ASC, MC і вузлів; з’єднання з куспідами домів. ☊ / ☋ — на якому вузлі затемнення: Північний — нові завдання й зростання, Південний — завершення етапу.',
   'eclipse.solar.total': 'Повне сонячне',
   'eclipse.solar.annular': 'Кільцеподібне сонячне',
   'eclipse.solar.hybrid': 'Гібридне сонячне',
@@ -1107,6 +1109,8 @@ const uk = {
   'timeline.short.progressions': 'прог.',
   'timeline.short.directions': 'дир.',
   'timeline.short.natal': 'нат.',
+  'eclipse.node.north': 'На Північному вузлі: нові завдання, розширення',
+  'eclipse.node.south': 'На Південному вузлі: завершення етапу, віддача боргів',
 };
 
 const en = {
@@ -1642,7 +1646,7 @@ const en = {
   'calendar.noIngresses': 'No ingresses of the chosen planets in this period.',
   'calendar.eclipses': 'Eclipses',
   'calendar.eclipsesLead': '{n} years either side of the chart date: degree, natal house and aspects to natal points. Hover one to mark it on the wheel.',
-  'calendar.eclipseOrbs': 'Orbs: conjunction and opposition 3°, square 2°',
+  'calendar.eclipseOrbs': 'Conjunction within 2° (filled), opposition, square and trine within 1.5° — to the planets, ASC, MC and the nodes; conjunctions to house cusps. ☊ / ☋ — the node of the eclipse: the North brings new tasks and growth, the South the end of a stage.',
   'eclipse.solar.total': 'Total solar',
   'eclipse.solar.annular': 'Annular solar',
   'eclipse.solar.hybrid': 'Hybrid solar',
@@ -1661,6 +1665,8 @@ const en = {
   'timeline.short.progressions': 'prog.',
   'timeline.short.directions': 'dir.',
   'timeline.short.natal': 'nat.',
+  'eclipse.node.north': 'At the North Node: new tasks, expansion',
+  'eclipse.node.south': 'At the South Node: a stage ends, debts are paid',
 };
 
 export const TRANSLATIONS = { ru, uk, en };
