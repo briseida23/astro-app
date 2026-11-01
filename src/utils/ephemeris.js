@@ -881,6 +881,36 @@ export function eclipsesAround(natal, date, years, points, pointTypes = POINT_TY
   return list.sort((a, b) => a.date - b.date);
 }
 
+// Orb windows found so far, per chart and calculation options (dropped with them): a window stays
+// right while the moment stays between the same two of its edges and exact contacts.
+const windowCache = new WeakMap();
+
+/** orbWindows that reuses a window found for an earlier moment when it still applies (stepping through time). */
+export function orbWindowsCached(natal, method, items, at, options) {
+  if (!windowCache.has(natal)) windowCache.set(natal, new WeakMap());
+  const byOptions = windowCache.get(natal);
+  if (!byOptions.has(options)) byOptions.set(options, new Map());
+  const cache = byOptions.get(options);
+  const t = at.getTime();
+  const keyOf = (item) => `${method}|${item.mover}|${item.target}|${item.angle}|${item.orb}`;
+  const result = new Array(items.length).fill(null);
+  const missing = [];
+  items.forEach((item, i) => {
+    const w = cache.get(keyOf(item));
+    const since = w && (w.lastExact ?? w.enter);
+    const until = w && (w.exact ?? w.exit);
+    if (since && until && t >= since.getTime() && t < until.getTime()) result[i] = w;
+    else missing.push(i);
+  });
+  if (missing.length) {
+    orbWindows(natal, method, missing.map((i) => items[i]), at, options).forEach((w, k) => {
+      result[missing[k]] = w;
+      if (w) cache.set(keyOf(items[missing[k]]), w);
+    });
+  }
+  return result;
+}
+
 // Return methods: the body whose return to its natal longitude starts the chart, and its mean speed (°/day).
 export const RETURNS = {
   solar: { body: Planet.Sun, speed: 0.98561 },

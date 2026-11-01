@@ -22,7 +22,7 @@ import {
   EXTRA_OBJECTS,
   extrasReady,
   CONTACT_METHODS,
-  orbWindows,
+  orbWindowsCached,
 } from './utils/ephemeris';
 import { findAspects, ORB_PRESET_KEYS } from './utils/aspects';
 import { calculateBalance } from './utils/balance';
@@ -204,7 +204,9 @@ function sameObjectFocus(hover, points) {
 // for a general forecast.
 const STATIC_TABS = ['planets', 'aspects', 'patterns', 'balance', 'dynamics', 'events', 'calendar', 'search'];
 const FORECAST_TABS = ['aspects', 'patterns', 'dynamics', 'calendar', 'search', 'planets', 'events'];
-const tabIdsOf = (mode) => (mode in ORB_PRESET_KEYS ? FORECAST_TABS : STATIC_TABS);
+/** Whether a mode draws a forecast ring around the natal chart (transits, progressions, directions). */
+const isForecast = (mode) => mode in ORB_PRESET_KEYS;
+const tabIdsOf = (mode) => (isForecast(mode) ? FORECAST_TABS : STATIC_TABS);
 /** The chosen tab where the mode has it, else the mode's first tab. */
 const activeTabOf = (mode, tab) => (tabIdsOf(mode).includes(tab) ? tab : tabIdsOf(mode)[0]);
 // Tools that stay open when switching between a chart of its own and a forecast; any other tab gives way to the new mode's first.
@@ -432,7 +434,7 @@ export default function App() {
   const { latitude: transitLat, longitude: transitLon } = transit;
   // Forecast methods draw an outer ring for the moment in the transit bar: transits at the
   // transit place, progressions and directions from the birth chart.
-  const forecast = mode in ORB_PRESET_KEYS ? mode : null;
+  const forecast = isForecast(mode) ? mode : null;
   // Solar and lunar returns replace the chart: the last return before the moment in the bar, at its place.
   const returnKind = RETURNS[mode] ? mode : null;
   const returnChart = useMemo(() => {
@@ -588,7 +590,7 @@ export default function App() {
       const own = list.filter((a) => a.a.ring === method);
       if (own.length === 0) continue;
       const items = own.map((a) => ({ mover: a.a.id, target: a.b.longitude, angle: a.angle, orb: a.allowed }));
-      orbWindows(chartData, method, items, date, calcOptions).forEach((w, i) => w && windows.set(own[i].id, w));
+      orbWindowsCached(chartData, method, items, date, calcOptions).forEach((w, i) => w && windows.set(own[i].id, w));
     }
     return windows;
   }, [activeTab, tableAspects, visibleAspects, windowsMoment, chartData, calcOptions]);

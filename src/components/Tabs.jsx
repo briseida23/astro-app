@@ -11,29 +11,39 @@ export function Tabs({ tabs, active, onChange, className = '' }) {
   const row = useRef(null);
   const [edges, setEdges] = useState({ left: false, right: false });
 
+  const order = tabs.map((t) => t.id).join();
+
   useEffect(() => {
     const el = row.current;
     if (!el) return;
-    const update = () => setEdges({ left: el.scrollLeft > 1, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 1 });
+    // A new state only when an edge changes: scrolling fires many events.
+    const update = () => {
+      const left = el.scrollLeft > 1;
+      const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+      setEdges((e) => (e.left === left && e.right === right ? e : { left, right }));
+    };
     update();
     el.addEventListener('scroll', update, { passive: true });
+    // The row's box and every tab: a longer label (another language, a bigger badge) widens the content, not the box.
     const observer = new ResizeObserver(update);
     observer.observe(el);
+    for (const tab of el.children) observer.observe(tab);
     return () => {
       el.removeEventListener('scroll', update);
       observer.disconnect();
     };
-  }, [tabs.length]);
+  }, [order]);
 
-  // Only the row scrolls (scrollIntoView would move the page too); also when the order changes with the mode.
-  const order = tabs.map((t) => t.id).join();
+  // Only the row scrolls (scrollIntoView would move the page too), just enough to bring the active
+  // tab out from under the faded edges; also when the order changes with the mode.
   useEffect(() => {
     const el = row.current;
     const tab = el?.querySelector('[aria-selected="true"]');
     if (!tab) return;
-    if (tab.offsetLeft < el.scrollLeft || tab.offsetLeft + tab.offsetWidth > el.scrollLeft + el.clientWidth) {
-      el.scrollTo({ left: tab.offsetLeft - FADE, behavior: 'smooth' });
-    }
+    const start = tab.offsetLeft;
+    const end = start + tab.offsetWidth;
+    if (start < el.scrollLeft + FADE) el.scrollTo({ left: start - FADE, behavior: 'smooth' });
+    else if (end > el.scrollLeft + el.clientWidth - FADE) el.scrollTo({ left: end - el.clientWidth + FADE, behavior: 'smooth' });
   }, [active, order]);
 
   const mask = `linear-gradient(to right, ${edges.left ? 'transparent' : 'black'}, black ${FADE}px, black calc(100% - ${FADE}px), ${edges.right ? 'transparent' : 'black'})`;
