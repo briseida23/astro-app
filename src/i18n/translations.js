@@ -571,6 +571,9 @@ const ru = {
   'rect.showNote': '«на круге» откроет дирекции этой дуги на дату события со временем кандидата и подсветит контакт; карта клиента не меняется. Чтобы оставить новое время, исправьте его в данных клиента.',
   'rect.previewBanner': 'Проверка ректификации: время рождения {time} (у клиента {recorded})',
   'rect.previewBack': 'Вернуть {time}',
+  'lifeEvents.kind.moveAbroad': 'Переезд за границу',
+  'lifeEvents.kind.fatherDeath': 'Смерть отца',
+  'lifeEvents.kind.motherDeath': 'Смерть матери',
 };
 
 const uk = {
@@ -1143,6 +1146,9 @@ const uk = {
   'rect.showNote': '«на колі» відкриє дирекції цієї дуги на дату події з часом кандидата й підсвітить контакт; карта клієнта не змінюється. Щоб залишити новий час, виправте його в даних клієнта.',
   'rect.previewBanner': 'Перевірка ректифікації: час народження {time} (у клієнта {recorded})',
   'rect.previewBack': 'Повернути {time}',
+  'lifeEvents.kind.moveAbroad': 'Переїзд за кордон',
+  'lifeEvents.kind.fatherDeath': 'Смерть батька',
+  'lifeEvents.kind.motherDeath': 'Смерть матері',
 };
 
 const en = {
@@ -1715,6 +1721,9 @@ const en = {
   'rect.showNote': '“On wheel” opens that arc’s directions at the event’s date with the candidate time and lights the contact; the client’s chart stays as it is. To keep the new time, change it in the client’s data.',
   'rect.previewBanner': 'Rectification check: birth time {time} (the client’s is {recorded})',
   'rect.previewBack': 'Back to {time}',
+  'lifeEvents.kind.moveAbroad': 'Move abroad',
+  'lifeEvents.kind.fatherDeath': 'Father’s death',
+  'lifeEvents.kind.motherDeath': 'Mother’s death',
 };
 
 export const TRANSLATIONS = { ru, uk, en };

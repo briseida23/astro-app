@@ -633,10 +633,15 @@ export const RECT_EVENTS = {
   // The Sun rules the 5th house by nature: children too.
   child: { weight: 9, houses: [5], points: ['moon', 'venus', 'sun', 'mc'] },
   move: { weight: 8, houses: [4, 9], points: ['uranus', 'jupiter', 'mc', 'ascendant'] },
+  // Abroad: the 9th house of far countries; Neptune for the far and unfamiliar.
+  moveAbroad: { weight: 8, houses: [9], points: ['jupiter', 'uranus', 'neptune', 'ascendant'] },
   career: { weight: 8, houses: [10], points: ['mc', 'saturn', 'sun'] },
   health: { weight: 7, houses: [1, 6, 8], points: ['mars', 'pluto', 'ascendant'] },
   accident: { weight: 7, houses: [1, 8], points: ['mars', 'uranus', 'pluto', 'ascendant'] },
   loss: { weight: 7, houses: [8, 12], points: ['saturn', 'pluto', 'moon'] },
+  // A parent's death: the father by the Sun, Saturn and the MC/IC axis, the mother by the Moon and the IC.
+  fatherDeath: { weight: 8, houses: [8, 10], points: ['sun', 'saturn', 'mc'] },
+  motherDeath: { weight: 8, houses: [4, 8], points: ['moon', 'mc'] },
   education: { weight: 6, houses: [3, 9], points: ['jupiter', 'mercury', 'mc'] },
   other: { weight: 5, houses: [], points: ['ascendant', 'mc'] },
 };
