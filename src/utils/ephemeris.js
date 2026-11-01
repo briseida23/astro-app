@@ -632,6 +632,9 @@ export const RECT_EVENTS = {
   divorce: { weight: 8, houses: [7], points: ['uranus', 'saturn', 'ascendant'] },
   // The Sun rules the 5th house by nature: children too.
   child: { weight: 9, houses: [5], points: ['moon', 'venus', 'sun', 'mc'] },
+  // A son by the Sun and Mars, a daughter by the Moon and Venus; Jupiter, the giver of children, for both.
+  childSon: { weight: 9, houses: [5], points: ['sun', 'mars', 'jupiter', 'mc'] },
+  childDaughter: { weight: 9, houses: [5], points: ['moon', 'venus', 'jupiter', 'mc'] },
   move: { weight: 8, houses: [4, 9], points: ['uranus', 'jupiter', 'mc', 'ascendant'] },
   // Abroad: the 9th house of far countries; Neptune for the far and unfamiliar.
   moveAbroad: { weight: 8, houses: [9], points: ['jupiter', 'uranus', 'neptune', 'ascendant'] },

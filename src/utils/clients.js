@@ -14,6 +14,6 @@ export function clientMatches(client, query, lang, t) {
 }
 
 // Kinds of life events; the ones tied to the angles (relationships, home, career, body) matter most for rectification.
-export const EVENT_KINDS = ['marriage', 'divorce', 'child', 'move', 'moveAbroad', 'career', 'health', 'accident', 'fatherDeath', 'motherDeath', 'loss', 'education', 'other'];
+export const EVENT_KINDS = ['marriage', 'divorce', 'child', 'childSon', 'childDaughter', 'move', 'moveAbroad', 'career', 'health', 'accident', 'fatherDeath', 'motherDeath', 'loss', 'education', 'other'];
 // One client's events have to fit a saved chart (16 KB with the birth data).
 export const MAX_EVENTS = 100;

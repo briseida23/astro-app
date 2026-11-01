@@ -574,6 +574,8 @@ const ru = {
   'lifeEvents.kind.moveAbroad': 'Переезд за границу',
   'lifeEvents.kind.fatherDeath': 'Смерть отца',
   'lifeEvents.kind.motherDeath': 'Смерть матери',
+  'lifeEvents.kind.childSon': 'Рождение сына',
+  'lifeEvents.kind.childDaughter': 'Рождение дочери',
 };
 
 const uk = {
@@ -1149,6 +1151,8 @@ const uk = {
   'lifeEvents.kind.moveAbroad': 'Переїзд за кордон',
   'lifeEvents.kind.fatherDeath': 'Смерть батька',
   'lifeEvents.kind.motherDeath': 'Смерть матері',
+  'lifeEvents.kind.childSon': 'Народження сина',
+  'lifeEvents.kind.childDaughter': 'Народження доньки',
 };
 
 const en = {
@@ -1724,6 +1728,8 @@ const en = {
   'lifeEvents.kind.moveAbroad': 'Move abroad',
   'lifeEvents.kind.fatherDeath': 'Father’s death',
   'lifeEvents.kind.motherDeath': 'Mother’s death',
+  'lifeEvents.kind.childSon': 'Son’s birth',
+  'lifeEvents.kind.childDaughter': 'Daughter’s birth',
 };
 
 export const TRANSLATIONS = { ru, uk, en };
