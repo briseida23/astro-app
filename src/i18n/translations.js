@@ -555,6 +555,19 @@ const ru = {
   'timeline.short.natal': 'нат.',
   'eclipse.node.north': 'На Северном узле: новые задачи, расширение',
   'eclipse.node.south': 'На Южном узле: завершение этапа, отдача долгов',
+  'rect.arcBoth': 'Обе: символические + солнечная дуга',
+  'rect.arcShort.symbolic': 'Символ.',
+  'rect.arcShort.naibod': 'Наибод',
+  'rect.arcShort.solar': 'Солн. дуга',
+  'rect.arcTag.symbolic': 'сим.',
+  'rect.arcTag.naibod': 'наиб.',
+  'rect.arcTag.solar': 'солн.',
+  'rect.confirmed': 'обе дуги',
+  'rect.confirmedLegend': 'Зелёным — минуты, где обе дуги объясняют все события (100% в каждой): самые надёжные кандидаты.',
+  'rect.less': 'свернуть',
+  'rect.compare': 'Сравнение кандидатов',
+  'rect.compareHint': 'Лучший контакт каждого события для каждого времени; жирным — орбис до 15′. Щелчок по времени открывает его разбор.',
+  'rect.accuracyAll': 'Точность {n}',
 };
 
 const uk = {
@@ -1111,6 +1124,19 @@ const uk = {
   'timeline.short.natal': 'нат.',
   'eclipse.node.north': 'На Північному вузлі: нові завдання, розширення',
   'eclipse.node.south': 'На Південному вузлі: завершення етапу, віддача боргів',
+  'rect.arcBoth': 'Обидві: символічні + сонячна дуга',
+  'rect.arcShort.symbolic': 'Символ.',
+  'rect.arcShort.naibod': 'Найбод',
+  'rect.arcShort.solar': 'Сон. дуга',
+  'rect.arcTag.symbolic': 'сим.',
+  'rect.arcTag.naibod': 'найб.',
+  'rect.arcTag.solar': 'сон.',
+  'rect.confirmed': 'обидві дуги',
+  'rect.confirmedLegend': 'Зеленим — хвилини, де обидві дуги пояснюють усі події (100% у кожній): найнадійніші кандидати.',
+  'rect.less': 'згорнути',
+  'rect.compare': 'Порівняння кандидатів',
+  'rect.compareHint': 'Найкращий контакт кожної події для кожного часу; жирним — орбіс до 15′. Клік по часу відкриває його розбір.',
+  'rect.accuracyAll': 'Точність {n}',
 };
 
 const en = {
@@ -1667,6 +1693,19 @@ const en = {
   'timeline.short.natal': 'nat.',
   'eclipse.node.north': 'At the North Node: new tasks, expansion',
   'eclipse.node.south': 'At the South Node: a stage ends, debts are paid',
+  'rect.arcBoth': 'Both: symbolic + solar arc',
+  'rect.arcShort.symbolic': 'Symbolic',
+  'rect.arcShort.naibod': 'Naibod',
+  'rect.arcShort.solar': 'Solar arc',
+  'rect.arcTag.symbolic': 'sym.',
+  'rect.arcTag.naibod': 'naib.',
+  'rect.arcTag.solar': 'sol.',
+  'rect.confirmed': 'both arcs',
+  'rect.confirmedLegend': 'Green: minutes where both arcs explain every event (100% each), the most reliable candidates.',
+  'rect.less': 'less',
+  'rect.compare': 'Candidates compared',
+  'rect.compareHint': 'Each event’s best contact for each time; bold within 15′. Click a time to open its details.',
+  'rect.accuracyAll': 'Accuracy {n}',
 };
 
 export const TRANSLATIONS = { ru, uk, en };
