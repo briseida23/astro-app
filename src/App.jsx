@@ -198,6 +198,18 @@ function sameObjectFocus(hover, points) {
   return { planets: new Set(points.filter((p) => p.id === id).map((p) => p.key)), aspects: new Set() };
 }
 
+// Tabs under the chart in the order of a consultation: a chart of its own (natal, solar, lunar)
+// goes from the positions to aspects, figures and the element balance, then to time; a forecast
+// starts from its aspects to the natal chart. The calendar and search stay in the natal chart too,
+// for a general forecast.
+const STATIC_TABS = ['planets', 'aspects', 'patterns', 'balance', 'dynamics', 'events', 'calendar', 'search'];
+const FORECAST_TABS = ['aspects', 'patterns', 'dynamics', 'calendar', 'search', 'planets', 'events'];
+const tabIdsOf = (mode) => (mode in ORB_PRESET_KEYS ? FORECAST_TABS : STATIC_TABS);
+/** The chosen tab where the mode has it, else the mode's first tab. */
+const activeTabOf = (mode, tab) => (tabIdsOf(mode).includes(tab) ? tab : tabIdsOf(mode)[0]);
+// Tools that stay open when switching between a chart of its own and a forecast; any other tab gives way to the new mode's first.
+const KEPT_TABS = new Set(['dynamics', 'calendar', 'search', 'events']);
+
 // Natal chart alone, or with the ring of a forecast method; labels are `mode.<id>`.
 const MODES = ['natal', 'transit', 'progressions', 'directions', 'solar', 'lunar'];
 
@@ -223,7 +235,7 @@ export default function App() {
   const [secondOwnMoment, setSecondOwnMoment] = useState(() => (savedSession?.secondMoment ? restoreMoment(savedSession.secondMoment) : null));
   const [settings, setSettings] = useState(loadSettings);
   const [hover, setHover] = useState(null);
-  const [tab, setTab] = useState('dynamics');
+  const [tab, setTab] = useState(() => tabIdsOf(savedSession?.mode ?? 'natal')[0]);
   // The eclipse hovered in the Calendar tab, marked on the main wheel.
   const [eclipseMark, setEclipseMark] = useState(null);
   const [dynamics, setDynamics] = useState({ step: 1, unit: 'day' });
@@ -330,6 +342,7 @@ export default function App() {
   }, [user, syncReady, settings, lang]);
 
   const changeMode = (id) => {
+    if (tabIdsOf(id) !== tabIdsOf(mode) && !KEPT_TABS.has(activeTabOf(mode, tab))) setTab(tabIdsOf(id)[0]);
     setMode(id);
     setHover(null);
   };
@@ -561,10 +574,7 @@ export default function App() {
     return pointFocus(hover, hover.second ? secondTableAspects ?? [] : visibleAspects, natalPlanets);
   }, [hover, secondHover, natalPoints, transitPlanets, visibleAspects, secondTableAspects, natalPlanets, patternAspects, patterns]);
 
-  // Dynamics comes first; the natal chart also has the element balance, transits show only Dynamics.
-  const dynamicsTab = { id: 'dynamics', label: t('tab.dynamics') };
-  const firstTabs = forecast ? [dynamicsTab] : [dynamicsTab, { id: 'balance', label: t('tab.balance') }];
-  const activeTab = tab === 'balance' && forecast ? 'dynamics' : tab;
+  const activeTab = activeTabOf(mode, tab);
   // When forecast aspects became or become exact and leave their orb: for the aspect table, or the
   // near-exact list in Dynamics. A second chart's forecast ring runs on its own date.
   const windowsMoment = activeTab === 'aspects' && showSecondAspects && secondView.ring ? secondTransit : transit;
@@ -599,15 +609,7 @@ export default function App() {
     return [...visibleAspects, ...extra.filter((a) => !drawn.has(a.id))];
   }, [isBiWheel, hover, focus, visibleAspects, patternAspects, patterns, transitPatternSettings.contours]);
 
-  const tabs = [
-    ...firstTabs,
-    { id: 'planets', label: t('tab.planets') },
-    { id: 'aspects', label: t('tab.aspects') },
-    { id: 'patterns', label: t('tab.patterns'), badge: patterns.length },
-    { id: 'search', label: t('tab.search') },
-    { id: 'calendar', label: t('tab.calendar') },
-    { id: 'events', label: t('tab.events') },
-  ];
+  const tabs = tabIdsOf(mode).map((id) => ({ id, label: t(`tab.${id}`), badge: id === 'patterns' ? patterns.length : undefined }));
   // The open client's life events, kept with its saved chart.
   const openClient = clients?.find((c) => c.id === birth.clientId);
   const clientEvents = openClient?.data.events ?? [];
