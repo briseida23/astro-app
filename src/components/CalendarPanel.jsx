@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { PLANETS, ROMAN, SIGNS, eclipsesAround, formatDegree, formatOrb, momentAt, toUtcDate, transitIngresses } from '../utils/ephemeris';
+import { PLANETS, ROMAN, SIGNS, eclipsesAround, formatDegree, formatOrb, momentAt, periodFrom, toUtcDate, transitIngresses } from '../utils/ephemeris';
 import { useI18n, formatShortDate } from '../i18n';
 import { Glyph } from './Glyph';
 import { Hint } from './Hint';
@@ -29,10 +29,8 @@ export function CalendarPanel({ natal, points, moment, extras, presets, options,
   const [kind, setKind] = useState('all');
 
   const ingresses = useMemo(() => {
-    const start = toUtcDate(from, '00:00', moment.utcOffset);
+    const [start, end] = periodFrom(from, span, moment.utcOffset);
     if (Number.isNaN(start.getTime())) return [];
-    const end = new Date(start);
-    end.setUTCMonth(end.getUTCMonth() + span);
     return transitIngresses(natal, planets, start, end, options);
   }, [natal, planets, from, span, moment.utcOffset, options]);
   const shown = kind === 'all' ? ingresses : ingresses.filter((i) => i.kind === kind);

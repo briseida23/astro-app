@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ASPECTS, CONTACT_METHODS, PLANETS, ANGLES, EXTRA_OBJECTS, ROMAN, findContacts, momentAt, toUtcDate } from '../utils/ephemeris';
+import { ASPECTS, CONTACT_METHODS, PLANETS, ANGLES, EXTRA_OBJECTS, ROMAN, findContacts, momentAt, periodFrom } from '../utils/ephemeris';
 import { useI18n, formatShortDate } from '../i18n';
 import { Glyph } from './Glyph';
 import { Hint } from './Hint';
@@ -40,10 +40,8 @@ export function SearchPanel({ natal, points, moment, extras, options, defaultMet
 
   const houseTarget = target === 'houses' || target.startsWith('cusp:');
   const result = useMemo(() => {
-    const start = toUtcDate(from, '00:00', moment.utcOffset);
+    const [start, end] = periodFrom(from, months, moment.utcOffset);
     if (Number.isNaN(start.getTime())) return null;
-    const end = new Date(start);
-    end.setUTCMonth(end.getUTCMonth() + months);
     const cusps = natal.houses.map((longitude, i) => ({ key: `cusp:${i + 1}`, longitude, cusp: i + 1 }));
     // A progressed or directed object to its own natal place is no contact (see allowedOrb).
     let targets = method === 'transit' ? points : points.filter((p) => p.id !== moverId);

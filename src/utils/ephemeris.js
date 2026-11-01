@@ -1001,6 +1001,17 @@ export function momentAt(moment, ms) {
 export const STEP_UNITS = ['minute', 'hour', 'day', 'week', 'month', 'year'];
 
 /**
+ * [start, end] of a period of `months` months from the calendar date `date` (YYYY-MM-DD), both
+ * midnights at UTC offset `offset`. Counted on the calendar, not the UTC instant: east of Greenwich
+ * the 1st's midnight is still the previous day in UTC, and a month added there would skip one.
+ */
+export function periodFrom(date, months, offset) {
+  const start = { date, time: '00:00', utcOffset: offset };
+  const end = shiftMoment(start, months, 'month');
+  return [toUtcDate(date, '00:00', offset), toUtcDate(end.date, '00:00', offset)];
+}
+
+/**
  * `moment` ({ date, time, utcOffset, timeZone? }) moved by `amount` units. Minutes and hours
  * move the instant; days and longer keep the wall-clock time (as calendars do across DST).
  */

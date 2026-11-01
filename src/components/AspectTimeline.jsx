@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ANGLES, CONTACT_METHODS, EXTRA_OBJECTS, PLANETS, aspectTimeline, momentAt, toUtcDate } from '../utils/ephemeris';
+import { ANGLES, CONTACT_METHODS, EXTRA_OBJECTS, PLANETS, aspectTimeline, momentAt, pad, periodFrom, toUtcDate } from '../utils/ephemeris';
 import { allowedOrb } from '../utils/aspects';
 import { useI18n, formatShortDate } from '../i18n';
 import { Glyph } from './Glyph';
@@ -14,12 +14,14 @@ const DEFAULT_TRANSITS = ['jupiter', 'saturn', 'uranus', 'neptune', 'pluto'];
 const ALL_ORDER = ['directions', 'progressions', 'transit'];
 const BY_ID = Object.fromEntries([...PLANETS, ...ANGLES, ...EXTRA_OBJECTS].map((p) => [p.id, p]));
 
-/** [start, end] of `months` months from the date `date` (YYYY-MM-DD) at UTC offset `offset`. */
-function periodOf(date, months, offset) {
-  const start = toUtcDate(date, '00:00', offset);
-  const end = new Date(start);
-  end.setUTCMonth(end.getUTCMonth() + months);
-  return [start, end];
+/** The scale's months from `date` on: the start, then each 1st of a month, with the month to label it. */
+function monthMarks(date, months, offset) {
+  const [y, m, d] = date.split('-').map(Number);
+  return Array.from({ length: months + (d === 1 ? 0 : 1) }, (_, i) => {
+    const first = new Date(Date.UTC(y, m - 1 + i, 1));
+    const iso = i === 0 ? date : `${first.getUTCFullYear()}-${pad(first.getUTCMonth() + 1)}-01`;
+    return { at: toUtcDate(iso, '00:00', offset), month: first };
+  });
 }
 
 const methodsOf = (method) => (method === 'all' ? ALL_ORDER : [method]);
@@ -37,10 +39,10 @@ export function AspectTimeline({ natal, points, moment, extras, presets, options
   const [transits, setTransits] = useState(DEFAULT_TRANSITS);
   const methods = methodsOf(method);
 
-  const [start, end] = periodOf(from, span, moment.utcOffset);
+  const [start, end] = periodFrom(from, span, moment.utcOffset);
 
   const rows = useMemo(() => {
-    const [start, end] = periodOf(from, span, moment.utcOffset);
+    const [start, end] = periodFrom(from, span, moment.utcOffset);
     if (Number.isNaN(start.getTime())) return [];
     // Progressed and directed: every point the method's settings let take part.
     const all = [...PLANETS, ...ANGLES, ...EXTRA_OBJECTS.filter((o) => extras.has(o.id))].map((p) => p.id);
@@ -53,12 +55,7 @@ export function AspectTimeline({ natal, points, moment, extras, presets, options
   const total = end - start;
   const pos = (date) => Math.min(100, Math.max(0, ((date - start) / total) * 100));
   const day = (date) => formatShortDate(momentAt(moment, date.getTime()).date, lang);
-  const months = [];
-  for (let i = 0; i < span; i++) {
-    const m = new Date(start);
-    m.setUTCMonth(m.getUTCMonth() + i);
-    months.push(m);
-  }
+  const months = monthMarks(from, span, moment.utcOffset).filter((mark) => mark.at < end);
   const now = toUtcDate(moment.date, moment.time, moment.utcOffset);
   const showNow = now >= start && now <= end;
   const toggle = (id) => setTransits((list) => (list.includes(id) ? list.filter((p) => p !== id) : [...list, id]));
@@ -130,9 +127,9 @@ export function AspectTimeline({ natal, points, moment, extras, presets, options
             <div className="flex border-b border-slate-200 pb-1 text-[10px] uppercase tracking-wider text-slate-400">
               <div className="w-44 shrink-0" />
               <div className="relative h-4 flex-1">
-                {months.map((m, i) => (
-                  <span key={i} className="absolute" style={{ left: `${pos(m)}%` }}>
-                    {span > 12 && i % 2 ? '' : new Intl.DateTimeFormat(lang, { month: 'short', timeZone: 'UTC' }).format(m)}
+                {months.map((mark, i) => (
+                  <span key={i} className="absolute" style={{ left: `${pos(mark.at)}%` }}>
+                    {span > 12 && i % 2 ? '' : new Intl.DateTimeFormat(lang, { month: 'short', timeZone: 'UTC' }).format(mark.month)}
                   </span>
                 ))}
               </div>
@@ -140,8 +137,8 @@ export function AspectTimeline({ natal, points, moment, extras, presets, options
             <div className="relative">
               {/* Month lines and the chart's date, drawn once behind all the rows. */}
               <div aria-hidden className="pointer-events-none absolute inset-y-0 left-44 right-0">
-                {months.slice(1).map((mo, i) => (
-                  <span key={i} className="absolute inset-y-0 w-px bg-slate-100" style={{ left: `${pos(mo)}%` }} />
+                {months.slice(1).map((mark, i) => (
+                  <span key={i} className="absolute inset-y-0 w-px bg-slate-100" style={{ left: `${pos(mark.at)}%` }} />
                 ))}
                 {showNow && <span className="absolute inset-y-0 w-px bg-amber-500" style={{ left: `${pos(now)}%` }} />}
               </div>
