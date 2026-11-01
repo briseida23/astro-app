@@ -624,28 +624,37 @@ export function orbWindows(natal, method, items, at, options) {
 
 /**
  * Rectification by events: each kind of event has a weight and its
- * significators, the natal houses (cusps) and points it is read by. ASC and MC stand for their
- * axes: an aspect to the ASC is one to the DSC as well, to the MC one to the IC.
+ * significators, the natal houses (cusps) and points it is read by; the rulers of those houses
+ * and the planets in them join for each chart. ASC and MC stand for their axes: an aspect to the
+ * ASC is one to the DSC as well, to the MC one to the IC. `hard`: a crisis (a divorce, a death,
+ * an accident) comes by square or opposition, or a conjunction with a malefic, never by trine or
+ * sextile; `'strict'`: by square or opposition only.
  */
 export const RECT_EVENTS = {
-  marriage: { weight: 10, houses: [7], points: ['venus', 'jupiter', 'ascendant'] },
-  divorce: { weight: 8, houses: [7], points: ['uranus', 'saturn', 'ascendant'] },
+  marriage: { weight: 10, houses: [7, 1], points: ['venus', 'jupiter'] },
+  divorce: { weight: 8, houses: [7, 1], points: ['uranus', 'pluto', 'saturn', 'mars'], hard: true },
   // The Sun rules the 5th house by nature: children too.
   child: { weight: 9, houses: [5], points: ['moon', 'venus', 'sun', 'mc'] },
   // A son by the Sun and Mars, a daughter by the Moon and Venus; Jupiter, the giver of children, for both.
   childSon: { weight: 9, houses: [5], points: ['sun', 'mars', 'jupiter', 'mc'] },
   childDaughter: { weight: 9, houses: [5], points: ['moon', 'venus', 'jupiter', 'mc'] },
-  move: { weight: 8, houses: [4, 9], points: ['uranus', 'jupiter', 'mc', 'ascendant'] },
-  // Abroad: the 9th house of far countries; Neptune for the far and unfamiliar.
-  moveAbroad: { weight: 8, houses: [9], points: ['jupiter', 'uranus', 'neptune', 'ascendant'] },
-  career: { weight: 8, houses: [10], points: ['mc', 'saturn', 'sun'] },
-  health: { weight: 7, houses: [1, 6, 8], points: ['mars', 'pluto', 'ascendant'] },
-  accident: { weight: 7, houses: [1, 8], points: ['mars', 'uranus', 'pluto', 'ascendant'] },
-  loss: { weight: 7, houses: [8, 12], points: ['saturn', 'pluto', 'moon'] },
+  // A move within the country or a home bought: the 4th house.
+  move: { weight: 8, houses: [4], points: ['jupiter', 'moon', 'venus'] },
+  // Emigration: far countries (9th), being cut off (12th) and new foundations (4th).
+  moveAbroad: { weight: 8, houses: [9, 12, 4], points: ['jupiter', 'neptune', 'uranus'] },
+  career: { weight: 8, houses: [10], points: ['sun', 'saturn', 'jupiter'] },
+  jobLoss: { weight: 8, houses: [10, 6], points: ['uranus', 'pluto', 'saturn', 'mars'], hard: true },
+  // Other people's money and investments (8th) as well as one's own (2nd).
+  finance: { weight: 7, houses: [2, 8], points: ['jupiter', 'venus'] },
+  health: { weight: 7, houses: [1, 8, 6], points: ['mars', 'pluto', 'uranus', 'saturn'], hard: true },
+  accident: { weight: 7, houses: [1, 8, 6], points: ['mars', 'pluto', 'uranus', 'saturn'], hard: true },
+  // A psychological crisis or a hospital stay: squares and oppositions only.
+  crisis: { weight: 7, houses: [12, 6], points: ['neptune', 'saturn', 'pluto'], hard: 'strict' },
+  loss: { weight: 7, houses: [8, 12], points: ['saturn', 'pluto', 'moon'], hard: true },
   // A parent's death: the father by the Sun, Saturn and the MC/IC axis, the mother by the Moon and the IC.
-  fatherDeath: { weight: 8, houses: [8, 10], points: ['sun', 'saturn', 'mc'] },
-  motherDeath: { weight: 8, houses: [4, 8], points: ['moon', 'mc'] },
-  education: { weight: 6, houses: [3, 9], points: ['jupiter', 'mercury', 'mc'] },
+  fatherDeath: { weight: 8, houses: [8, 10], points: ['sun', 'saturn', 'mc'], hard: true },
+  motherDeath: { weight: 8, houses: [4, 8], points: ['moon', 'mc'], hard: true },
+  education: { weight: 6, houses: [9, 3], points: ['jupiter', 'mercury'] },
   other: { weight: 5, houses: [], points: ['ascendant', 'mc'] },
 };
 const RECT_PLANETS = PLANETS.slice(0, 10);
@@ -660,14 +669,28 @@ const tier = (orb) => (orb <= 0.25 ? 1 : orb <= 0.5 ? 0.7 : orb <= 1 ? 0.3 : 0);
 /** Best rectification candidates first: highest score, then the closest contacts. */
 export const byRectScore = (a, b) => b.score - a.score || a.orbs - b.orbs;
 
-/** Major aspects of each mover ({ id, longitude }) to each target within 1°: [{ mover, target, aspect, orb, share }]. */
-function rectContacts(movers, targets, keep = () => true) {
+// Classical rulers of the signs, Aries to Pisces.
+const SIGN_RULERS = ['mars', 'venus', 'mercury', 'moon', 'sun', 'mercury', 'venus', 'mars', 'jupiter', 'saturn', 'saturn', 'jupiter'];
+const MALEFICS = new Set(['mars', 'saturn', 'uranus', 'pluto']);
+
+/** Whether `aspect` between `m` and `f` fits a crisis: square, opposition, or a conjunction with a malefic. */
+const hardAspect = (aspect, m, f) =>
+  aspect.id === 'square' || aspect.id === 'opposition' || (aspect.id === 'conjunction' && (MALEFICS.has(m.id) || MALEFICS.has(f.id)));
+/** Squares and oppositions only. */
+const strictAspect = (aspect) => aspect.id === 'square' || aspect.id === 'opposition';
+
+/**
+ * Major aspects (or those `aspectOk` lets through) of each mover ({ id, longitude }) to each
+ * target within 1°: [{ mover, target, aspect, orb, share }].
+ */
+function rectContacts(movers, targets, keep = () => true, aspectOk = () => true) {
   const found = [];
   for (const m of movers) {
     for (const f of targets) {
       if (m.id === f.id || !keep(m, f)) continue;
       const sep = Math.abs(signedDiff(m.longitude, f.longitude));
       for (const aspect of ASPECTS) {
+        if (!aspectOk(aspect, m, f)) continue;
         const orb = Math.abs(sep - aspect.angle);
         if (orb <= 1) found.push({ mover: m.id, target: f.id, aspect: aspect.id, orb, share: tier(orb) });
       }
@@ -685,11 +708,12 @@ const timeBound = (m, f) => [m, f].some((p) => ANGLE_IDS.has(p.id) || p.cusp || 
  * natal points are directed by `arc` (symbolic 1° a year by default), and directed angles and
  * planets that meet the event's natal significators, or directed significators that meet the natal
  * ASC or MC, earn the event's weight by orb; with `transits`, slow planets on the angles count too.
- * Each event earns at most its weight, by its best contact. Returns [{ date, score, orbs, percent,
+ * With `personal` the rulers of the event's houses and the planets in them count as significators
+ * too. Each event earns at most its weight, by its best contact. Returns [{ date, score, orbs, percent,
  * matches: [{ event, method, mover, target, aspect, orb, points }] }] in time order: `orbs` sums each
  * event's closest orb (1° when none), `percent` is the score against the sum of the events' weights.
  */
-export function rectify(birth, from, to, stepSeconds, events, { houseSystem, arc = 'symbolic', transits = false }) {
+export function rectify(birth, from, to, stepSeconds, events, { houseSystem, arc = 'symbolic', transits = false, personal = false }) {
   const fromJd = swe.dateToJulianDay(from);
   const steps = Math.floor((to.getTime() - from.getTime()) / (stepSeconds * 1000));
   const eventJds = events.map((e) => swe.dateToJulianDay(e.date));
@@ -708,21 +732,31 @@ export function rectify(birth, from, to, stepSeconds, events, { houseSystem, arc
     const planets = RECT_PLANETS.map((p) => ({ id: p.id, longitude: swe.calculatePosition(jd, p.body).longitude }));
     const natal = [...planets, ...angles];
     const matches = [];
+    // The house each planet stands in, for this birth time.
+    const cusps = houses.cusps.slice(1, 13);
+    const houseOfPlanet = Object.fromEntries(planets.map((p) => [p.id, houseOf(normalize(p.longitude), cusps)]));
     events.forEach((event, e) => {
       const config = configs[e];
+      // The event's points, plus the rulers of its houses and the planets standing in them.
+      const points = new Set([
+        ...config.points,
+        ...(personal ? config.houses.map((n) => SIGN_RULERS[Math.floor(normalize(houses.cusps[n]) / 30)]) : []),
+        ...(personal ? planets.filter((p) => config.houses.includes(houseOfPlanet[p.id])).map((p) => p.id) : []),
+      ]);
       const significators = [
-        ...natal.filter((p) => config.points.includes(p.id)),
+        ...natal.filter((p) => points.has(p.id)),
         ...config.houses.map((n) => ({ id: `cusp${n}`, cusp: n, longitude: houses.cusps[n] })),
       ];
+      const aspectOk = config.hard === 'strict' ? strictAspect : config.hard ? hardAspect : undefined;
       const shift = directionArc(jd, (eventJds[e] - jd) / TROPICAL_YEAR, arc);
       const directed = natal.map((p) => ({ id: p.id, longitude: p.longitude + shift }));
       const add = (method, factor) => (c) => matches.push({ event: e, method, ...c, points: c.share * config.weight * factor });
       // Directed angles and planets to the event's natal significators…
-      rectContacts(directed, significators, timeBound).forEach(add('directions', 1));
+      rectContacts(directed, significators, timeBound, aspectOk).forEach(add('directions', 1));
       // …and the event's directed significators to the natal angles not among them (those were counted above).
-      const otherAngles = angles.filter((p) => !config.points.includes(p.id));
-      rectContacts(directed.filter((p) => config.points.includes(p.id) && !ANGLE_IDS.has(p.id)), otherAngles).forEach(add('directions', 1));
-      if (transitPoints) rectContacts(transitPoints[e], angles).forEach(add('transit', RECT_TRANSIT_FACTOR));
+      const otherAngles = angles.filter((p) => !points.has(p.id));
+      rectContacts(directed.filter((p) => points.has(p.id) && !ANGLE_IDS.has(p.id)), otherAngles, undefined, aspectOk).forEach(add('directions', 1));
+      if (transitPoints) rectContacts(transitPoints[e], angles, undefined, aspectOk).forEach(add('transit', RECT_TRANSIT_FACTOR));
     });
     // An event earns at most its weight, by its closest contact; the sum of those orbs breaks ties
     // between times that explain the events equally well.

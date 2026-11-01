@@ -496,8 +496,8 @@ const ru = {
   'lifeEvents.kind.marriage': 'Брак',
   'lifeEvents.kind.divorce': 'Развод',
   'lifeEvents.kind.child': 'Рождение ребёнка',
-  'lifeEvents.kind.move': 'Переезд',
-  'lifeEvents.kind.career': 'Работа, карьера',
+  'lifeEvents.kind.move': 'Переезд в своей стране, покупка жилья',
+  'lifeEvents.kind.career': 'Карьерный рост, признание',
   'lifeEvents.kind.health': 'Здоровье, операция',
   'lifeEvents.kind.accident': 'Авария, травма',
   'lifeEvents.kind.loss': 'Утрата',
@@ -576,6 +576,12 @@ const ru = {
   'lifeEvents.kind.motherDeath': 'Смерть матери',
   'lifeEvents.kind.childSon': 'Рождение сына',
   'lifeEvents.kind.childDaughter': 'Рождение дочери',
+  'rect.personal': 'Учитывать управителей домов события и планеты в этих домах',
+  'rect.personalHint': 'Например, при Скорпионе на куспиде V дома Марс становится сигнификатором детей. При неточных датах событий (±месяц) даёт больше случайных совпадений — сравните с выключенным.',
+  'rect.hardNote': 'Развод, утраты, смерть, аварии и операции засчитываются только по квадрату, оппозиции или соединению с Марсом, Сатурном, Ураном, Плутоном.',
+  'lifeEvents.kind.jobLoss': 'Потеря работы, банкротство',
+  'lifeEvents.kind.finance': 'Крупный доход, покупка бизнеса',
+  'lifeEvents.kind.crisis': 'Психологический кризис, госпитализация',
 };
 
 const uk = {
@@ -1073,8 +1079,8 @@ const uk = {
   'lifeEvents.kind.marriage': 'Шлюб',
   'lifeEvents.kind.divorce': 'Розлучення',
   'lifeEvents.kind.child': 'Народження дитини',
-  'lifeEvents.kind.move': 'Переїзд',
-  'lifeEvents.kind.career': 'Робота, кар’єра',
+  'lifeEvents.kind.move': 'Переїзд у своїй країні, купівля житла',
+  'lifeEvents.kind.career': 'Кар’єрне зростання, визнання',
   'lifeEvents.kind.health': 'Здоров’я, операція',
   'lifeEvents.kind.accident': 'Аварія, травма',
   'lifeEvents.kind.loss': 'Втрата',
@@ -1153,6 +1159,12 @@ const uk = {
   'lifeEvents.kind.motherDeath': 'Смерть матері',
   'lifeEvents.kind.childSon': 'Народження сина',
   'lifeEvents.kind.childDaughter': 'Народження доньки',
+  'rect.personal': 'Враховувати управителів домів події та планети в цих домах',
+  'rect.personalHint': 'Наприклад, при Скорпіоні на куспіді V дому Марс стає сигніфікатором дітей. За неточних дат подій (±місяць) дає більше випадкових збігів — порівняйте з вимкненим.',
+  'rect.hardNote': 'Розлучення, втрати, смерть, аварії та операції зараховуються лише за квадратом, опозицією або з’єднанням з Марсом, Сатурном, Ураном, Плутоном.',
+  'lifeEvents.kind.jobLoss': 'Втрата роботи, банкрутство',
+  'lifeEvents.kind.finance': 'Великий дохід, купівля бізнесу',
+  'lifeEvents.kind.crisis': 'Психологічна криза, госпіталізація',
 };
 
 const en = {
@@ -1650,8 +1662,8 @@ const en = {
   'lifeEvents.kind.marriage': 'Marriage',
   'lifeEvents.kind.divorce': 'Divorce',
   'lifeEvents.kind.child': 'Child’s birth',
-  'lifeEvents.kind.move': 'Move',
-  'lifeEvents.kind.career': 'Work, career',
+  'lifeEvents.kind.move': 'Move within the country, home bought',
+  'lifeEvents.kind.career': 'Career rise, recognition',
   'lifeEvents.kind.health': 'Health, operation',
   'lifeEvents.kind.accident': 'Accident, injury',
   'lifeEvents.kind.loss': 'Loss',
@@ -1730,6 +1742,12 @@ const en = {
   'lifeEvents.kind.motherDeath': 'Mother’s death',
   'lifeEvents.kind.childSon': 'Son’s birth',
   'lifeEvents.kind.childDaughter': 'Daughter’s birth',
+  'rect.personal': 'Count the rulers of the event’s houses and the planets in them',
+  'rect.personalHint': 'With Scorpio on the 5th cusp, for example, Mars becomes a significator of children. With approximate event dates (± a month) this adds chance matches — compare with it off.',
+  'rect.hardNote': 'Divorce, losses, deaths, accidents and operations count only by square, opposition, or a conjunction with Mars, Saturn, Uranus or Pluto.',
+  'lifeEvents.kind.jobLoss': 'Job loss, bankruptcy',
+  'lifeEvents.kind.finance': 'Large income, business bought',
+  'lifeEvents.kind.crisis': 'Psychological crisis, hospital stay',
 };
 
 export const TRANSLATIONS = { ru, uk, en };

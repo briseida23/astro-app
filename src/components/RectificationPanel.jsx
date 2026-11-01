@@ -62,6 +62,8 @@ export function RectificationPanel({ birth, events, houseSystem, onShow }) {
   const [step, setStep] = useState(60);
   const [arcChoice, setArcChoice] = useState('both');
   const [transits, setTransits] = useState(false);
+  // Off at first: with event dates known only roughly, the extra significators add chance matches.
+  const [personal, setPersonal] = useState(false);
   const [state, setState] = useState({ status: 'idle', byArc: null, arcs: null });
   const [chosen, setChosen] = useState(0);
   // Events whose every contact is shown, as `${event}:${arc}`.
@@ -94,7 +96,7 @@ export function RectificationPanel({ birth, events, houseSystem, onShow }) {
       to: toDate,
       stepSeconds: step,
       events: events.map((e) => ({ kind: e.kind, date: toUtcDate(e.date, e.time || '12:00', birth.utcOffset) })),
-      options: { houseSystem, transits },
+      options: { houseSystem, transits, personal },
       arcs,
     });
   };
@@ -143,6 +145,7 @@ export function RectificationPanel({ birth, events, houseSystem, onShow }) {
       <div>
         <h3 className="font-display text-xl font-semibold">{t('rect.title')}</h3>
         <p className="mt-1 text-sm text-slate-600">{t('rect.lead')}</p>
+        <p className="mt-1 text-xs text-slate-500">{t('rect.hardNote')}</p>
         {events.length < 3 && <p className="mt-1 text-sm text-amber-700">{t('rect.fewEvents')}</p>}
       </div>
 
@@ -176,6 +179,13 @@ export function RectificationPanel({ birth, events, houseSystem, onShow }) {
           {state.status === 'running' ? t('rect.running') : t('rect.run')}
         </button>
       </div>
+      <label className="flex cursor-pointer items-start gap-2 text-sm text-slate-600">
+        <input type="checkbox" className="mt-0.5 h-4 w-4 accent-slate-900" checked={personal} onChange={(e) => setPersonal(e.target.checked)} />
+        <span>
+          {t('rect.personal')}
+          <span className="block text-xs text-slate-500">{t('rect.personalHint')}</span>
+        </span>
+      </label>
       <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
         <input type="checkbox" className="h-4 w-4 accent-slate-900" checked={transits} onChange={(e) => setTransits(e.target.checked)} />
         {t('rect.transits')}
