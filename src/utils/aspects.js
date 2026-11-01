@@ -27,6 +27,10 @@ function takesPart(p, include) {
   return include.extras;
 }
 
+// A directed point always stands exactly the arc away from its natal place, and progressed slow
+// planets hardly leave theirs: an object to itself says nothing there. (A transit to itself is a return.)
+const SELF_BLIND = new Set(['progressions', 'directions']);
+
 /** Angles, nodes, Lilith, Chiron and additional objects: their orb caps the orb of any pair. */
 const isPoint = (p) => !PLANET_IDS.has(p.id);
 
@@ -150,20 +154,30 @@ function separation(l1, l2) {
 
 const DT = 1 / 24; // one hour, in days
 
-function aspectBetween(a, b, settings) {
+/**
+ * The orb allowed for `aspect` between points `a` and `b` ({ id, ring }) under `settings`, or null
+ * when the aspect is switched off or either point does not take part.
+ */
+export function allowedOrb(a, b, aspect, settings) {
   if (settings.include && !(takesPart(a, settings.include) && takesPart(b, settings.include))) return null;
   // ASC and MC always stand in the same relation to each other: not an aspect.
   if (ANGLE_IDS.has(a.id) && ANGLE_IDS.has(b.id)) return null;
+  if (a.id === b.id && (SELF_BLIND.has(a.ring) || SELF_BLIND.has(b.ring))) return null;
+  if (!settings.enabled[aspect.id]) return null;
   const combine = (ORB_METHODS.find((m) => m.id === settings.method) ?? ORB_METHODS[0]).combine;
+  const orbA = settings.orbs[a.id]?.[aspect.id] ?? 0;
+  const orbB = settings.orbs[b.id]?.[aspect.id] ?? 0;
+  // A point's narrow orb is a hard limit: averaging Lilith's 2° with the Sun's 8° must not
+  // give 5°, nor MC's 4° with Venus' 6° give 5°.
+  const caps = [a, b].filter(isPoint).map((p) => (p === a ? orbA : orbB));
+  return Math.min(combine(orbA, orbB), ...caps) || null;
+}
+
+function aspectBetween(a, b, settings) {
   const sep = separation(a.longitude, b.longitude);
   for (const aspect of ASPECTS) {
-    if (!settings.enabled[aspect.id]) continue;
-    const orbA = settings.orbs[a.id]?.[aspect.id] ?? 0;
-    const orbB = settings.orbs[b.id]?.[aspect.id] ?? 0;
-    // A point's narrow orb is a hard limit: averaging Lilith's 2° with the Sun's 8° must not
-    // give 5°, nor MC's 4° with Venus' 6° give 5°.
-    const caps = [a, b].filter(isPoint).map((p) => (p === a ? orbA : orbB));
-    const allowed = Math.min(combine(orbA, orbB), ...caps);
+    const allowed = allowedOrb(a, b, aspect, settings);
+    if (allowed === null) continue;
     const orb = Math.abs(sep - aspect.angle);
     if (orb > allowed) continue;
     // Applying if the orb shrinks as both bodies move on at their current speeds.

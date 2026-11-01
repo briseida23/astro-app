@@ -457,6 +457,14 @@ function moverLongitude(natal, method, id, { houseSystem, pointTypes, directions
   const def = [...PLANETS, ...EXTRA_OBJECTS].find((p) => p.id === id);
   const bodyLon = (jd) => normalize(swe.calculatePosition(jd, bodyOf(def, pointTypes)).longitude + (def.opposite ? 180 : 0));
   const progJd = (jd) => birthJd + (jd - birthJd) / TROPICAL_YEAR;
+  // An additional object whose data file is missing (or not loaded yet) cannot be followed.
+  if (def) {
+    try {
+      bodyLon(birthJd);
+    } catch {
+      return null;
+    }
+  }
   if (method === 'transit') return def ? bodyLon : null;
   if (method === 'progressions') {
     if (def) return (jd) => bodyLon(progJd(jd));
@@ -724,6 +732,68 @@ export function rectify(birth, from, to, stepSeconds, events, { houseSystem, arc
     results.push({ date: new Date(from.getTime() + i * stepSeconds * 1000), score, orbs, percent: (score / maxScore) * 100, matches });
   }
   return results;
+}
+
+/**
+ * Aspect calendar: for each object in `movers` (ids) moved by `method`, every stretch between
+ * `from` and `to` (Dates) when it is within orb of an aspect to one of `targets` (natal points).
+ * `orbOf(mover, target, aspect)` gives the allowed orb, or null when the pair or aspect does not
+ * count. Returns [{ method, mover, target, aspect, windows: [{ start, end, exacts, startClipped,
+ * endClipped }] }] by first start; a window cut by the period's edge is marked clipped there.
+ */
+export function aspectTimeline(natal, method, movers, targets, from, to, orbOf, options) {
+  const fromJd = swe.dateToJulianDay(from);
+  const toJd = swe.dateToJulianDay(to);
+  const toDate = (jd) => new Date(from.getTime() + (jd - fromJd) * 86400000);
+  const rows = [];
+  for (const id of movers) {
+    const lonAt = moverLongitude(natal, method, id, options);
+    if (!lonAt) continue;
+    const mover = { id, ring: method };
+    const pairs = targets.flatMap((target) =>
+      ASPECTS.flatMap((aspect) => {
+        const orb = orbOf(mover, target, aspect);
+        if (!orb) return [];
+        const goals = aspect.angle % 180 === 0 ? [target.longitude + aspect.angle] : [target.longitude + aspect.angle, target.longitude - aspect.angle];
+        return goals.map((goal) => ({ target, aspect, orb, goal }));
+      })
+    );
+    if (pairs.length === 0) continue;
+    // Half the time the fastest motion needs to cross the narrowest orb: no window slips between samples.
+    const narrowest = Math.max(0.05, Math.min(...pairs.map((p) => p.orb)));
+    const step = Math.min(sampleStep(method, id), narrowest / (2 * maxSpeed(method, id, options.pointTypes)));
+    const jds = [];
+    for (let jd = fromJd; jd < toJd; jd += step) jds.push(jd);
+    jds.push(toJd);
+    const lons = jds.map(lonAt);
+    for (const { target, aspect, orb, goal } of pairs) {
+      const f = (jd) => signedDiff(lonAt(jd), goal);
+      const outside = (jd) => Math.abs(f(jd)) - orb;
+      const windows = [];
+      let d0 = signedDiff(lons[0], goal);
+      let current = Math.abs(d0) <= orb ? { start: fromJd, startClipped: true, exacts: [] } : null;
+      for (let i = 1; i < jds.length; i++) {
+        const d1 = signedDiff(lons[i], goal);
+        const was = Math.abs(d0) <= orb;
+        const is = Math.abs(d1) <= orb;
+        if (!was && is) current = { start: findRoot(jds[i - 1], jds[i], Math.abs(d0) - orb, Math.abs(d1) - orb, outside), startClipped: false, exacts: [] };
+        if (current && (d0 < 0) !== (d1 < 0) && Math.abs(d0 - d1) < 90) current.exacts.push(findRoot(jds[i - 1], jds[i], d0, d1, f));
+        if (was && !is && current) {
+          windows.push({ ...current, end: findRoot(jds[i - 1], jds[i], Math.abs(d0) - orb, Math.abs(d1) - orb, outside), endClipped: false });
+          current = null;
+        }
+        d0 = d1;
+      }
+      if (current) windows.push({ ...current, end: toJd, endClipped: true });
+      if (windows.length === 0) continue;
+      const dated = windows.map((w) => ({ ...w, start: toDate(w.start), end: toDate(w.end), exacts: w.exacts.map(toDate) }));
+      // Both sides of a square, trine or sextile are one row: the same planets in the same aspect.
+      const row = rows.find((r) => r.method === method && r.mover === id && r.target === target && r.aspect === aspect);
+      if (row) row.windows = [...row.windows, ...dated].sort((a, b) => a.start - b.start);
+      else rows.push({ method, mover: id, target, aspect, windows: dated });
+    }
+  }
+  return rows.sort((a, b) => a.windows[0].start - b.windows[0].start);
 }
 
 /**

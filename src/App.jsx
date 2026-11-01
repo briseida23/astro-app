@@ -622,6 +622,16 @@ export default function App() {
     changeMode(forecast ?? 'transit');
     updateTransit({ ...transit, date: ev.date, time, utcOffset: transit.timeZone ? offsetForZone(transit.timeZone, ev.date, time) : transit.utcOffset });
   };
+  // Aspect settings of every forecast method, for the aspect calendar.
+  const { transitOrbPreset, progressionOrbPreset, directionOrbPreset } = settings;
+  const forecastPresets = useMemo(
+    () => ({
+      transit: { ...settings.aspects, ...transitOrbPreset },
+      progressions: { ...settings.aspects, ...progressionOrbPreset },
+      directions: { ...settings.aspects, ...directionOrbPreset },
+    }),
+    [settings.aspects, transitOrbPreset, progressionOrbPreset, directionOrbPreset]
+  );
   // A found contact opens its method at that moment.
   const openContact = (method, ms) => {
     changeMode(method);
@@ -990,9 +1000,12 @@ export default function App() {
               natal={chartData}
               points={birthPoints}
               moment={transit}
+              extras={extras}
+              presets={forecastPresets}
               options={calcOptions}
+              defaultMethod={forecast}
               aspectColors={colors.aspects}
-              onOpen={(ms) => openContact('transit', ms)}
+              onOpen={openContact}
               onEclipseHover={setEclipseMark}
             />
           )}

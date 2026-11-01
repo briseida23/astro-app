@@ -3,6 +3,7 @@ import { PLANETS, ROMAN, SIGNS, eclipsesAround, formatDegree, formatOrb, momentA
 import { useI18n, formatShortDate } from '../i18n';
 import { Glyph } from './Glyph';
 import { Hint } from './Hint';
+import { AspectTimeline } from './AspectTimeline';
 
 // Planets whose ingresses can be listed; the Moon changes sign every two and a half days.
 const INGRESS_PLANETS = PLANETS.slice(0, 10).filter((p) => p.id !== 'moon');
@@ -15,11 +16,12 @@ const KINDS = ['all', 'sign', 'house'];
 const ECLIPSE_YEARS = 2;
 
 /**
- * Transit ingresses into signs and natal houses for a period, and the eclipses around the date with
- * their natal house and contacts. `onOpen(ms)` opens transits at a moment; hovering an eclipse
- * calls `onEclipseHover` so the wheel can mark its degree.
+ * The forecast at a glance: the aspect calendar, transit ingresses into signs and natal houses for
+ * a period, and the eclipses around the date with their natal house and contacts. `onOpen(method,
+ * ms)` opens a method at a moment; hovering an eclipse calls `onEclipseHover` so the wheel can mark
+ * its degree.
  */
-export function CalendarPanel({ natal, points, moment, options, aspectColors, onOpen, onEclipseHover }) {
+export function CalendarPanel({ natal, points, moment, extras, presets, options, defaultMethod, aspectColors, onOpen, onEclipseHover }) {
   const { lang, t } = useI18n();
   const [from, setFrom] = useState(moment.date);
   const [span, setSpan] = useState(12);
@@ -48,6 +50,17 @@ export function CalendarPanel({ natal, points, moment, options, aspectColors, on
 
   return (
     <div className="space-y-8">
+      <AspectTimeline
+        natal={natal}
+        points={points}
+        moment={moment}
+        extras={extras}
+        presets={presets}
+        options={options}
+        defaultMethod={defaultMethod}
+        aspectColors={aspectColors}
+        onOpen={onOpen}
+      />
       <section className="space-y-4">
         <h3 className="font-display text-xl font-semibold">{t('calendar.ingresses')}</h3>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -99,7 +112,7 @@ export function CalendarPanel({ natal, points, moment, options, aspectColors, on
               <li key={`${i.date.getTime()}:${i.mover}:${i.kind}`}>
                 <button
                   type="button"
-                  onClick={() => onOpen(i.date.getTime())}
+                  onClick={() => onOpen('transit', i.date.getTime())}
                   title={t('search.open')}
                   className="flex w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-left transition hover:bg-slate-50"
                 >
@@ -133,7 +146,7 @@ export function CalendarPanel({ natal, points, moment, options, aspectColors, on
               <li key={e.date.getTime()}>
                 <button
                   type="button"
-                  onClick={() => onOpen(e.date.getTime())}
+                  onClick={() => onOpen('transit', e.date.getTime())}
                   onMouseEnter={() => onEclipseHover(e)}
                   onFocus={() => onEclipseHover(e)}
                   title={t('search.open')}

@@ -542,6 +542,17 @@ const ru = {
   'eclipse.lunar.total': 'Полное лунное',
   'eclipse.lunar.partial': 'Частное лунное',
   'eclipse.lunar.penumbral': 'Полутеневое лунное',
+  'timeline.title': 'Календарь аспектов',
+  'timeline.allMethods': 'Все методы (общий прогноз)',
+  'timeline.transits': 'Транзиты:',
+  'timeline.empty': 'За этот период аспектов в орбисе нет.',
+  'timeline.before': 'раньше {date}',
+  'timeline.after': 'позже {date}',
+  'timeline.legend': 'Полоса — аспект в орбисе (по настройкам орбисов метода), черта — точное касание, оранжевая линия — дата карты. Щелчок открывает карту на момент касания.',
+  'timeline.short.transit': 'тр.',
+  'timeline.short.progressions': 'прог.',
+  'timeline.short.directions': 'дир.',
+  'timeline.short.natal': 'нат.',
 };
 
 const uk = {
@@ -1085,6 +1096,17 @@ const uk = {
   'eclipse.lunar.total': 'Повне місячне',
   'eclipse.lunar.partial': 'Часткове місячне',
   'eclipse.lunar.penumbral': 'Півтіньове місячне',
+  'timeline.title': 'Календар аспектів',
+  'timeline.allMethods': 'Усі методи (загальний прогноз)',
+  'timeline.transits': 'Транзити:',
+  'timeline.empty': 'За цей період аспектів в орбісі немає.',
+  'timeline.before': 'раніше {date}',
+  'timeline.after': 'пізніше {date}',
+  'timeline.legend': 'Смуга — аспект в орбісі (за налаштуваннями орбісів методу), риска — точний дотик, помаранчева лінія — дата карти. Клік відкриває карту на момент дотику.',
+  'timeline.short.transit': 'тр.',
+  'timeline.short.progressions': 'прог.',
+  'timeline.short.directions': 'дир.',
+  'timeline.short.natal': 'нат.',
 };
 
 const en = {
@@ -1628,6 +1650,17 @@ const en = {
   'eclipse.lunar.total': 'Total lunar',
   'eclipse.lunar.partial': 'Partial lunar',
   'eclipse.lunar.penumbral': 'Penumbral lunar',
+  'timeline.title': 'Aspect calendar',
+  'timeline.allMethods': 'All methods (general forecast)',
+  'timeline.transits': 'Transits:',
+  'timeline.empty': 'No aspects within orb in this period.',
+  'timeline.before': 'before {date}',
+  'timeline.after': 'after {date}',
+  'timeline.legend': 'A bar is an aspect within orb (by the method’s orb settings), a tick the exact contact, the orange line the chart’s date. Click to open the chart at the contact.',
+  'timeline.short.transit': 'tr.',
+  'timeline.short.progressions': 'prog.',
+  'timeline.short.directions': 'dir.',
+  'timeline.short.natal': 'nat.',
 };
 
 export const TRANSLATIONS = { ru, uk, en };

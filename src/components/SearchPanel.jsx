@@ -45,10 +45,11 @@ export function SearchPanel({ natal, points, moment, extras, options, defaultMet
     const end = new Date(start);
     end.setUTCMonth(end.getUTCMonth() + months);
     const cusps = natal.houses.map((longitude, i) => ({ key: `cusp:${i + 1}`, longitude, cusp: i + 1 }));
-    let targets = points;
+    // A progressed or directed object to its own natal place is no contact (see allowedOrb).
+    let targets = method === 'transit' ? points : points.filter((p) => p.id !== moverId);
     if (target === 'houses') targets = cusps;
     else if (target.startsWith('cusp:')) targets = cusps.filter((c) => c.key === target);
-    else if (target !== 'all') targets = points.filter((p) => p.key === target);
+    else if (target !== 'all') targets = targets.filter((p) => p.key === target);
     // A house is entered by conjunction; the aspect picker applies to points only.
     const aspects = aspect === 'all' || houseTarget ? ASPECTS : ASPECTS.filter((a) => a.id === aspect);
     const hits = findContacts(natal, method, moverId, targets, aspects, start, end, options);
