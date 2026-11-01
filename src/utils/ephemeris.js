@@ -623,7 +623,7 @@ export function orbWindows(natal, method, items, at, options) {
 }
 
 /**
- * Rectification by events (Erika Royals' method): each kind of event has a weight and its
+ * Rectification by events: each kind of event has a weight and its
  * significators, the natal houses (cusps) and points it is read by. ASC and MC stand for their
  * axes: an aspect to the ASC is one to the DSC as well, to the MC one to the IC.
  */
@@ -823,7 +823,7 @@ export function transitIngresses(natal, ids, from, to, options) {
 /** A Julian day (UT) as a Date. */
 const jdToDate = (jd) => new Date((jd - 2440587.5) * 86400000);
 
-// Eclipses (Erika Royals): conjunction within 2°, the other major aspects within 1.5°, to the ten
+// Eclipses: conjunction within 2°, the other major aspects within 1.5°, to the ten
 // planets, the angles and the nodes only (not Chiron, Lilith or asteroids: background noise), and
 // conjunctions to the intermediate house cusps.
 const ECLIPSE_ORBS = { conjunction: 2, opposition: 1.5, square: 1.5, trine: 1.5 };

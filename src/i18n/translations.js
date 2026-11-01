@@ -434,7 +434,7 @@ const ru = {
   'about.feature.search': 'Поиск точных касаний',
   'about.feature.search.text': 'Когда транзит, прогрессия или дирекция станет точной к натальной точке или войдёт в дом — список дат с ретроградными проходами; щелчок открывает карту на этот момент.',
   'about.feature.rectification': 'Ректификация по событиям',
-  'about.feature.rectification.text': 'События клиента с датами и перебор времени рождения по методике Эрики Роялз: дирекции к сигнификаторам события, гистограмма вариантов и лучшее время в один клик.',
+  'about.feature.rectification.text': 'События клиента с датами и перебор времени рождения: дирекции к сигнификаторам события, гистограмма вариантов и лучшее время в один клик.',
   // Feedback form in the "About" window
   'feedback.kind.idea': 'Идея',
   'feedback.kind.bug': 'Ошибка',
@@ -990,7 +990,7 @@ const uk = {
   'about.feature.search': 'Пошук точних дотиків',
   'about.feature.search.text': 'Коли транзит, прогресія чи дирекція стане точною до натальної точки або увійде в дім — список дат із ретроградними проходженнями; клік відкриває карту на цей момент.',
   'about.feature.rectification': 'Ректифікація за подіями',
-  'about.feature.rectification.text': 'Події клієнта з датами й перебір часу народження за методикою Ерики Роялз: дирекції до сигніфікаторів події, гістограма варіантів і найкращий час в один клік.',
+  'about.feature.rectification.text': 'Події клієнта з датами й перебір часу народження: дирекції до сигніфікаторів події, гістограма варіантів і найкращий час в один клік.',
   // Feedback form in the "About" window
   'feedback.kind.idea': 'Ідея',
   'feedback.kind.bug': 'Помилка',
@@ -1546,7 +1546,7 @@ const en = {
   'about.feature.search': 'Exact contact search',
   'about.feature.search.text': 'When a transit, progression or direction becomes exact to a natal point or enters a house: a list of dates with retrograde passes; click one to open the chart at that moment.',
   'about.feature.rectification': 'Rectification by events',
-  'about.feature.rectification.text': 'Client events with dates and a birth-time search by Erika Royals’ method: directions to each event’s significators, a histogram of the candidates and the best time in one click.',
+  'about.feature.rectification.text': 'Client events with dates and a birth-time search: directions to each event’s significators, a histogram of the candidates and the best time in one click.',
   // Feedback form in the "About" window
   'feedback.kind.idea': 'Idea',
   'feedback.kind.bug': 'Bug',
