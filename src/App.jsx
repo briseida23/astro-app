@@ -268,10 +268,11 @@ export default function App() {
 
   useEffect(() => saveSettings(settings), [settings]);
 
+  // Both at once: the session answer does not depend on the config, it is only ignored without accounts.
   useEffect(() => {
-    api.getConfig().then((config) => {
+    Promise.all([api.getConfig(), api.getSession()]).then(([config, session]) => {
       setAuthConfig(config);
-      if (config) api.getSession().then(setUser);
+      if (config) setUser(session);
     });
   }, []);
 

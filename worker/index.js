@@ -72,6 +72,18 @@ function createAuth(env, origin) {
   });
 }
 
+// Better Auth instances by origin: building one costs tens of milliseconds, so each isolate keeps
+// it for the requests that follow (env, secrets and bindings, stays the same for an isolate).
+const authByOrigin = new Map();
+const authFor = (env, origin) => {
+  if (!authByOrigin.has(origin)) authByOrigin.set(origin, createAuth(env, origin));
+  return authByOrigin.get(origin);
+};
+
+// Better Auth's session cookie (with a __Secure- prefix over HTTPS). Without it there is no session
+// to look up, which is every guest's visit.
+const hasSessionCookie = (request) => (request.headers.get('cookie') ?? '').includes('better-auth.session_token');
+
 // no-store: answers carry per-user data (settings, saved charts) and must never be served from a cache.
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
@@ -356,7 +368,10 @@ export default {
       return json({ google: googleEnabled(env), turnstile: turnstileEnabled(env) ? env.TURNSTILE_SITE_KEY : null });
     }
 
-    const auth = createAuth(env, url.origin);
+    // A guest's page load asks for the session too: answer without building Better Auth.
+    if (url.pathname === '/api/auth/get-session' && !hasSessionCookie(request)) return json(null);
+
+    const auth = authFor(env, url.origin);
 
     // Creates or updates all tables. Needs the MIGRATE_TOKEN secret.
     if (url.pathname === '/api/migrate' && request.method === 'POST') {
@@ -381,7 +396,7 @@ export default {
 
     // Our own endpoints: signed-in users only. Changes must come from this site (the session
     // cookie would otherwise be sent along with requests forged by other sites).
-    const session = await auth.api.getSession({ headers: request.headers });
+    const session = hasSessionCookie(request) ? await auth.api.getSession({ headers: request.headers }) : null;
     if (!session) return json({ error: 'unauthorized' }, 401);
     if (request.method !== 'GET' && request.headers.get('origin') !== url.origin) {
       return json({ error: 'forbidden' }, 403);
