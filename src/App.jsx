@@ -968,7 +968,7 @@ export default function App() {
         )}
 
         {/* Balance, planets, aspects and patterns as tabs */}
-        <section id="chart-tabs" className={`card self-start scroll-mt-4 p-4 sm:p-6 ${secondView ? 'lg:col-span-2' : ''}`}>
+        <section id="chart-tabs" className={`@container card self-start scroll-mt-4 p-4 sm:p-6 ${secondView ? 'lg:col-span-2' : ''}`}>
           <Tabs tabs={tabs} active={activeTab} onChange={setTab} className="-mt-2 mb-5" />
           {activeTab === 'balance' && <BalancePanel balance={balance} elementColors={colors.elements} />}
           {activeTab === 'dynamics' && (

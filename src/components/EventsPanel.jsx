@@ -48,7 +48,7 @@ export function EventsPanel({ events, saved, signedIn, onSave, onOpen, onSaveCli
 
   return (
     <div className="space-y-5">
-      <form onSubmit={add} className="grid grid-cols-2 gap-3 sm:grid-cols-[auto_auto_auto_1fr_auto] sm:items-end">
+      <form onSubmit={add} className="grid grid-cols-2 gap-3 @2xl:grid-cols-[auto_auto_auto_1fr_auto] @2xl:items-end">
         <label className="field">
           <span>{t('lifeEvents.date')}</span>
           <input type="date" className="input" required value={draft.date} onChange={(e) => set({ date: e.target.value })} />
@@ -57,7 +57,7 @@ export function EventsPanel({ events, saved, signedIn, onSave, onOpen, onSaveCli
           <span>{t('lifeEvents.time')}</span>
           <input type="time" className="input" value={draft.time} onChange={(e) => set({ time: e.target.value })} />
         </label>
-        <label className="field">
+        <label className="field col-span-2 @2xl:col-span-1">
           <span>{t('lifeEvents.kind')}</span>
           <select className="input" value={draft.kind} onChange={(e) => set({ kind: e.target.value })}>
             {EVENT_KINDS.map((k) => (
@@ -65,11 +65,11 @@ export function EventsPanel({ events, saved, signedIn, onSave, onOpen, onSaveCli
             ))}
           </select>
         </label>
-        <label className="field">
+        <label className="field col-span-2 @2xl:col-span-1">
           <span>{t('lifeEvents.title')}</span>
           <input className="input" maxLength={120} placeholder={t('lifeEvents.titlePlaceholder')} value={draft.title} onChange={(e) => set({ title: e.target.value })} />
         </label>
-        <button type="submit" className="btn-primary col-span-2 sm:col-span-1" disabled={status === 'saving' || !draft.date || events.length >= MAX_EVENTS}>
+        <button type="submit" className="btn-primary col-span-2 @2xl:col-span-1" disabled={status === 'saving' || !draft.date || events.length >= MAX_EVENTS}>
           {t('lifeEvents.add')}
         </button>
       </form>

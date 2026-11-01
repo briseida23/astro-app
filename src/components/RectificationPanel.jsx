@@ -146,7 +146,7 @@ export function RectificationPanel({ birth, events, houseSystem, onShow }) {
         {events.length < 3 && <p className="mt-1 text-sm text-amber-700">{t('rect.fewEvents')}</p>}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 sm:items-end">
+      <div className="grid grid-cols-2 gap-3 @2xl:grid-cols-5 @2xl:items-end">
         <label className="field">
           <span>{t('rect.from')}</span>
           <input type="time" className="input" value={from} onChange={(e) => e.target.value && setFrom(e.target.value)} />
@@ -172,7 +172,7 @@ export function RectificationPanel({ birth, events, houseSystem, onShow }) {
             ))}
           </select>
         </label>
-        <button type="button" className="btn-primary col-span-2 sm:col-span-1" onClick={run} disabled={state.status === 'running' || events.length === 0}>
+        <button type="button" className="btn-primary col-span-2 @2xl:col-span-1" onClick={run} disabled={state.status === 'running' || events.length === 0}>
           {state.status === 'running' ? t('rect.running') : t('rect.run')}
         </button>
       </div>
@@ -256,12 +256,12 @@ export function RectificationPanel({ birth, events, houseSystem, onShow }) {
                       {t('rect.accuracyAll', { n: scores(candidate) })}
                     </span>
                   </div>
-                  <div className={`grid gap-x-6 gap-y-3 text-sm ${several ? 'sm:grid-cols-[minmax(0,12rem)_1fr_1fr]' : 'sm:grid-cols-[minmax(0,12rem)_1fr]'}`}>
+                  <div className={`grid gap-x-6 gap-y-3 text-sm ${several ? '@2xl:grid-cols-[minmax(0,12rem)_1fr_1fr]' : '@2xl:grid-cols-[minmax(0,12rem)_1fr]'}`}>
                     {several && (
                       <>
-                        <span className="hidden sm:block" />
+                        <span className="hidden @2xl:block" />
                         {arcs.map((arc) => (
-                          <span key={arc} className="hidden text-[11px] font-medium uppercase tracking-wider text-slate-400 sm:block">
+                          <span key={arc} className="hidden text-[11px] font-medium uppercase tracking-wider text-slate-400 @2xl:block">
                             {t(`directions.arc.${arc}`)}
                           </span>
                         ))}
@@ -278,7 +278,7 @@ export function RectificationPanel({ birth, events, houseSystem, onShow }) {
                           const shown = open.has(key) ? own : own.slice(0, 1);
                           return (
                             <div key={arc} className="text-slate-700">
-                              {several && <span className="text-[11px] text-slate-400 sm:hidden">{t(`rect.arcShort.${arc}`)}: </span>}
+                              {several && <span className="text-[11px] text-slate-400 @2xl:hidden">{t(`rect.arcShort.${arc}`)}: </span>}
                               {own.length === 0 ? (
                                 <span className="text-slate-400">{t('rect.noContact')}</span>
                               ) : (
