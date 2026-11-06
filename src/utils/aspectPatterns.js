@@ -38,6 +38,14 @@ export function findAspectPatterns(planets, aspects) {
         add('grandCross', quad);
         crossMembers.add(quad.map((x) => x.key).sort().join());
       }
+      // Mystic Rectangle: two oppositions whose ends are joined by two sextiles and two trines.
+      if (
+        is(p, q, 'opposition') && is(r, s, 'opposition') &&
+        ((is(p, r, 'sextile') && is(q, s, 'sextile') && is(p, s, 'trine') && is(q, r, 'trine')) ||
+          (is(p, s, 'sextile') && is(q, r, 'sextile') && is(p, r, 'trine') && is(q, s, 'trine')))
+      ) {
+        add('mysticRectangle', quad);
+      }
     }
   }
   const insideCross = (members) =>
@@ -62,6 +70,23 @@ export function findAspectPatterns(planets, aspects) {
       for (const [opp, s1, s2] of [[p, q, r], [q, p, r], [r, p, q]]) {
         if (is(d, opp, 'opposition') && is(d, s1, 'sextile') && is(d, s2, 'sextile')) {
           add('kite', [...trio, d], opp);
+        }
+      }
+    }
+  }
+
+  // Cradle (trapezoid): an opposition spanned by a chain of three sextiles p–r–s–q,
+  // so r and s are also trine to the far ends of the opposition.
+  for (const [p, q] of combinations(points, 2)) {
+    if (!is(p, q, 'opposition')) continue;
+    const others = points.filter((x) => x !== p && x !== q);
+    for (const [a, b] of combinations(others, 2)) {
+      for (const [r, s] of [[a, b], [b, a]]) {
+        if (
+          is(p, r, 'sextile') && is(r, s, 'sextile') && is(s, q, 'sextile') &&
+          is(p, s, 'trine') && is(r, q, 'trine')
+        ) {
+          add('cradle', [p, r, s, q]);
         }
       }
     }
