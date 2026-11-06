@@ -407,7 +407,7 @@ const ru = {
   'pattern.bisextile.hint': 'Тригон и третья планета в секстилях к обеим',
   'pattern.mysticRectangle': 'Конверт / Повозка',
   'pattern.mysticRectangle.hint': 'Две оппозиции, концы которых связаны двумя тригонами и двумя секстилями',
-  'pattern.cradle': 'Трапеция',
+  'pattern.cradle': 'Трапеция / Колыбель',
   'pattern.cradle.hint': 'Оппозиция и две планеты между её концами: цепочка из трёх секстилей и два тригона',
   // "About" window (AboutModal.jsx)
   'about.title': 'О приложении',
@@ -997,7 +997,7 @@ const uk = {
   'pattern.bisextile.hint': 'Тригон і третя планета в секстилях до обох',
   'pattern.mysticRectangle': 'Конверт / Містичний прямокутник',
   'pattern.mysticRectangle.hint': "Дві опозиції, кінці яких пов'язані двома тригонами та двома секстилями",
-  'pattern.cradle': 'Трапеція',
+  'pattern.cradle': 'Трапеція / Колиска',
   'pattern.cradle.hint': 'Опозиція і дві планети між її кінцями: ланцюжок із трьох секстилів і два тригони',
   // "About" window (AboutModal.jsx)
   'about.title': 'Про застосунок',
