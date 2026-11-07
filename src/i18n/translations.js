@@ -408,9 +408,9 @@ const ru = {
   'pattern.mysticRectangle': 'Конверт / Повозка',
   'pattern.mysticRectangle.hint': 'Две оппозиции, концы которых связаны двумя тригонами и двумя секстилями',
   'pattern.cradle': 'Трапеция / Колыбель',
+  'pattern.cradle.hint': 'Оппозиция и две планеты между её концами: цепочка из трёх секстилей и два тригона',
   'pattern.halfWagon': 'Полуповозка / Косой парус',
   'pattern.halfWagon.hint': 'Оппозиция и третья планета (вершина) в тригоне к одному её концу и в секстиле к другому',
-  'pattern.cradle.hint': 'Оппозиция и две планеты между её концами: цепочка из трёх секстилей и два тригона',
   // "About" window (AboutModal.jsx)
   'about.title': 'О приложении',
   'about.hero': 'Профессиональная астрология — быстро, красиво и на родном языке.',
@@ -1000,9 +1000,9 @@ const uk = {
   'pattern.mysticRectangle': 'Конверт / Містичний прямокутник',
   'pattern.mysticRectangle.hint': "Дві опозиції, кінці яких пов'язані двома тригонами та двома секстилями",
   'pattern.cradle': 'Трапеція / Колиска',
+  'pattern.cradle.hint': 'Опозиція і дві планети між її кінцями: ланцюжок із трьох секстилів і два тригони',
   'pattern.halfWagon': 'Напівповозка / Косе вітрило',
   'pattern.halfWagon.hint': 'Опозиція і третя планета (вершина) у тригоні до одного її кінця та в секстилі до іншого',
-  'pattern.cradle.hint': 'Опозиція і дві планети між її кінцями: ланцюжок із трьох секстилів і два тригони',
   // "About" window (AboutModal.jsx)
   'about.title': 'Про застосунок',
   'about.hero': 'Професійна астрологія — швидко, красиво й рідною мовою.',
@@ -1592,9 +1592,9 @@ const en = {
   'pattern.mysticRectangle': 'Mystic Rectangle',
   'pattern.mysticRectangle.hint': 'Two oppositions whose ends are linked by two trines and two sextiles',
   'pattern.cradle': 'Cradle',
+  'pattern.cradle.hint': 'An opposition spanned by a chain of three sextiles, with two trines across',
   'pattern.halfWagon': 'Half Mystic Rectangle',
   'pattern.halfWagon.hint': 'An opposition and a third planet (apex) trine to one end and sextile to the other',
-  'pattern.cradle.hint': 'An opposition spanned by a chain of three sextiles, with two trines across',
   // "About" window (AboutModal.jsx)
   'about.title': 'About',
   'about.hero': 'Professional astrology — fast, beautiful and in your language.',

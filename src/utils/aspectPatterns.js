@@ -23,8 +23,12 @@ export function findAspectPatterns(planets, aspects) {
   const patterns = [];
   const add = (type, members, apex) => patterns.push({ type, members, apex });
 
-  const crossMembers = new Set();
-  const rectangleMembers = new Set();
+  // Member sets of the larger figures: smaller figures made of their planets are not listed again.
+  const groupOf = (members) => new Set(members.map((m) => m.key));
+  const inside = (groups, members) => groups.some((g) => members.every((m) => g.has(m.key)));
+  const crosses = [];
+  const wholes = []; // Mystic Rectangles, Kites and Cradles: each holds two or four half-wagons
+
   for (const quad of combinations(points, 4)) {
     // Try each way of splitting the four planets into two opposing pairs.
     for (const [p, q, r, s] of [
@@ -32,46 +36,37 @@ export function findAspectPatterns(planets, aspects) {
       [quad[0], quad[2], quad[1], quad[3]],
       [quad[0], quad[3], quad[1], quad[2]],
     ]) {
-      if (
-        is(p, q, 'opposition') && is(r, s, 'opposition') &&
-        is(p, r, 'square') && is(p, s, 'square') && is(q, r, 'square') && is(q, s, 'square')
-      ) {
+      if (!(is(p, q, 'opposition') && is(r, s, 'opposition'))) continue;
+      if (is(p, r, 'square') && is(p, s, 'square') && is(q, r, 'square') && is(q, s, 'square')) {
         add('grandCross', quad);
-        crossMembers.add(quad.map((x) => x.key).sort().join());
+        crosses.push(groupOf(quad));
       }
       // Mystic Rectangle: two oppositions whose ends are joined by two sextiles and two trines.
       if (
-        is(p, q, 'opposition') && is(r, s, 'opposition') &&
-        ((is(p, r, 'sextile') && is(q, s, 'sextile') && is(p, s, 'trine') && is(q, r, 'trine')) ||
-          (is(p, s, 'sextile') && is(q, r, 'sextile') && is(p, r, 'trine') && is(q, s, 'trine')))
+        (is(p, r, 'sextile') && is(q, s, 'sextile') && is(p, s, 'trine') && is(q, r, 'trine')) ||
+        (is(p, s, 'sextile') && is(q, r, 'sextile') && is(p, r, 'trine') && is(q, s, 'trine'))
       ) {
         add('mysticRectangle', quad);
-        rectangleMembers.add(quad.map((x) => x.key).sort().join());
+        wholes.push(groupOf(quad));
       }
     }
   }
-  const inside = (groups, members) =>
-    [...groups].some((c) => members.every((m) => c.split(',').includes(m.key)));
-  const insideCross = (members) => inside(crossMembers, members);
 
-  // Half-wagon (slanted sail): an opposition and a third planet trine to one end and sextile
-  // to the other. Its halves of a Mystic Rectangle are left out: the whole figure is shown.
+  // One pass over the oppositions: a T-square's apex is square to both ends; a half-wagon's
+  // (slanted sail's) apex is trine to one end and sextile to the other. Half-wagons are kept
+  // until the larger figures are known.
+  const halfWagons = [];
   for (const [p, q] of combinations(points, 2)) {
     if (!is(p, q, 'opposition')) continue;
     for (const apex of points) {
       if (apex === p || apex === q) continue;
-      const linked =
-        (is(apex, p, 'trine') && is(apex, q, 'sextile')) || (is(apex, p, 'sextile') && is(apex, q, 'trine'));
-      if (linked && !inside(rectangleMembers, [p, q, apex])) add('halfWagon', [p, q, apex], apex);
-    }
-  }
-
-  for (const [p, q] of combinations(points, 2)) {
-    if (!is(p, q, 'opposition')) continue;
-    for (const apex of points) {
-      if (apex === p || apex === q) continue;
-      if (is(apex, p, 'square') && is(apex, q, 'square') && !insideCross([p, q, apex])) {
-        add('tSquare', [p, q, apex], apex);
+      if (is(apex, p, 'square') && is(apex, q, 'square')) {
+        if (!inside(crosses, [p, q, apex])) add('tSquare', [p, q, apex], apex);
+      } else if (
+        (is(apex, p, 'trine') && is(apex, q, 'sextile')) ||
+        (is(apex, p, 'sextile') && is(apex, q, 'trine'))
+      ) {
+        halfWagons.push([p, q, apex]);
       }
     }
   }
@@ -85,6 +80,7 @@ export function findAspectPatterns(planets, aspects) {
       for (const [opp, s1, s2] of [[p, q, r], [q, p, r], [r, p, q]]) {
         if (is(d, opp, 'opposition') && is(d, s1, 'sextile') && is(d, s2, 'sextile')) {
           add('kite', [...trio, d], opp);
+          wholes.push(groupOf([...trio, d]));
         }
       }
     }
@@ -102,6 +98,7 @@ export function findAspectPatterns(planets, aspects) {
           is(p, s, 'trine') && is(r, q, 'trine')
         ) {
           add('cradle', [p, r, s, q]);
+          wholes.push(groupOf([p, q, r, s]));
         }
       }
     }
@@ -113,6 +110,11 @@ export function findAspectPatterns(planets, aspects) {
       if (apex === p || apex === q) continue;
       if (is(apex, p, 'sextile') && is(apex, q, 'sextile')) add('bisextile', [p, q, apex], apex);
     }
+  }
+
+  // The weakest figure goes last; inside a Mystic Rectangle, Kite or Cradle only the whole is shown.
+  for (const members of halfWagons) {
+    if (!inside(wholes, members)) add('halfWagon', members, members[2]);
   }
 
   return patterns;
@@ -136,8 +138,11 @@ export function findTransitPatterns(natalPlanets, natalAspects, transitPlanets, 
     ...natalAspects,
     ...findAspects(transits, narrow, natalPlanets.filter((p) => PLANET_IDS.has(p.id))),
   ];
+  // A half-wagon is too weak to count as a transit event: it stays a natal figure only.
   const patterns = findAspectPatterns([...natalPlanets, ...transits], aspects).filter(
-    (p) => p.members.some((m) => m.ring === 'natal') && p.members.some((m) => m.ring !== 'natal')
+    (p) =>
+      p.type !== 'halfWagon' &&
+      p.members.some((m) => m.ring === 'natal') && p.members.some((m) => m.ring !== 'natal')
   );
   return { patterns, aspects };
 }
