@@ -24,6 +24,7 @@ export function findAspectPatterns(planets, aspects) {
   const add = (type, members, apex) => patterns.push({ type, members, apex });
 
   const crossMembers = new Set();
+  const rectangleMembers = new Set();
   for (const quad of combinations(points, 4)) {
     // Try each way of splitting the four planets into two opposing pairs.
     for (const [p, q, r, s] of [
@@ -45,11 +46,25 @@ export function findAspectPatterns(planets, aspects) {
           (is(p, s, 'sextile') && is(q, r, 'sextile') && is(p, r, 'trine') && is(q, s, 'trine')))
       ) {
         add('mysticRectangle', quad);
+        rectangleMembers.add(quad.map((x) => x.key).sort().join());
       }
     }
   }
-  const insideCross = (members) =>
-    [...crossMembers].some((c) => members.every((m) => c.split(',').includes(m.key)));
+  const inside = (groups, members) =>
+    [...groups].some((c) => members.every((m) => c.split(',').includes(m.key)));
+  const insideCross = (members) => inside(crossMembers, members);
+
+  // Half-wagon (slanted sail): an opposition and a third planet trine to one end and sextile
+  // to the other. Its halves of a Mystic Rectangle are left out: the whole figure is shown.
+  for (const [p, q] of combinations(points, 2)) {
+    if (!is(p, q, 'opposition')) continue;
+    for (const apex of points) {
+      if (apex === p || apex === q) continue;
+      const linked =
+        (is(apex, p, 'trine') && is(apex, q, 'sextile')) || (is(apex, p, 'sextile') && is(apex, q, 'trine'));
+      if (linked && !inside(rectangleMembers, [p, q, apex])) add('halfWagon', [p, q, apex], apex);
+    }
+  }
 
   for (const [p, q] of combinations(points, 2)) {
     if (!is(p, q, 'opposition')) continue;
