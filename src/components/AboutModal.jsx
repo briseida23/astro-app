@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Modal } from './Modal';
 import { Turnstile } from './Turnstile';
-import { APP_NAME, GITHUB_URL } from '../appInfo';
+import { APP_NAME, DONATE_URL, GITHUB_URL } from '../appInfo';
+import { HeartIcon } from './HeartIcon';
 import { sendFeedback } from '../utils/api';
 import { useI18n } from '../i18n';
 
@@ -129,6 +130,23 @@ export function AboutModal({ open, onClose, user, turnstile }) {
           <p className="text-sm text-slate-600">{t('about.next')}</p>
           {open && <FeedbackForm user={user} turnstile={turnstile} />}
         </section>
+
+        {DONATE_URL && (
+          <section className="space-y-3 rounded-xl border border-slate-200 p-4">
+            <h3 className="font-display text-xl font-semibold">{t('support.title')}</h3>
+            <p className="text-sm leading-relaxed text-slate-600">{t('support.hello')}</p>
+            <p className="text-sm leading-relaxed text-slate-600">{t('support.text')}</p>
+            <a
+              href={DONATE_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+            >
+              <HeartIcon />
+              {t('support.button')}
+            </a>
+          </section>
+        )}
 
         <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
           <a href={GITHUB_URL} target="_blank" rel="noreferrer" className="text-slate-600 underline hover:text-slate-900">

@@ -51,7 +51,8 @@ import { AccountMenu } from './components/AccountMenu';
 import { MobileMenu } from './components/MobileMenu';
 import { ClientsModal } from './components/ClientsModal';
 import { AboutModal } from './components/AboutModal';
-import { APP_NAME } from './appInfo';
+import { APP_NAME, DONATE_URL } from './appInfo';
+import { HeartIcon } from './components/HeartIcon';
 import { Tabs } from './components/Tabs';
 import { detectCurrentPlace, placeFields, withoutPlace, withoutClient } from './utils/location';
 import { I18nContext, LANGUAGES, loadLanguage, saveLanguage, translate, placeName } from './i18n';
@@ -762,6 +763,15 @@ export default function App() {
                 <a href={`/privacy?lang=${lang}`} target="_blank" rel="noreferrer" className="hidden underline lg:inline decoration-slate-300 underline-offset-2 hover:text-slate-900">
                   {t('auth.privacy')}
                 </a>
+                {DONATE_URL && (
+                  <>
+                    <span aria-hidden className="hidden lg:inline">·</span>
+                    <a href={DONATE_URL} target="_blank" rel="noreferrer" className="hidden items-center gap-1 underline lg:inline-flex decoration-slate-300 underline-offset-2 hover:text-slate-900">
+                      <HeartIcon />
+                      {t('support.link')}
+                    </a>
+                  </>
+                )}
               </p>
             </div>
           </div>
