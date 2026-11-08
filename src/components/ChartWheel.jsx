@@ -322,7 +322,7 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
   const flipX = pointer && pointer.x > pointer.width * 0.58;
 
   return (
-    <div data-wheel className="relative mx-auto w-full max-w-[680px]">
+    <div data-wheel className="relative mx-auto w-full max-w-[860px]">
       <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="w-full select-none" role="img" aria-label={t('wheel.label')}>
         {/* Zodiac band */}
         {SIGNS.map((sign, i) => {

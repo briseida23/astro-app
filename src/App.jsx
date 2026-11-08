@@ -724,7 +724,7 @@ export default function App() {
     <I18nContext.Provider value={i18n}>
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A]">
       <header className="relative z-40 border-b border-slate-200/70 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
+        <div className="mx-auto flex max-w-7xl 2xl:max-w-[1440px] flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
             <div className="lg:hidden">
               <MobileMenu
@@ -819,12 +819,12 @@ export default function App() {
 
       {/* With a second wheel both wheels share the top row and the tabs take the full width below. */}
       <main
-        className={`mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] gap-6 px-4 py-6 sm:px-6 ${
-          secondView ? 'lg:grid-cols-2' : 'lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]'
+        className={`mx-auto grid max-w-7xl 2xl:max-w-[1440px] grid-cols-[minmax(0,1fr)] gap-6 px-2 py-6 sm:px-6 ${
+          secondView ? 'lg:grid-cols-2' : 'lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]'
         }`}
       >
         {/* Wheel Chart Component */}
-        <section className={`card flex flex-col gap-4 p-4 sm:p-6 ${secondView ? '' : 'lg:sticky lg:top-6 lg:self-start'}`}>
+        <section className={`card flex flex-col gap-4 p-3 sm:p-6 ${secondView ? '' : 'lg:sticky lg:top-6 lg:self-start'}`}>
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-1">
             {/* A return is named with its own moment and place; the birth data stay one click away. */}
             <button type="button" onClick={() => setBirthOpen(true)} className="text-left">
@@ -894,7 +894,7 @@ export default function App() {
         </section>
 
         {secondView && (
-          <section className="card flex flex-col gap-4 p-4 sm:p-6">
+          <section className="card flex flex-col gap-4 p-3 sm:p-6">
             {/* The card stretches to the main card's height so the two cards line up. */}
             <div className="px-1">
               <div className="flex items-start justify-between gap-2">
