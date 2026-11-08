@@ -680,7 +680,10 @@ export default function App() {
   // Over the wheel: steps through time (or ‹ return ›); with two wheels it goes under the main
   // wheel so both wheels start at the same height. The date, time and place themselves open in a
   // window from the line under the chart's title.
-  const forecastBar = (forecast || returnKind) && (
+  // In the natal chart the steps move the birth moment itself, as in Dynamics.
+  const forecastBar = mode === 'natal' ? (
+    <StepBar dynamics={dynamics} onDynamicsChange={setDynamics} onStep={stepBirth} onNow={natalNow} />
+  ) : (forecast || returnKind) && (
     <StepBar dynamics={dynamics} onDynamicsChange={setDynamics} onStep={stepTransit} onNow={transitNow}>
       {returnList && (
         <ReturnPicker
@@ -855,6 +858,8 @@ export default function App() {
                   <div className="text-xs tabular-nums text-slate-500">
                     {birth.name && `${placeName(birth, t)} · `}
                     {formatDate(chartBirth.date, lang)} · {chartBirth.time} · {formatOffset(chartBirth.utcOffset)}
+                    {/* The birth data open from here, as from "Data" in the header. */}
+                    <span aria-hidden className="ml-1.5 text-slate-400">✎</span>
                   </div>
                 </>
               )}
