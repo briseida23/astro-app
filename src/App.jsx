@@ -193,11 +193,15 @@ function pointFocus(hover, aspects, planets) {
   return null;
 }
 
-/** Highlight in one wheel for a planet hovered in the other: the same object in every ring. */
-function sameObjectFocus(hover, points) {
+/**
+ * Highlight in one wheel for a planet hovered in the other: the same object in every ring, with its
+ * aspects in this wheel, so the other aspects fade the same way as in the hovered wheel.
+ */
+function sameObjectFocus(hover, points, aspects) {
   if (hover?.type !== 'planet') return null;
   const id = hover.key.slice(hover.key.indexOf(':') + 1);
-  return { planets: new Set(points.filter((p) => p.id === id).map((p) => p.key)), aspects: new Set() };
+  const planets = new Set(points.filter((p) => p.id === id).map((p) => p.key));
+  return { planets, aspects: new Set(aspects.filter((a) => planets.has(a.a.key) || planets.has(a.b.key)).map((a) => a.id)) };
 }
 
 // Tabs under the chart in the order of a consultation: a chart of its own (natal, solar, lunar)
@@ -559,7 +563,7 @@ export default function App() {
     if (!secondView) return null;
     if (secondHover) return pointFocus(secondHover, secondView.aspects, secondView.planets);
     // A planet hovered in the main wheel or a table lights up the same object here.
-    return sameObjectFocus(hover, [...secondView.planets, ...secondView.angles, ...(secondView.ring ?? [])]);
+    return sameObjectFocus(hover, [...secondView.planets, ...secondView.angles, ...(secondView.ring ?? [])], secondView.aspects);
   }, [secondHover, secondView, hover]);
 
   const balance = useMemo(() => calculateBalance(mainChart, weights), [mainChart, weights]);
@@ -583,7 +587,7 @@ export default function App() {
       const aspect = visibleAspects.find((a) => a.a.key === moverKey && a.b.key === `natal:${target}`);
       return { planets: new Set([moverKey, `natal:${target}`]), aspects: new Set(aspect ? [aspect.id] : []) };
     }
-    if (!hover) return sameObjectFocus(secondHover, [...natalPoints, ...(transitPlanets ?? [])]);
+    if (!hover) return sameObjectFocus(secondHover, [...natalPoints, ...(transitPlanets ?? [])], visibleAspects);
     if (hover.type === 'pattern') {
       const pattern = patterns[hover.index];
       if (!pattern) return null;
