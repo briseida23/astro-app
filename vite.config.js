@@ -29,9 +29,26 @@ function preloadEphemeris() {
   }
 }
 
+/**
+ * On the site, Cloudflare serves public/privacy.html at /privacy. The dev server would answer
+ * /privacy with the app itself, so it rewrites the path the same way.
+ */
+function privacyPage() {
+  return {
+    name: 'privacy-page',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use((req, _res, next) => {
+        if (req.url === '/privacy' || req.url.startsWith('/privacy?')) req.url = '/privacy.html' + req.url.slice(8)
+        next()
+      })
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), preloadEphemeris()],
+  plugins: [react(), preloadEphemeris(), privacyPage()],
   // ES module workers: the rectification worker loads the ephemeris with a dynamic import.
   worker: { format: 'es' },
 })
