@@ -559,10 +559,13 @@ export default function App() {
   const showSecondAspects = Boolean(secondTableAspects) && aspectTarget === 'second';
   const tableAspects = showSecondAspects ? secondTableAspects : visibleAspects;
   const tableTwoRings = showSecondAspects ? Boolean(secondView.ring || (secondView.isReturn && transitPlanets)) : isBiWheel;
+  // A hover on a wheel stays in that wheel; a planet hovered in a table lights up both wheels.
+  const hoverInWheel = (h) => setHover(h && { ...h, inWheel: true });
   const secondFocus = useMemo(() => {
     if (!secondView) return null;
     if (secondHover) return pointFocus(secondHover, secondView.aspects, secondView.planets);
-    // A planet hovered in the main wheel or a table lights up the same object here.
+    if (hover?.inWheel) return null;
+    // A planet hovered in a table lights up the same object here.
     return sameObjectFocus(hover, [...secondView.planets, ...secondView.angles, ...(secondView.ring ?? [])], secondView.aspects);
   }, [secondHover, secondView, hover]);
 
@@ -578,7 +581,7 @@ export default function App() {
 
   // What to highlight on the wheel and in the tables for the current hover target.
   const focus = useMemo(() => {
-    // A planet hovered in the second wheel lights up the same object here; else a previewed
+    // With nothing hovered (a hover in the second wheel stays there), a previewed
     // rectification contact stays lit: its aspect line, or the planet and the house of a cusp.
     if (!hover && !secondHover && preview?.contact) {
       const { method, mover, target } = preview.contact;
@@ -587,7 +590,7 @@ export default function App() {
       const aspect = visibleAspects.find((a) => a.a.key === moverKey && a.b.key === `natal:${target}`);
       return { planets: new Set([moverKey, `natal:${target}`]), aspects: new Set(aspect ? [aspect.id] : []) };
     }
-    if (!hover) return sameObjectFocus(secondHover, [...natalPoints, ...(transitPlanets ?? [])], visibleAspects);
+    if (!hover) return null;
     if (hover.type === 'pattern') {
       const pattern = patterns[hover.index];
       if (!pattern) return null;
@@ -599,7 +602,7 @@ export default function App() {
     }
     // The table may list the second chart's aspects; their ids can repeat the main chart's (both use natal keys in a return).
     return pointFocus(hover, hover.second ? secondTableAspects ?? [] : visibleAspects, natalPlanets);
-  }, [hover, secondHover, preview, natalPoints, transitPlanets, visibleAspects, secondTableAspects, natalPlanets, patternAspects, patterns]);
+  }, [hover, secondHover, preview, visibleAspects, secondTableAspects, natalPlanets, patternAspects, patterns]);
 
   const activeTab = activeTabOf(mode, tab);
   // When forecast aspects became or become exact and leave their orb: for the aspect table, or the
@@ -888,7 +891,7 @@ export default function App() {
             aspectColors={colors.aspects}
             hover={hover}
             focus={focus}
-            onHover={setHover}
+            onHover={hoverInWheel}
             mark={activeTab === 'calendar' ? eclipseMark : null}
             highContrast={settings.highContrast}
             smallGlyphs={wide}
