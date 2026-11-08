@@ -5,6 +5,26 @@ import { offsetForZone, toUtcDate, momentAt, formatOffset, STEP_PRESETS } from '
 import { detectCurrentPlace, placeFromSearch, withoutPlace } from '../utils/location';
 import { useI18n, placeName, formatShortDate } from '../i18n';
 
+/**
+ * A button's hint above it, shown at once on hover and on keyboard focus (a native title waits
+ * about a second).
+ */
+function Tip({ label, align = 'center', children }) {
+  // The outermost buttons of a bar anchor their hint to the outer side, so it stays on a phone's screen.
+  const place = { left: 'left-0', right: 'right-0', center: 'left-1/2 -translate-x-1/2' }[align];
+  return (
+    <span className="group/tip relative inline-flex">
+      {children}
+      <span
+        role="tooltip"
+        className={`pointer-events-none absolute bottom-full z-30 mb-1.5 hidden whitespace-nowrap ${place} rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white shadow-lg group-hover/tip:block group-focus-within/tip:block`}
+      >
+        {label}
+      </span>
+    </span>
+  );
+}
+
 /** Picks the transit place; `onSelect(null)` means "follow the birth place". */
 function TransitPlaceModal({ open, onClose, onSelect }) {
   const { lang, t } = useI18n();
@@ -55,15 +75,16 @@ export function ReturnPicker({ kind, dates, current, moment, onPick }) {
   const label = (d) => formatShortDate(momentAt(moment, d.getTime()).date, lang);
   return (
     <div className="mb-0.5 flex gap-1">
-      <button
-        type="button"
-        className="input-sm px-3 hover:border-slate-300"
-        onClick={() => onPick(dates[current - 1])}
-        aria-label={t(`returns.prev.${kind}`)}
-        title={t(`returns.prev.${kind}`)}
-      >
-        ‹
-      </button>
+      <Tip label={t(`returns.prev.${kind}`)}>
+        <button
+          type="button"
+          className="input-sm px-3 hover:border-slate-300"
+          onClick={() => onPick(dates[current - 1])}
+          aria-label={t(`returns.prev.${kind}`)}
+        >
+          ‹
+        </button>
+      </Tip>
       <select className="input-sm" aria-label={t(`mode.${kind}`)} value={current} onChange={(e) => onPick(dates[Number(e.target.value)])}>
         {dates.map((d, i) => (
           <option key={d.getTime()} value={i}>
@@ -71,15 +92,16 @@ export function ReturnPicker({ kind, dates, current, moment, onPick }) {
           </option>
         ))}
       </select>
-      <button
-        type="button"
-        className="input-sm px-3 hover:border-slate-300"
-        onClick={() => onPick(dates[current + 1])}
-        aria-label={t(`returns.next.${kind}`)}
-        title={t(`returns.next.${kind}`)}
-      >
-        ›
-      </button>
+      <Tip label={t(`returns.next.${kind}`)}>
+        <button
+          type="button"
+          className="input-sm px-3 hover:border-slate-300"
+          onClick={() => onPick(dates[current + 1])}
+          aria-label={t(`returns.next.${kind}`)}
+        >
+          ›
+        </button>
+      </Tip>
     </div>
   );
 }
@@ -161,9 +183,11 @@ export function StepBar({ dynamics, onDynamicsChange, onStep, onNow, children })
   const arrow = (count, sign) => {
     const label = t(count < 0 ? 'dynamics.back' : 'dynamics.forward', { amount: amount(count) });
     return (
-      <button type="button" className="input-sm min-w-9 px-2.5 hover:border-slate-300" onClick={() => onStep(count)} aria-label={label} title={label}>
-        {sign}
-      </button>
+      <Tip label={label} align={count === -10 ? 'left' : count === 10 ? 'right' : 'center'}>
+        <button type="button" className="input-sm min-w-9 px-2.5 hover:border-slate-300" onClick={() => onStep(count)} aria-label={label}>
+          {sign}
+        </button>
+      </Tip>
     );
   };
   return (
