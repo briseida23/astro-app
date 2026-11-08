@@ -677,9 +677,8 @@ export default function App() {
   };
   const houseSystem = HOUSE_SYSTEMS.find((h) => h.id === settings.houseSystem);
 
-  // Over the wheel: steps through time (or ‹ return ›); with two wheels it goes under the main
-  // wheel so both wheels start at the same height. The date, time and place themselves open in a
-  // window from the line under the chart's title.
+  // Under the wheel: steps through time (or ‹ return ›). The date, time and place themselves open
+  // in a window from the line under the chart's title.
   // In the natal chart the steps move the birth moment itself, as in Dynamics.
   const forecastBar = mode === 'natal' ? (
     <StepBar dynamics={dynamics} onDynamicsChange={setDynamics} onStep={stepBirth} onNow={natalNow} />
@@ -890,7 +889,6 @@ export default function App() {
             </div>
           )}
 
-          {!secondView && forecastBar}
 
           <ChartWheel
             chartData={mainChart}
@@ -907,7 +905,7 @@ export default function App() {
             highContrast={settings.highContrast}
             smallGlyphs={wide}
           />
-          {secondView && forecastBar}
+          {forecastBar}
           <Legend aspectColors={colors.aspects} t={t} />
           {isBiWheel && <TransitEvents method={forecast} patterns={patterns} aspects={patternAspects} hover={hover} onHover={setHover} />}
         </section>
