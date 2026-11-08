@@ -135,6 +135,7 @@ export function AboutModal({ open, onClose, user, turnstile }) {
           <section className="space-y-3 rounded-xl border border-slate-200 p-4">
             <h3 className="font-display text-xl font-semibold">{t('support.title')}</h3>
             <p className="text-sm leading-relaxed text-slate-600">{t('support.hello')}</p>
+            <p className="text-sm leading-relaxed text-slate-600">{t('support.why')}</p>
             <p className="text-sm leading-relaxed text-slate-600">{t('support.text')}</p>
             <a
               href={DONATE_URL}
