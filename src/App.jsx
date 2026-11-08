@@ -887,6 +887,7 @@ export default function App() {
             onHover={setHover}
             mark={activeTab === 'calendar' ? eclipseMark : null}
             highContrast={settings.highContrast}
+            smallGlyphs={wide}
           />
           {secondView && forecastBar}
           <Legend aspectColors={colors.aspects} t={t} />
@@ -945,6 +946,7 @@ export default function App() {
               focus={secondFocus}
               onHover={setSecondHover}
               highContrast={settings.highContrast}
+              smallGlyphs={wide}
             />
             {/* The second chart's date bar sits under its wheel like the main one, so both wheels start
                 at the same height. Its date is its own once changed, until "same as main". */}

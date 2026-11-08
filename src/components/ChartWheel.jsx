@@ -8,6 +8,8 @@ const C = SIZE / 2;
 const R_OUTER = 280; // outer edge of the zodiac band
 const R_ZODIAC = 243; // inner edge of the zodiac band
 const MIN_GLYPH_GAP = 27; // distance between planet glyph centres (a glyph's circle is 27 across)
+// On a computer the wheel is large, so planet glyphs are drawn smaller there; phones keep full size.
+const SMALL_GLYPHS = 0.875;
 const ANGLE_LABELS = { 0: 'ASC', 3: 'IC', 6: 'DSC', 9: 'MC' };
 // The symbol font draws ♂, ♀ and ☿ smaller (shorter or narrower) than the other planets.
 const GLYPH_SCALE = { mars: 1.3, venus: 1.2, mercury: 1.12 };
@@ -94,10 +96,10 @@ function aspectPath(aspect, r, ascendant) {
  * at about 20° and 27°, not at 22° and 30°. The gap is a distance on the circle, so the inner
  * ring of a bi-wheel gets more degrees than the roomier natal ring.
  */
-function spreadPlanets(planets, radius) {
+function spreadPlanets(planets, radius, glyphGap = MIN_GLYPH_GAP) {
   const sorted = [...planets].sort((a, b) => a.longitude - b.longitude);
   if (sorted.length < 2) return sorted.map((p) => ({ ...p, displayLon: p.longitude }));
-  const gap = Math.min((MIN_GLYPH_GAP / radius) * (180 / Math.PI), 360 / sorted.length);
+  const gap = Math.min((glyphGap / radius) * (180 / Math.PI), 360 / sorted.length);
   // Start after the widest empty arc, so a cluster around 0° Aries is spread as one group.
   let start = 0;
   let widest = -1;
@@ -224,9 +226,10 @@ function TooltipBody({ hover, aspects, points, houses, angleCusps, isBiWheel }) 
   return null;
 }
 
-export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects, elementColors, aspectColors, hover, focus, onHover, mark = null, highContrast = false }) {
+export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects, elementColors, aspectColors, hover, focus, onHover, mark = null, highContrast = false, smallGlyphs = false }) {
   const { LINE, MUTED, LABEL, fs, glyphScale, ink, aspectWidth, cuspWidth, glyphStroke } = theme(highContrast);
   const [pointer, setPointer] = useState(null);
+  const g = smallGlyphs ? SMALL_GLYPHS : 1;
   const { t } = useI18n();
   const { ascendant, mc, houses } = chartData;
   // Cusps 1, 4, 7 and 10 are the angles in quadrant systems; with Equal or Whole Sign houses
@@ -261,7 +264,7 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
   });
 
   const renderPlanets = (list, glyphRadius, degreeRadius, outer = false) =>
-    spreadPlanets(list, glyphRadius).map((planet) => {
+    spreadPlanets(list, glyphRadius, MIN_GLYPH_GAP * g).map((planet) => {
       const glyph = point(planet.displayLon, glyphRadius, ascendant);
       const degree = point(planet.displayLon, degreeRadius, ascendant);
       const tickA = point(planet.longitude, R_ZODIAC, ascendant);
@@ -278,7 +281,7 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
           <circle
             cx={glyph.x}
             cy={glyph.y}
-            r={13.5}
+            r={13.5 * g}
             fill={active ? color : '#ffffff'}
             fillOpacity={active ? 0.14 : 0}
             stroke={isTransit ? color : 'none'}
@@ -287,7 +290,7 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
             strokeDasharray={isTransit ? '2 2' : undefined}
           />
           {planet.hollow ? (
-            <g transform={`translate(${glyph.x},${glyph.y}) scale(${glyphScale})`}>
+            <g transform={`translate(${glyph.x},${glyph.y}) scale(${glyphScale * g})`}>
               <SelenaShape color={color} strokeWidth={highContrast ? 1.9 : 1.5} />
             </g>
           ) : (
@@ -296,7 +299,7 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
               y={glyph.y}
               textAnchor="middle"
               dominantBaseline="central"
-              fontSize={glyphSize(planet) * glyphScale}
+              fontSize={glyphSize(planet) * glyphScale * g}
               fontWeight={planet.textGlyph ? 700 : undefined}
               fill={color}
               // Symbol fonts have no bold: a thin outline in the same colour thickens the strokes.
@@ -308,7 +311,7 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
             </text>
           )}
           {planet.retrograde && (
-            <text x={glyph.x + 10} y={glyph.y + 10} fontSize={9 * fs} fontWeight="700" fill="#B91C1C">R</text>
+            <text x={glyph.x + 10 * g} y={glyph.y + 10 * g} fontSize={9 * fs} fontWeight="700" fill="#B91C1C">R</text>
           )}
           {degreeRadius && (
             <text x={degree.x} y={degree.y} textAnchor="middle" dominantBaseline="central" fontSize={9.5 * fs} fontWeight={600} fill={LABEL} className="tabular-nums">
