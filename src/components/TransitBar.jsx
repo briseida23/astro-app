@@ -7,17 +7,18 @@ import { useI18n, placeName, formatShortDate } from '../i18n';
 
 /**
  * A button's hint above it, shown at once on hover and on keyboard focus (a native title waits
- * about a second).
+ * about a second). A click or tap leaves the button focused, so only keyboard focus shows it, and
+ * it does not stay hanging after a click. It repeats the button's aria-label, so readers skip it.
+ * The outermost buttons of a bar pass `align` to anchor it to the outer side, on a phone's screen.
  */
 function Tip({ label, align = 'center', children }) {
-  // The outermost buttons of a bar anchor their hint to the outer side, so it stays on a phone's screen.
   const place = { left: 'left-0', right: 'right-0', center: 'left-1/2 -translate-x-1/2' }[align];
   return (
     <span className="group/tip relative inline-flex">
       {children}
       <span
-        role="tooltip"
-        className={`pointer-events-none absolute bottom-full z-30 mb-1.5 hidden whitespace-nowrap ${place} rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white shadow-lg group-hover/tip:block group-focus-within/tip:block`}
+        aria-hidden
+        className={`pointer-events-none absolute bottom-full z-30 mb-1.5 hidden whitespace-nowrap ${place} rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white shadow-lg group-hover/tip:block group-has-[:focus-visible]/tip:block`}
       >
         {label}
       </span>
@@ -75,7 +76,7 @@ export function ReturnPicker({ kind, dates, current, moment, onPick }) {
   const label = (d) => formatShortDate(momentAt(moment, d.getTime()).date, lang);
   return (
     <div className="mb-0.5 flex gap-1">
-      <Tip label={t(`returns.prev.${kind}`)}>
+      <Tip label={t(`returns.prev.${kind}`)} align="left">
         <button
           type="button"
           className="input-sm px-3 hover:border-slate-300"
@@ -92,7 +93,7 @@ export function ReturnPicker({ kind, dates, current, moment, onPick }) {
           </option>
         ))}
       </select>
-      <Tip label={t(`returns.next.${kind}`)}>
+      <Tip label={t(`returns.next.${kind}`)} align="right">
         <button
           type="button"
           className="input-sm px-3 hover:border-slate-300"
@@ -180,10 +181,10 @@ export function StepBar({ dynamics, onDynamicsChange, onStep, onNow, children })
   const amount = (count) => t(`dynamics.preset.${unit}`, { n: Math.abs(count) * step });
   const known = STEP_PRESETS.some((p) => p.step === step && p.unit === unit);
   const options = known ? STEP_PRESETS : [...STEP_PRESETS, { step, unit }];
-  const arrow = (count, sign) => {
+  const arrow = (count, sign, align = 'center') => {
     const label = t(count < 0 ? 'dynamics.back' : 'dynamics.forward', { amount: amount(count) });
     return (
-      <Tip label={label} align={count === -10 ? 'left' : count === 10 ? 'right' : 'center'}>
+      <Tip label={label} align={align}>
         <button type="button" className="input-sm min-w-9 px-2.5 hover:border-slate-300" onClick={() => onStep(count)} aria-label={label}>
           {sign}
         </button>
@@ -194,7 +195,7 @@ export function StepBar({ dynamics, onDynamicsChange, onStep, onNow, children })
     <div className="flex flex-wrap items-center justify-center gap-1.5 rounded-xl bg-slate-50 px-3 py-2">
       {children || (
         <>
-          {arrow(-10, '«')}
+          {arrow(-10, '«', 'left')}
           {arrow(-1, '‹')}
           <select
             className="input-sm"
@@ -212,7 +213,7 @@ export function StepBar({ dynamics, onDynamicsChange, onStep, onNow, children })
             ))}
           </select>
           {arrow(1, '›')}
-          {arrow(10, '»')}
+          {arrow(10, '»', 'right')}
         </>
       )}
       {onNow && (
