@@ -7,7 +7,7 @@ const SIZE = 640;
 const C = SIZE / 2;
 const R_OUTER = 280; // outer edge of the zodiac band
 const R_ZODIAC = 243; // inner edge of the zodiac band
-const MIN_GAP = 7.5; // degrees between planet glyphs before they are spread apart
+const MIN_GLYPH_GAP = 27; // distance between planet glyph centres (a glyph's circle is 27 across)
 const ANGLE_LABELS = { 0: 'ASC', 3: 'IC', 6: 'DSC', 9: 'MC' };
 // The symbol font draws ♂, ♀ and ☿ smaller (shorter or narrower) than the other planets.
 const GLYPH_SCALE = { mars: 1.3, venus: 1.2, mercury: 1.12 };
@@ -88,28 +88,54 @@ function aspectPath(aspect, r, ascendant) {
   return `M${start.x},${start.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${end.x},${end.y}`;
 }
 
-function spreadPlanets(planets) {
+/**
+ * Spreads planet glyphs that would overlap. A crowded group is laid out evenly around the mean of
+ * its real longitudes, so it does not drift away to one side: Mars at 22° and Jupiter at 25° sit
+ * at about 20° and 27°, not at 22° and 30°. The gap is a distance on the circle, so the inner
+ * ring of a bi-wheel gets more degrees than the roomier natal ring.
+ */
+function spreadPlanets(planets, radius) {
   const sorted = [...planets].sort((a, b) => a.longitude - b.longitude);
   if (sorted.length < 2) return sorted.map((p) => ({ ...p, displayLon: p.longitude }));
+  const gap = Math.min((MIN_GLYPH_GAP / radius) * (180 / Math.PI), 360 / sorted.length);
   // Start after the widest empty arc, so a cluster around 0° Aries is spread as one group.
   let start = 0;
   let widest = -1;
   sorted.forEach((p, i) => {
     const next = sorted[(i + 1) % sorted.length];
-    const gap = normalize(next.longitude - p.longitude);
-    if (gap > widest) {
-      widest = gap;
+    const empty = normalize(next.longitude - p.longitude);
+    if (empty > widest) {
+      widest = empty;
       start = (i + 1) % sorted.length;
     }
   });
   const base = sorted[start].longitude;
-  const display = [...sorted.slice(start), ...sorted.slice(0, start)].map((p) => ({
-    ...p,
-    displayLon: base + normalize(p.longitude - base),
-  }));
-  for (let i = 1; i < display.length; i++) {
-    const gap = display[i].displayLon - display[i - 1].displayLon;
-    if (gap < MIN_GAP) display[i].displayLon = display[i - 1].displayLon + MIN_GAP;
+  const ordered = [...sorted.slice(start), ...sorted.slice(0, start)];
+  const lons = ordered.map((p) => base + normalize(p.longitude - base));
+
+  // Groups of consecutive glyphs: [first index, count, display longitude of the first].
+  const place = (from, count) => {
+    let sum = 0;
+    for (let i = from; i < from + count; i++) sum += lons[i];
+    return sum / count - ((count - 1) * gap) / 2;
+  };
+  const groups = [];
+  lons.forEach((_, i) => {
+    groups.push({ from: i, count: 1, first: lons[i] });
+    // Merge backwards while the newest group runs into the one before it.
+    while (groups.length > 1) {
+      const b = groups[groups.length - 1];
+      const a = groups[groups.length - 2];
+      if (a.first + a.count * gap <= b.first + 1e-9) break;
+      groups.pop();
+      a.count += b.count;
+      a.first = place(a.from, a.count);
+    }
+  });
+
+  const display = [];
+  for (const g of groups) {
+    for (let k = 0; k < g.count; k++) display.push({ ...ordered[g.from + k], displayLon: g.first + k * gap });
   }
   return display;
 }
@@ -235,7 +261,7 @@ export function ChartWheel({ chartData, planets, angles, transitPlanets, aspects
   });
 
   const renderPlanets = (list, glyphRadius, degreeRadius, outer = false) =>
-    spreadPlanets(list).map((planet) => {
+    spreadPlanets(list, glyphRadius).map((planet) => {
       const glyph = point(planet.displayLon, glyphRadius, ascendant);
       const degree = point(planet.displayLon, degreeRadius, ascendant);
       const tickA = point(planet.longitude, R_ZODIAC, ascendant);
