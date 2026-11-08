@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ANGLES, CONTACT_METHODS, EXTRA_OBJECTS, PLANETS, aspectTimeline, momentAt, pad, periodFrom, toUtcDate } from '../utils/ephemeris';
 import { allowedOrb } from '../utils/aspects';
 import { useI18n, formatShortDate } from '../i18n';
@@ -27,6 +27,25 @@ function monthMarks(date, months, offset) {
 const methodsOf = (method) => (method === 'all' ? ALL_ORDER : [method]);
 
 /**
+ * Dates of a calendar bar, above it. Fixed to the screen, so the scrolling scale does not clip it;
+ * kept inside the window at its edges, and below the bar when there is no room above.
+ */
+function BarTip({ tip }) {
+  const r = tip.el.getBoundingClientRect();
+  const x = Math.min(Math.max(r.left + r.width / 2, 230), window.innerWidth - 230);
+  const above = r.top > 70;
+  return (
+    <span
+      role="tooltip"
+      className="pointer-events-none fixed z-50 w-max max-w-[28rem] -translate-x-1/2 whitespace-pre-line rounded-md bg-slate-900 px-2 py-1 text-left text-xs font-medium text-white shadow-lg"
+      style={{ left: x, ...(above ? { top: r.top - 8, transform: 'translate(-50%, -100%)' } : { top: r.bottom + 8 }) }}
+    >
+      {tip.text}
+    </span>
+  );
+}
+
+/**
  * Aspect calendar: bars from entering to leaving the orb, with the exact moments marked, for the
  * forecast aspects to the natal chart over a period. Orbs and the points that take part come from
  * `presets` (aspect settings per method). `onOpen(method, ms)` opens that method at a moment.
@@ -37,6 +56,35 @@ export function AspectTimeline({ natal, points, moment, extras, presets, options
   const [from, setFrom] = useState(moment.date);
   const [span, setSpan] = useState(12);
   const [transits, setTransits] = useState(DEFAULT_TRANSITS);
+  // The bar under the pointer shows its dates at once (a native title waits about a second and
+  // never shows on a phone); a clicked bar keeps them shown until a click elsewhere or Escape.
+  const [hovered, setHovered] = useState(null);
+  const [pinned, setPinned] = useState(null);
+  const shown = hovered ?? pinned;
+  const [, redraw] = useState(0);
+  useEffect(() => {
+    if (!pinned) return undefined;
+    const close = (e) => {
+      if (e.type === 'keydown' ? e.key === 'Escape' : !e.target.closest('[data-timeline-bar]')) setPinned(null);
+    };
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', close);
+    return () => {
+      document.removeEventListener('pointerdown', close);
+      document.removeEventListener('keydown', close);
+    };
+  }, [pinned]);
+  // A shown tip follows its bar when the page or the scale scrolls.
+  useEffect(() => {
+    if (!shown) return undefined;
+    const follow = () => redraw((n) => n + 1);
+    window.addEventListener('scroll', follow, true);
+    window.addEventListener('resize', follow);
+    return () => {
+      window.removeEventListener('scroll', follow, true);
+      window.removeEventListener('resize', follow);
+    };
+  }, [shown]);
   const methods = methodsOf(method);
 
   const [start, end] = periodFrom(from, span, moment.utcOffset);
@@ -171,12 +219,20 @@ export function AspectTimeline({ natal, points, moment, extras, presets, options
                         <div className="relative h-6 flex-1">
                           {r.windows.map((w) => {
                             const color = r.aspect.id === 'opposition' ? '#0F172A' : aspectColors[r.aspect.id];
+                            const id = `${m}|${r.mover}|${r.target.key}|${r.aspect.id}|${w.start.getTime()}`;
+                            const tipOf = (e) => ({ id, el: e.currentTarget, text: describe(r, w) });
                             return (
                               <button
                                 key={w.start.getTime()}
                                 type="button"
-                                title={describe(r, w)}
-                                onClick={() => onOpen(m, (w.exacts[0] ?? w.start).getTime())}
+                                data-timeline-bar
+                                aria-label={describe(r, w)}
+                                onMouseEnter={(e) => setHovered(tipOf(e))}
+                                onMouseLeave={() => setHovered(null)}
+                                onClick={(e) => {
+                                  setPinned(tipOf(e));
+                                  onOpen(m, (w.exacts[0] ?? w.start).getTime());
+                                }}
                                 className={`absolute top-1.5 h-3 min-w-[3px] ${w.startClipped ? '' : 'rounded-l-full'} ${w.endClipped ? '' : 'rounded-r-full'} transition hover:brightness-90`}
                                 style={{ left: `${pos(w.start)}%`, width: `${pos(w.end) - pos(w.start)}%`, backgroundColor: `color-mix(in srgb, ${color} 25%, transparent)` }}
                               >
@@ -198,6 +254,7 @@ export function AspectTimeline({ natal, points, moment, extras, presets, options
               })}
             </div>
             <p className="mt-2 text-[11px] text-slate-500">{t('timeline.legend')}</p>
+            {shown?.el.isConnected && <BarTip tip={shown} />}
           </div>
         </div>
       )}
