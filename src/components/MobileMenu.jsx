@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useI18n, LANGUAGES } from '../i18n';
-import { APP_NAME } from '../appInfo';
+import { APP_NAME, DONATE_URL } from '../appInfo';
+import { SparklesIcon } from './SparklesIcon';
 
 // Width from which the desktop header is shown instead of this menu (Tailwind `lg`).
 const DESKTOP = '(min-width: 1024px)';
@@ -177,6 +178,12 @@ export function MobileMenu({ modes, mode, onModeChange, user, accountsEnabled, o
                 <a href={`/privacy?lang=${lang}`} target="_blank" rel="noreferrer" className="block px-5 py-3 text-sm hover:bg-slate-50">
                   {t('auth.privacy')}
                 </a>
+                {DONATE_URL && (
+                  <a href={DONATE_URL} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-5 py-3 text-sm hover:bg-slate-50">
+                    <SparklesIcon />
+                    {t('support.link')}
+                  </a>
+                )}
               </div>
             </div>
           </div>,
