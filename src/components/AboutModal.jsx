@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Modal } from './Modal';
 import { Turnstile } from './Turnstile';
 import { APP_NAME, DONATE_URL, GITHUB_URL } from '../appInfo';
-import { HeartIcon } from './HeartIcon';
+import { SparklesIcon } from './SparklesIcon';
 import { sendFeedback } from '../utils/api';
 import { useI18n } from '../i18n';
 
@@ -143,7 +143,7 @@ export function AboutModal({ open, onClose, user, turnstile }) {
               rel="noreferrer"
               className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
             >
-              <HeartIcon />
+              <SparklesIcon />
               {t('support.button')}
             </a>
           </section>

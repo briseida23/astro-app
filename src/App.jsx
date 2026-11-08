@@ -52,7 +52,7 @@ import { MobileMenu } from './components/MobileMenu';
 import { ClientsModal } from './components/ClientsModal';
 import { AboutModal } from './components/AboutModal';
 import { APP_NAME, DONATE_URL } from './appInfo';
-import { HeartIcon } from './components/HeartIcon';
+import { SparklesIcon } from './components/SparklesIcon';
 import { Tabs } from './components/Tabs';
 import { detectCurrentPlace, placeFields, withoutPlace, withoutClient } from './utils/location';
 import { I18nContext, LANGUAGES, loadLanguage, saveLanguage, translate, placeName } from './i18n';
@@ -767,7 +767,7 @@ export default function App() {
                   <>
                     <span aria-hidden className="hidden lg:inline">·</span>
                     <a href={DONATE_URL} target="_blank" rel="noreferrer" className="hidden items-center gap-1 underline lg:inline-flex decoration-slate-300 underline-offset-2 hover:text-slate-900">
-                      <HeartIcon />
+                      <SparklesIcon />
                       {t('support.link')}
                     </a>
                   </>
