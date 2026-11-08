@@ -36,7 +36,7 @@ import { AspectTable } from './components/AspectTable';
 import { BalancePanel } from './components/BalancePanel';
 import { PatternsPanel, TransitEvents } from './components/PatternsPanel';
 import { BirthModal } from './components/BirthForm';
-import { TransitBar, BarSteps, ReturnPicker } from './components/TransitBar';
+import { MomentButton, StepBar, ReturnPicker } from './components/TransitBar';
 import { DynamicsPanel } from './components/DynamicsPanel';
 import { SearchPanel } from './components/SearchPanel';
 import { EventsPanel } from './components/EventsPanel';
@@ -523,7 +523,6 @@ export default function App() {
   const secondNow = () => updateSecond(momentAt(secondTransit, Date.now()), true);
   // One Dynamics step back or forward for the second wheel's own date.
   const stepSecond = (count) => updateSecond(shiftMoment(secondTransit, count * dynamics.step, dynamics.unit));
-  const stepAmount = t(`dynamics.preset.${dynamics.unit}`, { n: dynamics.step });
   const secondPreset = secondMode && settings[ORB_PRESET_KEYS[secondMode]];
   const secondView = useMemo(() => {
     if (!secondMode || !secondRaw.date) return null;
@@ -678,10 +677,11 @@ export default function App() {
   };
   const houseSystem = HOUSE_SYSTEMS.find((h) => h.id === settings.houseSystem);
 
-  // The date (and place) of the forecast or return; with two wheels it goes under the main wheel
-  // so both wheels start at the same height.
+  // Over the wheel: steps through time (or ‹ return ›); with two wheels it goes under the main
+  // wheel so both wheels start at the same height. The date, time and place themselves open in a
+  // window from the line under the chart's title.
   const forecastBar = (forecast || returnKind) && (
-    <TransitBar method={mode} moment={transit} onChange={updateTransit} onPlaceChange={setTransitMoment} onNow={transitNow}>
+    <StepBar dynamics={dynamics} onDynamicsChange={setDynamics} onStep={stepTransit} onNow={transitNow}>
       {returnList && (
         <ReturnPicker
           kind={returnKind}
@@ -691,6 +691,10 @@ export default function App() {
           onPick={(date) => updateTransit(atReturn(transit, date))}
         />
       )}
+    </StepBar>
+  );
+  const forecastMoment = (forecast || returnKind) && (
+    <MomentButton method={mode} moment={transit} onChange={updateTransit} onPlaceChange={setTransitMoment} onNow={transitNow}>
       {mode === 'directions' && (
         <>
           <label className="field">
@@ -724,7 +728,7 @@ export default function App() {
           </label>
         </>
       )}
-    </TransitBar>
+    </MomentButton>
   );
 
   return (
@@ -870,6 +874,8 @@ export default function App() {
             </div>
           </div>
 
+          {forecastMoment && <div className="-mt-2 px-1">{forecastMoment}</div>}
+
           {preview && (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
               <span>{t('rect.previewBanner', { time: chartBirth.time, recorded: birth.time })}</span>
@@ -936,10 +942,22 @@ export default function App() {
                   ✕
                 </button>
               </div>
-              <div className="text-xs tabular-nums text-slate-500">
-                {placeName(secondView.moment, t)} · {formatDate(secondView.moment.date, lang)} · {secondView.moment.time} ·{' '}
-                {formatOffset(secondView.moment.utcOffset)}
-              </div>
+              {secondMode === 'natal' ? (
+                <div className="text-xs tabular-nums text-slate-500">
+                  {placeName(secondView.moment, t)} · {formatDate(secondView.moment.date, lang)} · {secondView.moment.time} ·{' '}
+                  {formatOffset(secondView.moment.utcOffset)}
+                </div>
+              ) : (
+                <div className="mt-1">
+                  <MomentButton method={secondMode} moment={secondTransit} onChange={updateSecond} onPlaceChange={setSecondOwnMoment} onNow={secondNow}>
+                    {secondOwnMoment && (
+                      <button type="button" className="btn-ghost mb-1" onClick={() => setSecondOwnMoment(null)}>
+                        {t('second.sameMoment')}
+                      </button>
+                    )}
+                  </MomentButton>
+                </div>
+              )}
             </div>
             <ChartWheel
               chartData={secondView.chart}
@@ -958,8 +976,8 @@ export default function App() {
             {/* The second chart's date bar sits under its wheel like the main one, so both wheels start
                 at the same height. Its date is its own once changed, until "same as main". */}
             {secondMode !== 'natal' && (
-              <TransitBar method={secondMode} moment={secondTransit} onChange={updateSecond} onPlaceChange={setSecondOwnMoment} onNow={secondNow}>
-                {secondView.isReturn ? (
+              <StepBar dynamics={dynamics} onDynamicsChange={setDynamics} onStep={stepSecond} onNow={secondNow}>
+                {secondView.isReturn && (
                   <ReturnPicker
                     kind={secondMode}
                     dates={secondReturnList}
@@ -967,20 +985,8 @@ export default function App() {
                     moment={secondTransit}
                     onPick={(date) => updateSecond(atReturn(secondTransit, date))}
                   />
-                ) : (
-                  <BarSteps
-                    prevLabel={t('dynamics.back', { amount: stepAmount })}
-                    nextLabel={t('dynamics.forward', { amount: stepAmount })}
-                    onPrev={() => stepSecond(-1)}
-                    onNext={() => stepSecond(1)}
-                  />
                 )}
-                {secondOwnMoment && (
-                  <button type="button" className="btn-ghost mb-1" onClick={() => setSecondOwnMoment(null)}>
-                    {t('second.sameMoment')}
-                  </button>
-                )}
-              </TransitBar>
+              </StepBar>
             )}
             <Legend aspectColors={colors.aspects} t={t} />
           </section>

@@ -1051,6 +1051,16 @@ export function momentAt(moment, ms) {
 }
 
 export const STEP_UNITS = ['minute', 'hour', 'day', 'week', 'month', 'year'];
+// Ready-made step sizes for moving a forecast or the birth moment.
+export const STEP_PRESETS = [
+  { step: 1, unit: 'minute' },
+  { step: 10, unit: 'minute' },
+  { step: 1, unit: 'hour' },
+  { step: 1, unit: 'day' },
+  { step: 1, unit: 'week' },
+  { step: 1, unit: 'month' },
+  { step: 1, unit: 'year' },
+];
 
 /**
  * [start, end] of a period of `months` months from the calendar date `date` (YYYY-MM-DD), both

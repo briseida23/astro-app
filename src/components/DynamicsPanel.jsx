@@ -1,18 +1,9 @@
-import { STEP_UNITS, ROMAN, formatOffset, formatOrb, momentAt } from '../utils/ephemeris';
+import { STEP_UNITS, STEP_PRESETS, ROMAN, formatOffset, formatOrb, momentAt } from '../utils/ephemeris';
 import { useI18n, placeName, formatShortDate } from '../i18n';
 import { Glyph } from './Glyph';
 import { Hint } from './Hint';
 import { OrbWindowNote } from './AspectTable';
 
-const PRESETS = [
-  { step: 1, unit: 'minute' },
-  { step: 10, unit: 'minute' },
-  { step: 1, unit: 'hour' },
-  { step: 1, unit: 'day' },
-  { step: 1, unit: 'week' },
-  { step: 1, unit: 'month' },
-  { step: 1, unit: 'year' },
-];
 
 
 /** 2026-10-13 + 14:05 → "вт, 13 октября 2026 г., 14:05". */
@@ -109,7 +100,7 @@ export function DynamicsPanel({ natal, moment, dynamics, onDynamicsChange, onSte
       </div>
 
       <div className="flex flex-wrap gap-1.5">
-        {PRESETS.map((p) => {
+        {STEP_PRESETS.map((p) => {
           const active = p.step === step && p.unit === unit;
           return (
             <button
