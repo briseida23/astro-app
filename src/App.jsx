@@ -162,6 +162,11 @@ function forecastPoints(method, natal, date, place, { houseSystem, pointTypes, d
   return calculateTransitPlanets(date, natal.houses, place, houseSystem, extras, pointTypes);
 }
 
+const ANGLE_IDS = new Set(['ascendant', 'mc']);
+/** Transit points without the transit ASC and MC unless the setting shows them. */
+const withoutTransitAngles = (method, points, show) =>
+  method === 'transit' && !show ? points.filter((p) => !ANGLE_IDS.has(p.id)) : points;
+
 /** Forecast aspects with the separating ones past `separatingOrb` hidden or dimmed. */
 function withSeparating(aspects, { separating, separatingOrb }) {
   return aspects.flatMap((a) => {
@@ -478,13 +483,18 @@ export default function App() {
   const natalPoints = useMemo(() => [...natalPlanets, ...natalAngles], [natalPlanets, natalAngles]);
   const natalAspects = useMemo(() => findAspects(natalPoints, mainAspectSettings), [natalPoints, mainAspectSettings]);
 
-  const transitPlanets = useMemo(() => {
+  // Every forecast point, for the planet table; the wheel and the aspects may leave out the transit angles.
+  const transitAll = useMemo(() => {
     if (!forecast || !transitMoment.date) return null;
     const date = toUtcDate(transitMoment.date, transitMoment.time, transitMoment.utcOffset);
     if (Number.isNaN(date.getTime())) return null;
     const place = { latitude: transitLat, longitude: transitLon };
     return forecastPoints(forecast, chartData, date, place, calcOptions, extras).filter((p) => visible[p.id]);
   }, [forecast, transitMoment, transitLat, transitLon, chartData, visible, calcOptions, extras]);
+  const transitPlanets = useMemo(
+    () => transitAll && withoutTransitAngles(forecast, transitAll, settings.transitAngles),
+    [transitAll, forecast, settings.transitAngles]
+  );
 
   // Each forecast method has its own orb table and formula; the rest of the aspect settings is shared.
   const orbPreset = settings[ORB_PRESET_KEYS[forecast] ?? ORB_PRESET_KEYS.transit];
@@ -539,10 +549,14 @@ export default function App() {
     }
     const base = { chart: chartData, planets: birthPlanets, angles: birthAngles };
     if (secondMode === 'natal') return { ...base, ring: null, points: birthPoints, aspects: findAspects(birthPoints, settings.aspects), moment: chartBirth };
-    const ring = forecastPoints(secondMode, chartData, date, place, calcOptions, extras).filter((p) => visible[p.id]);
+    const ring = withoutTransitAngles(
+      secondMode,
+      forecastPoints(secondMode, chartData, date, place, calcOptions, extras).filter((p) => visible[p.id]),
+      settings.transitAngles
+    );
     const preset = { ...settings.aspects, ...secondPreset };
     return { ...base, ring, points: ring, aspects: withSeparating(findAspects(ring, preset, birthPoints), preset), moment: secondTransit };
-  }, [secondMode, secondRaw, secondTransit, chartData, chartBirth, calcOptions, settings.aspects, secondPreset, extras, pointTypes, visible, birthPlanets, birthAngles, birthPoints, returnAspectSettings]);
+  }, [secondMode, secondRaw, secondTransit, chartData, chartBirth, calcOptions, settings.aspects, secondPreset, extras, pointTypes, visible, birthPlanets, birthAngles, birthPoints, returnAspectSettings, settings.transitAngles]);
   const secondReturnList = useMemo(
     () => (secondView?.isReturn ? returnsAround(chartData, secondMode, secondView.chart.date, RETURN_LIST_SPAN[secondMode]) : null),
     [secondView, chartData, secondMode]
@@ -1021,7 +1035,7 @@ export default function App() {
               mainLabel={returnKind ?? 'natal'}
               secondPoints={secondMode === 'natal' && !returnKind ? null : secondView?.points}
               secondLabel={secondMode}
-              transitPlanets={transitPlanets}
+              transitPlanets={transitAll}
               focus={focus}
               onHover={setHover}
             />

@@ -93,6 +93,18 @@ function ParamsTab({ settings, update }) {
           <span className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition peer-checked:translate-x-5" />
         </label>
       </Row>
+      <Row label={t('settings.transitAngles')} hint={t('settings.transitAnglesHint')}>
+        <label className="relative inline-flex cursor-pointer items-center">
+          <input
+            type="checkbox"
+            className="peer sr-only"
+            checked={settings.transitAngles}
+            onChange={(e) => update({ transitAngles: e.target.checked })}
+          />
+          <span className="h-6 w-11 rounded-full bg-slate-200 transition peer-checked:bg-slate-900 peer-focus-visible:ring-4 peer-focus-visible:ring-slate-200" />
+          <span className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition peer-checked:translate-x-5" />
+        </label>
+      </Row>
       <Row label={t('settings.zodiac')} hint={t('settings.zodiacHint')}>
         <select className="input" disabled value="tropical">
           <option value="tropical">{t('settings.zodiacValue')}</option>

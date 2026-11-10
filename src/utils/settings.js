@@ -32,6 +32,9 @@ export const DEFAULT_SETTINGS = {
   lilithType: 'mean',
   // Darker, thicker, larger chart for low vision.
   highContrast: false,
+  // Transit ASC and MC on the wheel and in the aspects; they change sign every couple of hours,
+  // so they are off by default and stay only in the planet table.
+  transitAngles: false,
   visible: Object.fromEntries([
     ...OBJECTS.map((o) => [o.id, true]),
     ...EXTRA_OBJECTS.map((o) => [o.id, DEFAULT_EXTRAS.has(o.id)]),
