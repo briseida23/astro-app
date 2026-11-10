@@ -25,7 +25,7 @@ import {
   orbWindowsCached,
   momentAtOffset,
 } from './utils/ephemeris';
-import { findAspects, ORB_PRESET_KEYS } from './utils/aspects';
+import { ANGLE_IDS, findAspects, ORB_PRESET_KEYS } from './utils/aspects';
 import { calculateBalance } from './utils/balance';
 import { findAspectPatterns, findTransitPatterns } from './utils/aspectPatterns';
 import { loadSettings, saveSettings, loadSession, saveSession, normalizeSettings } from './utils/settings';
@@ -162,7 +162,6 @@ function forecastPoints(method, natal, date, place, { houseSystem, pointTypes, d
   return calculateTransitPlanets(date, natal.houses, place, houseSystem, extras, pointTypes);
 }
 
-const ANGLE_IDS = new Set(['ascendant', 'mc']);
 /** Transit points without the transit ASC and MC unless the setting shows them. */
 const withoutTransitAngles = (method, points, show) =>
   method === 'transit' && !show ? points.filter((p) => !ANGLE_IDS.has(p.id)) : points;
@@ -549,13 +548,11 @@ export default function App() {
     }
     const base = { chart: chartData, planets: birthPlanets, angles: birthAngles };
     if (secondMode === 'natal') return { ...base, ring: null, points: birthPoints, aspects: findAspects(birthPoints, settings.aspects), moment: chartBirth };
-    const ring = withoutTransitAngles(
-      secondMode,
-      forecastPoints(secondMode, chartData, date, place, calcOptions, extras).filter((p) => visible[p.id]),
-      settings.transitAngles
-    );
+    const ringAll = forecastPoints(secondMode, chartData, date, place, calcOptions, extras).filter((p) => visible[p.id]);
+    const ring = withoutTransitAngles(secondMode, ringAll, settings.transitAngles);
     const preset = { ...settings.aspects, ...secondPreset };
-    return { ...base, ring, points: ring, aspects: withSeparating(findAspects(ring, preset, birthPoints), preset), moment: secondTransit };
+    // ringAll: every point, for the planet table; ring: the wheel and the aspects.
+    return { ...base, ring, ringAll, points: ring, aspects: withSeparating(findAspects(ring, preset, birthPoints), preset), moment: secondTransit };
   }, [secondMode, secondRaw, secondTransit, chartData, chartBirth, calcOptions, settings.aspects, secondPreset, extras, pointTypes, visible, birthPlanets, birthAngles, birthPoints, returnAspectSettings, settings.transitAngles]);
   const secondReturnList = useMemo(
     () => (secondView?.isReturn ? returnsAround(chartData, secondMode, secondView.chart.date, RETURN_LIST_SPAN[secondMode]) : null),
@@ -1033,7 +1030,7 @@ export default function App() {
             <PlanetTable
               points={natalPoints}
               mainLabel={returnKind ?? 'natal'}
-              secondPoints={secondMode === 'natal' && !returnKind ? null : secondView?.points}
+              secondPoints={secondMode === 'natal' && !returnKind ? null : (secondView?.ringAll ?? secondView?.points)}
               secondLabel={secondMode}
               transitPlanets={transitAll}
               focus={focus}

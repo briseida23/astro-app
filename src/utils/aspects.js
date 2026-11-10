@@ -8,7 +8,7 @@ export const PLANET_IDS = new Set([
 
 // Planets and Chiron always take part in aspects; the other groups are switched on per chart.
 const CORE_IDS = new Set([...PLANET_IDS, 'chiron']);
-const ANGLE_IDS = new Set(['ascendant', 'mc']);
+export const ANGLE_IDS = new Set(['ascendant', 'mc']);
 const NODE_IDS = new Set(['node', 'southNode', 'lilith']);
 
 /** Forecast planets that can be left out per method: they move fast and add short-lived aspects. */
