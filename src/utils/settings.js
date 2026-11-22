@@ -40,6 +40,8 @@ export const DEFAULT_SETTINGS = {
     ...EXTRA_OBJECTS.map((o) => [o.id, DEFAULT_EXTRAS.has(o.id)]),
   ]),
   weights: DEFAULT_WEIGHTS,
+  // House chain of dispositors: a planet this many degrees before a cusp counts in the next house.
+  chainCuspOrb: 2,
   aspects: DEFAULT_ASPECT_SETTINGS,
   transitOrbPreset: DEFAULT_TRANSIT_ORB_SETTINGS,
   progressionOrbPreset: DEFAULT_PROGRESSION_ORB_SETTINGS,

@@ -72,13 +72,22 @@ export function planetaryChains(planets) {
 }
 
 /**
+ * The house a planet counts in for the chain: with `cuspOrb` degrees, a planet that close before
+ * the next cusp already counts in the next house.
+ */
+function chainHouse(planet, cusps, cuspOrb) {
+  const nextCusp = cusps[planet.house % 12];
+  return cuspOrb > 0 && normalize(nextCusp - planet.longitude) <= cuspOrb ? (planet.house % 12) + 1 : planet.house;
+}
+
+/**
  * House chain: each house (1–12) points at the house its cusp ruler stands in.
  * Returns { chains, rulers }, `rulers` mapping each house to the planet ruling its cusp, or null
  * when the cusps could not be calculated (e.g. Placidus at a polar latitude).
  */
-export function houseChains(planets, cusps) {
+export function houseChains(planets, cusps, cuspOrb = 0) {
   if (cusps?.length !== 12 || !cusps.every(Number.isFinite)) return null;
-  const houseOfPlanet = new Map(planets.map((p) => [p.id, p.house]));
+  const houseOfPlanet = new Map(planets.map((p) => [p.id, chainHouse(p, cusps, cuspOrb)]));
   const nodes = cusps.map((_, i) => i + 1);
   const rulers = new Map(nodes.map((h) => [h, rulerOf(cusps[h - 1])]));
   const next = new Map(nodes.map((h) => [h, houseOfPlanet.get(rulers.get(h))]));
@@ -86,10 +95,10 @@ export function houseChains(planets, cusps) {
   return { chains: findChains(nodes, next, missing), rulers };
 }
 
-export function calculateDispositors(chartData) {
+export function calculateDispositors(chartData, { cuspOrb = 0 } = {}) {
   const planets = chartData.planets.filter((p) => CHAIN_PLANETS.includes(p.id));
   return {
     planetary: planetaryChains(planets),
-    houses: houseChains(planets, chartData.houses),
+    houses: houseChains(planets, chartData.houses, cuspOrb),
   };
 }

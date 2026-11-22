@@ -15,7 +15,7 @@ const TABS = ['params', 'objects', 'extras', 'orbs', 'method', 'colors'];
 const TAB_KEYS = {
   params: ['houseSystem', 'nodeType', 'lilithType', 'highContrast'],
   orbs: ['aspects', 'returnOrbPreset', ...Object.values(ORB_PRESET_KEYS)],
-  method: ['weights'],
+  method: ['weights', 'chainCuspOrb'],
   colors: ['colors'],
 };
 const TAB_OBJECTS = { objects: OBJECTS, extras: EXTRA_OBJECTS };
@@ -447,6 +447,19 @@ function MethodTab({ settings, update }) {
       <p className="mt-3 text-sm">
         {t('settings.total')} <span className="font-semibold tabular-nums">{total}</span> {t('settings.points')}
       </p>
+      <div className="mt-4">
+        <Row label={t('settings.chainCuspOrb')} hint={t('settings.chainCuspOrbHint')}>
+          <select
+            className="input w-24"
+            value={settings.chainCuspOrb}
+            onChange={(e) => update({ chainCuspOrb: Number(e.target.value) })}
+          >
+            {[0, 1, 2, 3].map((n) => (
+              <option key={n} value={n}>{n}°</option>
+            ))}
+          </select>
+        </Row>
+      </div>
     </div>
   );
 }

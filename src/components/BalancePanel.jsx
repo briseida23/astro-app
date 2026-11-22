@@ -32,7 +32,7 @@ function BalanceBar({ label, score, percent, color, level }) {
 const namesAt = (items, levels, kind, t) =>
   items.filter((i) => levels.includes(i.level)).map((i) => t(`${kind}.${i.id}`)).join(', ') || '—';
 
-export function BalancePanel({ balance, dispositors, planets, elementColors }) {
+export function BalancePanel({ balance, dispositors, cuspOrb, planets, elementColors }) {
   const { t } = useI18n();
   const { elements, modalities, dominantElements, dominantModalities, syntheticSigns, closestSign, luminaries } = balance;
   const tie = syntheticSigns.length > 1;
@@ -122,7 +122,7 @@ export function BalancePanel({ balance, dispositors, planets, elementColors }) {
         </dd>
       </dl>
       <p className="mt-4 text-xs text-slate-400">{t('balance.levelsNote')}</p>
-      {dispositors && <DispositorChains dispositors={dispositors} planets={planets} elementColors={elementColors} />}
+      {dispositors && <DispositorChains dispositors={dispositors} cuspOrb={cuspOrb} planets={planets} elementColors={elementColors} />}
     </div>
   );
 }

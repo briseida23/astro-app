@@ -291,7 +291,7 @@ function ChainGroup({ title, hint, example, chains, view, t }) {
   );
 }
 
-export function DispositorChains({ dispositors, planets, elementColors }) {
+export function DispositorChains({ dispositors, cuspOrb, planets, elementColors }) {
   const { t } = useI18n();
   const byId = new Map(planets.map((p) => [p.id, p]));
 
@@ -341,7 +341,7 @@ export function DispositorChains({ dispositors, planets, elementColors }) {
       <ChainGroup
         title={t('chains.houses')}
         hint={t('chains.housesHint')}
-        example={t('chains.housesExample')}
+        example={`${t('chains.housesExample')} ${t(cuspOrb > 0 ? 'chains.cuspOrbNote' : 'chains.cuspOrbOff', { orb: cuspOrb })}`}
         chains={dispositors.houses?.chains ?? null}
         view={houseView}
         t={t}
