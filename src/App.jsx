@@ -27,6 +27,7 @@ import {
 } from './utils/ephemeris';
 import { ANGLE_IDS, findAspects, ORB_PRESET_KEYS } from './utils/aspects';
 import { calculateBalance } from './utils/balance';
+import { calculateDispositors } from './utils/dispositors';
 import { findAspectPatterns, findTransitPatterns } from './utils/aspectPatterns';
 import { loadSettings, saveSettings, loadSession, saveSession, normalizeSettings } from './utils/settings';
 import * as api from './utils/api';
@@ -580,6 +581,7 @@ export default function App() {
   }, [secondHover, secondView, hover]);
 
   const balance = useMemo(() => calculateBalance(mainChart, weights), [mainChart, weights]);
+  const dispositors = useMemo(() => calculateDispositors(mainChart), [mainChart]);
   // Natal figures in the natal chart; under transits, the figures transits complete with natal planets.
   const transitPatternSettings = settings.transitPatterns;
   const { patterns, patternAspects } = useMemo(() => {
@@ -1009,7 +1011,7 @@ export default function App() {
         {/* Balance, planets, aspects and patterns as tabs */}
         <section id="chart-tabs" className={`@container card self-start scroll-mt-4 p-4 sm:p-6 ${secondView ? 'lg:col-span-2' : ''}`}>
           <Tabs tabs={tabs} active={activeTab} onChange={setTab} className="-mt-2 mb-5" />
-          {activeTab === 'balance' && <BalancePanel balance={balance} elementColors={colors.elements} />}
+          {activeTab === 'balance' && <BalancePanel balance={balance} dispositors={dispositors} planets={mainChart.planets} elementColors={colors.elements} />}
           {activeTab === 'dynamics' && (
             <DynamicsPanel
               natal={!isBiWheel}
