@@ -82,17 +82,20 @@ function chainHouse(planet, cusps, cuspOrb) {
 
 /**
  * House chain: each house (1–12) points at the house its cusp ruler stands in.
- * Returns { chains, rulers }, `rulers` mapping each house to the planet ruling its cusp, or null
- * when the cusps could not be calculated (e.g. Placidus at a polar latitude).
+ * With whole-sign houses (every cusp at 0° of a sign) the cusp orb does not apply: a house is a sign.
+ * Returns { chains, rulers, wholeSign }, `rulers` mapping each house to the planet ruling its cusp,
+ * or null when the cusps could not be calculated (e.g. Placidus at a polar latitude).
  */
 export function houseChains(planets, cusps, cuspOrb = 0) {
   if (cusps?.length !== 12 || !cusps.every(Number.isFinite)) return null;
-  const houseOfPlanet = new Map(planets.map((p) => [p.id, chainHouse(p, cusps, cuspOrb)]));
+  const wholeSign = cusps.every((c) => Math.abs(normalize(c + 1e-6) % 30) < 1e-5);
+  const orb = wholeSign ? 0 : cuspOrb;
+  const houseOfPlanet = new Map(planets.map((p) => [p.id, chainHouse(p, cusps, orb)]));
   const nodes = cusps.map((_, i) => i + 1);
   const rulers = new Map(nodes.map((h) => [h, rulerOf(cusps[h - 1])]));
   const next = new Map(nodes.map((h) => [h, houseOfPlanet.get(rulers.get(h))]));
   const missing = new Map(nodes.filter((h) => next.get(h) == null).map((h) => [h, rulers.get(h)]));
-  return { chains: findChains(nodes, next, missing), rulers };
+  return { chains: findChains(nodes, next, missing), rulers, wholeSign };
 }
 
 export function calculateDispositors(chartData, { cuspOrb = 0 } = {}) {

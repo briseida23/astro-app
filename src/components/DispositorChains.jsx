@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useI18n } from '../i18n';
 import { PLANETS, SIGNS, ROMAN, normalize } from '../utils/ephemeris';
 
@@ -58,20 +58,26 @@ const targetsOf = (chain) => {
 
 function Chain({ chain, view, t }) {
   const markerId = useId();
-  const [active, setActive] = useState(null);
+  const [hovered, setActive] = useState(null);
   const layout = useMemo(() => layoutChain(chain), [chain]);
   const next = useMemo(() => targetsOf(chain), [chain]);
   const { pos, depths, y, height, closeY } = layout;
+  // A node that left this chain (other settings, another chart) is no longer lit.
+  const active = hovered != null && pos.has(hovered) && !chain.center.includes(hovered) ? hovered : null;
 
   // Fit the card: narrower gaps first, then a smaller drawing, then a scroll that starts at the center.
+  // A callback ref: the drawing may appear later than the chain (when sources flow into its center).
   const scrollRef = useRef(null);
+  const observerRef = useRef(null);
   const [avail, setAvail] = useState(null);
-  useLayoutEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return undefined;
+  const attachScroll = useCallback((el) => {
+    observerRef.current?.disconnect();
+    observerRef.current = null;
+    scrollRef.current = el;
+    if (!el) return;
     const observer = new ResizeObserver(([entry]) => setAvail(entry.contentRect.width));
     observer.observe(el);
-    return () => observer.disconnect();
+    observerRef.current = observer;
   }, []);
   const room = avail == null ? GAP.max : (avail - CENTER_W - depths * CHIP_W) / Math.max(depths, 1);
   const col = CHIP_W + Math.min(GAP.max, Math.max(GAP.min, room));
@@ -146,12 +152,14 @@ function Chain({ chain, view, t }) {
   return (
     <div className="rounded-lg border border-slate-100 p-3 text-sm">
       {caption}
-      <div ref={scrollRef} className="overflow-x-auto">
+      <div ref={attachScroll} className="overflow-x-auto">
         <div style={{ width: width * scale, height: height * scale }}>
           <div
             className="relative origin-top-left"
             style={{ width, height, transform: scale < 1 ? `scale(${scale})` : undefined }}
             onMouseLeave={() => setActive(null)}
+            // A tap on the empty space turns the highlight off (on touch screens there is no mouse leave).
+            onClick={(e) => e.target === e.currentTarget && setActive(null)}
           >
             <svg className="pointer-events-none absolute inset-0" width={width} height={height} aria-hidden="true">
               <defs>
@@ -188,7 +196,9 @@ function Chain({ chain, view, t }) {
                   type="button"
                   onMouseEnter={() => setActive(id)}
                   onFocus={() => setActive(id)}
-                  onClick={() => setActive((a) => (a === id ? null : id))}
+                  onBlur={() => setActive(null)}
+                  // Only switches on: a tap also fires mouseenter and focus first, so a toggle would undo it.
+                  onClick={() => setActive(id)}
                   className={`absolute flex items-center justify-center rounded-full border bg-white shadow-sm transition-opacity ${
                     active === id ? 'border-slate-500' : 'border-slate-200 hover:border-slate-400'
                   } ${dim(id)}`}
@@ -291,6 +301,10 @@ function ChainGroup({ title, hint, example, chains, view, t }) {
   );
 }
 
+/** The note on how a planet's house is taken: by the cusp orb, strictly, or by sign (whole signs). */
+const houseRuleKey = (houses, cuspOrb) =>
+  houses?.wholeSign ? 'chains.cuspOrbWholeSign' : cuspOrb > 0 ? 'chains.cuspOrbNote' : 'chains.cuspOrbOff';
+
 export function DispositorChains({ dispositors, cuspOrb, planets, elementColors }) {
   const { t } = useI18n();
   const byId = new Map(planets.map((p) => [p.id, p]));
@@ -341,7 +355,7 @@ export function DispositorChains({ dispositors, cuspOrb, planets, elementColors 
       <ChainGroup
         title={t('chains.houses')}
         hint={t('chains.housesHint')}
-        example={`${t('chains.housesExample')} ${t(cuspOrb > 0 ? 'chains.cuspOrbNote' : 'chains.cuspOrbOff', { orb: cuspOrb })}`}
+        example={`${t('chains.housesExample')} ${t(houseRuleKey(dispositors.houses, cuspOrb), { orb: cuspOrb })}`}
         chains={dispositors.houses?.chains ?? null}
         view={houseView}
         t={t}
