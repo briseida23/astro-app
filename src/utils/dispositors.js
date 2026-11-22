@@ -3,20 +3,24 @@ import { normalize } from './ephemeris';
 // Modern rulers of the signs, Aries to Pisces: Scorpio — Pluto, Aquarius — Uranus, Pisces — Neptune.
 export const MODERN_RULERS = ['mars', 'venus', 'mercury', 'moon', 'sun', 'mercury', 'venus', 'pluto', 'jupiter', 'saturn', 'uranus', 'neptune'];
 
-// The ten planets of the chains: no angles, nodes, Lilith or asteroids.
+// The ten planets of the chains: no angles, nodes, Lilith or asteroids. All ten count, whether
+// or not they are shown on the wheel: leaving one out would change where the arrows end.
 export const CHAIN_PLANETS = ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto'];
 
 const rulerOf = (longitude) => MODERN_RULERS[Math.floor(normalize(longitude) / 30)];
 
 /**
- * Splits a graph where every node has exactly one outgoing edge into chains. Each chain ends in
- * a center — a cycle: one node pointing at itself, two in mutual reception, or a ring of 3+.
- * `next` maps a node to the node its arrow points at.
- * Returns [{ center: [ids in arrow order], type, members: [ids], sources: Map(id → [ids pointing at it]) }],
+ * Splits a graph where every node has one outgoing edge into chains. Each chain ends in a center:
+ * a cycle — one node pointing at itself ('single'), two in mutual reception ('mutual'), a ring of
+ * 3+ ('cycle') — or a node whose ruler was not calculated ('missing', with `missing` its ruler).
+ * `next` maps a node to the node its arrow points at; `missingRuler` maps the nodes whose target
+ * is not among `nodes` to the planet that is missing.
+ * Returns [{ center: [ids in arrow order], type, missing?, members: [ids], sources: Map(id → [ids pointing at it]) }],
  * the largest chains first; `sources` leaves out the arrows inside the center.
  */
-function findChains(nodes, next) {
-  const centerOf = new Map(); // node → the center (array) its arrows end in
+function findChains(nodes, next, missingRuler) {
+  const centerOf = new Map(); // node → its chain's center (the same array for the whole chain)
+  for (const node of missingRuler.keys()) centerOf.set(node, [node]);
   for (const start of nodes) {
     const path = [];
     let node = start;
@@ -40,9 +44,11 @@ function findChains(nodes, next) {
     const center = centerOf.get(node);
     let chain = chains.find((c) => c.center === center);
     if (!chain) {
+      const missing = missingRuler.get(center[0]);
       chain = {
         center,
-        type: center.length === 1 ? 'single' : center.length === 2 ? 'mutual' : 'cycle',
+        type: missing ? 'missing' : center.length === 1 ? 'single' : center.length === 2 ? 'mutual' : 'cycle',
+        ...(missing && { missing }),
         members: [],
         sources: new Map(),
       };
@@ -61,25 +67,27 @@ export function planetaryChains(planets) {
   const byId = new Map(planets.map((p) => [p.id, p]));
   const nodes = CHAIN_PLANETS.filter((id) => byId.has(id));
   const next = new Map(nodes.map((id) => [id, rulerOf(byId.get(id).longitude)]));
-  return findChains(nodes, next);
+  const missing = new Map(nodes.filter((id) => !byId.has(next.get(id))).map((id) => [id, next.get(id)]));
+  return findChains(nodes, next, missing);
 }
 
 /**
- * House chain: each house points at the house its cusp ruler stands in. Needs the birth time.
- * `rulers` maps a house (1–12) to the ruling planet, for the labels.
+ * House chain: each house (1–12) points at the house its cusp ruler stands in.
+ * Returns { chains, rulers }, `rulers` mapping each house to the planet ruling its cusp.
  */
 export function houseChains(planets, cusps) {
   const houseOfPlanet = new Map(planets.map((p) => [p.id, p.house]));
   const nodes = cusps.map((_, i) => i + 1);
   const rulers = new Map(nodes.map((h) => [h, rulerOf(cusps[h - 1])]));
   const next = new Map(nodes.map((h) => [h, houseOfPlanet.get(rulers.get(h))]));
-  return { chains: findChains(nodes, next), rulers };
+  const missing = new Map(nodes.filter((h) => next.get(h) == null).map((h) => [h, rulers.get(h)]));
+  return { chains: findChains(nodes, next, missing), rulers };
 }
 
 export function calculateDispositors(chartData) {
   const planets = chartData.planets.filter((p) => CHAIN_PLANETS.includes(p.id));
   return {
     planetary: planetaryChains(planets),
-    houses: chartData.houses?.length === 12 ? houseChains(planets, chartData.houses) : null,
+    houses: houseChains(planets, chartData.houses),
   };
 }
