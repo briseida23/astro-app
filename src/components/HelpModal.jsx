@@ -7,7 +7,7 @@ import { useI18n } from '../i18n';
  * How the app works, section by section, with buttons that open the settings tab, chart mode or
  * tab under the chart a section talks about.
  */
-export function HelpModal({ open, onClose, onOpenSettings, onOpenMode, onOpenTab }) {
+export function HelpModal({ open, onClose, onOpenSettings, onOpenMode, onOpenTab, accountsEnabled = true }) {
   const { lang, t } = useI18n();
   const sections = HELP[lang] ?? HELP.ru;
   const refs = useRef({});
@@ -43,7 +43,7 @@ export function HelpModal({ open, onClose, onOpenSettings, onOpenMode, onOpenTab
           <section key={s.id} ref={(el) => (refs.current[s.id] = el)} className="scroll-mt-2">
             <h3 className="mb-3 font-display text-xl font-semibold">{s.title}</h3>
             <dl className="space-y-2.5 text-sm leading-relaxed text-slate-700">
-              {s.items.map((item, i) => (
+              {s.items.filter((item) => accountsEnabled || !item.accounts).map((item, i) => (
                 <div key={i}>
                   {item.term && <dt className="inline font-semibold text-slate-900">{item.term}. </dt>}
                   <dd className="inline">{item.text}</dd>

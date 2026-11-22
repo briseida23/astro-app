@@ -227,6 +227,7 @@ const KEPT_TABS = new Set(['dynamics', 'calendar', 'search', 'events']);
 // Natal chart alone, or with the ring of a forecast method; labels are `mode.<id>`.
 const MODES = ['natal', 'transit', 'progressions', 'directions', 'solar', 'lunar'];
 // Without an account only the natal chart is open; the others ask to sign in, and there is no second wheel.
+const SIGNED_IN_KEY = 'astro-app:signed-in';
 const LOCKED_MODES = new Set(MODES.filter((id) => id !== 'natal'));
 
 
@@ -271,10 +272,21 @@ export default function App() {
   const [authOpen, setAuthOpen] = useState(false);
   // Why the sign-in window opened: 'modes' when a guest picked a chart beyond the natal one.
   const [authReason, setAuthReason] = useState(null);
-  // A guest (accounts on, not signed in; also while that is still loading) sees only the natal chart.
+  // Whether this browser was signed in last time: until the server answers, it decides whether the
+  // chart opens locked, so a signed-in user's saved forecast does not flash to the natal chart.
+  const [wasSignedIn] = useState(() => {
+    try {
+      return localStorage.getItem(SIGNED_IN_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  // A guest (accounts on, not signed in) gets only the natal chart; the other modes ask to sign in.
+  const guest = !user && Boolean(authConfig);
+  // Locked: what a guest sees — also while the server has not answered, unless this browser was signed in.
+  const locked = guest || (authConfig === undefined && !wasSignedIn);
   // The chosen mode is kept and comes back after sign-in.
-  const guest = !user && authConfig !== null;
-  const mode = guest ? 'natal' : chosenMode;
+  const mode = locked ? 'natal' : chosenMode;
   const [chartsOpen, setChartsOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   // Id of the user whose account settings have been loaded: only then are changes saved back,
@@ -294,12 +306,34 @@ export default function App() {
   useEffect(() => saveSettings(settings), [settings]);
 
   // Both at once: the session answer does not depend on the config, it is only ignored without accounts.
+  // Retried while the server can't be reached, so a dropped request neither unlocks a guest nor hides sign-in.
   useEffect(() => {
-    Promise.all([api.getConfig(), api.getSession()]).then(([config, session]) => {
-      setAuthConfig(config);
-      if (config) setUser(session);
-    });
+    let cancelled = false;
+    let timer;
+    const load = (attempt) =>
+      Promise.all([api.getConfig(), api.getSession()]).then(([config, session]) => {
+        if (cancelled) return;
+        if (config === undefined) {
+          timer = setTimeout(() => load(attempt + 1), Math.min(30000, 2000 * 2 ** attempt));
+          return;
+        }
+        setAuthConfig(config);
+        if (config) setUser(session);
+      });
+    load(0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, []);
+  useEffect(() => {
+    if (authConfig === undefined) return;
+    try {
+      localStorage.setItem(SIGNED_IN_KEY, user ? '1' : '0');
+    } catch {
+      // Private mode or blocked storage: the hint is only a convenience.
+    }
+  }, [user, authConfig]);
 
   // On sign-in: take the account's settings and language, or store the current ones in a new
   // account. Afterwards every change is saved to the account (debounced).
@@ -377,14 +411,15 @@ export default function App() {
 
   /** Switches the chart; a guest gets the sign-in window instead of anything beyond the natal chart. */
   const changeMode = (id) => {
-    if (guest && id !== 'natal') {
-      askSignIn('modes');
-      return false;
+    // Locked: the pick is kept and shows after sign-in (or once the server confirms this browser's session).
+    if (locked && id !== 'natal') {
+      setMode(id);
+      if (guest) askSignIn('modes');
+      return;
     }
     if (tabIdsOf(id) !== tabIdsOf(mode) && !KEPT_TABS.has(activeTabOf(mode, tab))) setTab(tabIdsOf(id)[0]);
     setMode(id);
     setHover(null);
-    return true;
   };
 
   const signOut = async () => {
@@ -545,7 +580,7 @@ export default function App() {
   // The second wheel shows any other mode for the same moment: the birth chart, a forecast ring
   // around it, or a solar or lunar return with its own houses (at the transit place).
   const wide = useSyncExternalStore(subscribeWide, isWide);
-  const secondMode = !guest && wide && second !== mode && MODES.includes(second) ? second : null;
+  const secondMode = !locked && wide && second !== mode && MODES.includes(second) ? second : null;
   const birthPlanets = useMemo(() => chartData.planets.filter((p) => visible[p.id]), [chartData, visible]);
   const birthAngles = useMemo(() => chartData.angles.filter((p) => visible[p.id]), [chartData, visible]);
   const birthPoints = useMemo(() => [...birthPlanets, ...birthAngles], [birthPlanets, birthAngles]);
@@ -694,7 +729,7 @@ export default function App() {
   // An event opens the forecast (transits unless one is open) for its date and time at the transit place.
   const openEvent = (ev, method = forecast ?? 'transit') => {
     const time = ev.time || '12:00';
-    if (!changeMode(method)) return;
+    changeMode(method);
     updateTransit({ ...transit, date: ev.date, time, utcOffset: transit.timeZone ? offsetForZone(transit.timeZone, ev.date, time) : transit.utcOffset });
   };
   // Aspect settings of every forecast method, for the aspect calendar.
@@ -709,7 +744,7 @@ export default function App() {
   );
   // A found contact opens its method at that moment.
   const openContact = (method, ms) => {
-    if (!changeMode(method)) return;
+    changeMode(method);
     updateTransit(momentAt(transit, ms));
   };
   const houseSystem = HOUSE_SYSTEMS.find((h) => h.id === settings.houseSystem);
@@ -780,7 +815,7 @@ export default function App() {
               <MobileMenu
                 modes={MODES}
                 mode={mode}
-                lockedModes={guest ? LOCKED_MODES : null}
+                lockedModes={locked ? LOCKED_MODES : null}
                 onModeChange={changeMode}
                 user={user}
                 accountsEnabled={Boolean(authConfig)}
@@ -833,11 +868,16 @@ export default function App() {
                   key={id}
                   type="button"
                   onClick={() => changeMode(id)}
-                  title={guest && LOCKED_MODES.has(id) ? t('guest.modesTitle') : undefined}
+                  title={locked && LOCKED_MODES.has(id) ? t('guest.modesTitle') : undefined}
                   className={`flex items-center gap-1 rounded-md px-3 py-1.5 transition ${mode === id ? 'bg-white font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
                 >
                   {t(`mode.${id}`)}
-                  {guest && LOCKED_MODES.has(id) && <LockIcon />}
+                  {locked && LOCKED_MODES.has(id) && (
+                    <>
+                      <LockIcon />
+                      <span className="sr-only">{t('guest.modesTitle')}</span>
+                    </>
+                  )}
                 </button>
               ))}
             </div>
@@ -905,7 +945,7 @@ export default function App() {
             </button>
             <div className="flex items-center gap-3">
               {/* Opens the second wheel; which chart it shows is chosen in its own title. */}
-              {wide && !secondView && !guest && (
+              {wide && !secondView && !locked && (
                 <button
                   type="button"
                   className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-200"
@@ -1181,6 +1221,7 @@ export default function App() {
             onClose={() => setHelpOpen(false)}
             onOpenSettings={setSettingsOpen}
             onOpenMode={changeMode}
+            accountsEnabled={authConfig !== null}
             onOpenTab={(id) => {
               setTab(id);
               document.getElementById('chart-tabs')?.scrollIntoView({ behavior: 'smooth' });

@@ -143,7 +143,12 @@ export function MobileMenu({ modes, mode, lockedModes, onModeChange, user, accou
                     className={`flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-3 py-1.5 transition ${mode === id ? 'bg-white font-semibold shadow-sm' : 'text-slate-600'}`}
                   >
                     {t(`mode.${id}`)}
-                    {lockedModes?.has(id) && <LockIcon />}
+                    {lockedModes?.has(id) && (
+                      <>
+                        <LockIcon />
+                        <span className="sr-only">{t('guest.modesTitle')}</span>
+                      </>
+                    )}
                   </button>
                 ))}
               </div>

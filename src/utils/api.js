@@ -21,7 +21,9 @@ async function request(path, { method = 'GET', body, headers = {} } = {}) {
 }
 
 /** Sign-in methods offered by the server, or null when accounts are not available. */
-export const getConfig = () => request('/api/config').catch(() => null);
+// A server that answered without accounts gives null; a request that never reached it (offline,
+// timeout) gives undefined, so the caller can try again instead of taking it for 'no accounts'.
+export const getConfig = () => request('/api/config').catch((error) => (error.status ? null : undefined));
 
 /** The signed-in user, or null. */
 export const getSession = () =>
