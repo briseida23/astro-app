@@ -48,6 +48,7 @@ import { CalendarPanel } from './components/CalendarPanel';
 const HelpModal = lazy(() => import('./components/HelpModal').then((m) => ({ default: m.HelpModal })));
 import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
+import { LockIcon } from './components/LockIcon';
 import { AccountMenu } from './components/AccountMenu';
 import { MobileMenu } from './components/MobileMenu';
 import { ClientsModal } from './components/ClientsModal';
@@ -225,6 +226,9 @@ const KEPT_TABS = new Set(['dynamics', 'calendar', 'search', 'events']);
 
 // Natal chart alone, or with the ring of a forecast method; labels are `mode.<id>`.
 const MODES = ['natal', 'transit', 'progressions', 'directions', 'solar', 'lunar'];
+// Without an account only the natal chart is open; the others ask to sign in, and there is no second wheel.
+const LOCKED_MODES = new Set(MODES.filter((id) => id !== 'natal'));
+
 
 function IconButton({ onClick, children, label }) {
   return (
@@ -236,7 +240,7 @@ function IconButton({ onClick, children, label }) {
 
 export default function App() {
   const [birth, setBirth] = useState(() => savedSession?.birth ?? defaultBirth());
-  const [mode, setMode] = useState(() => savedSession?.mode ?? 'natal');
+  const [chosenMode, setMode] = useState(() => savedSession?.mode ?? 'natal');
   // Second wheel beside the main one on wide screens: 'none', 'solar' or 'lunar'.
   const [second, setSecond] = useState(() => savedSession?.second ?? 'none');
   const [secondHover, setSecondHover] = useState(null);
@@ -261,9 +265,16 @@ export default function App() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [lang, setLang] = useState(loadLanguage);
   // Accounts: available only when the site runs with the Worker API (config is null otherwise).
-  const [authConfig, setAuthConfig] = useState(null);
+  // undefined while loading, null without accounts (no server), else the server's auth config.
+  const [authConfig, setAuthConfig] = useState(undefined);
   const [user, setUser] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
+  // Why the sign-in window opened: 'modes' when a guest picked a chart beyond the natal one.
+  const [authReason, setAuthReason] = useState(null);
+  // A guest (accounts on, not signed in; also while that is still loading) sees only the natal chart.
+  // The chosen mode is kept and comes back after sign-in.
+  const guest = !user && authConfig !== null;
+  const mode = guest ? 'natal' : chosenMode;
   const [chartsOpen, setChartsOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   // Id of the user whose account settings have been loaded: only then are changes saved back,
@@ -358,10 +369,22 @@ export default function App() {
     return () => clearTimeout(syncTimer.current);
   }, [user, syncReady, settings, lang]);
 
+  /** Opens the sign-in window, with a note on why when a guest reaches for a members' feature. */
+  const askSignIn = (reason = null) => {
+    setAuthReason(reason);
+    setAuthOpen(true);
+  };
+
+  /** Switches the chart; a guest gets the sign-in window instead of anything beyond the natal chart. */
   const changeMode = (id) => {
+    if (guest && id !== 'natal') {
+      askSignIn('modes');
+      return false;
+    }
     if (tabIdsOf(id) !== tabIdsOf(mode) && !KEPT_TABS.has(activeTabOf(mode, tab))) setTab(tabIdsOf(id)[0]);
     setMode(id);
     setHover(null);
+    return true;
   };
 
   const signOut = async () => {
@@ -404,8 +427,8 @@ export default function App() {
     document.documentElement.lang = lang;
   }, [lang]);
   useEffect(
-    () => saveSession({ birth, mode, second, transitMoment, secondMoment: secondOwnMoment }),
-    [birth, mode, second, transitMoment, secondOwnMoment]
+    () => saveSession({ birth, mode: chosenMode, second, transitMoment, secondMoment: secondOwnMoment }),
+    [birth, chosenMode, second, transitMoment, secondOwnMoment]
   );
 
   const hasTransitPlace = transitMoment.latitude != null;
@@ -522,7 +545,7 @@ export default function App() {
   // The second wheel shows any other mode for the same moment: the birth chart, a forecast ring
   // around it, or a solar or lunar return with its own houses (at the transit place).
   const wide = useSyncExternalStore(subscribeWide, isWide);
-  const secondMode = wide && second !== mode && MODES.includes(second) ? second : null;
+  const secondMode = !guest && wide && second !== mode && MODES.includes(second) ? second : null;
   const birthPlanets = useMemo(() => chartData.planets.filter((p) => visible[p.id]), [chartData, visible]);
   const birthAngles = useMemo(() => chartData.angles.filter((p) => visible[p.id]), [chartData, visible]);
   const birthPoints = useMemo(() => [...birthPlanets, ...birthAngles], [birthPlanets, birthAngles]);
@@ -671,7 +694,7 @@ export default function App() {
   // An event opens the forecast (transits unless one is open) for its date and time at the transit place.
   const openEvent = (ev, method = forecast ?? 'transit') => {
     const time = ev.time || '12:00';
-    changeMode(method);
+    if (!changeMode(method)) return;
     updateTransit({ ...transit, date: ev.date, time, utcOffset: transit.timeZone ? offsetForZone(transit.timeZone, ev.date, time) : transit.utcOffset });
   };
   // Aspect settings of every forecast method, for the aspect calendar.
@@ -686,7 +709,7 @@ export default function App() {
   );
   // A found contact opens its method at that moment.
   const openContact = (method, ms) => {
-    changeMode(method);
+    if (!changeMode(method)) return;
     updateTransit(momentAt(transit, ms));
   };
   const houseSystem = HOUSE_SYSTEMS.find((h) => h.id === settings.houseSystem);
@@ -757,6 +780,7 @@ export default function App() {
               <MobileMenu
                 modes={MODES}
                 mode={mode}
+                lockedModes={guest ? LOCKED_MODES : null}
                 onModeChange={changeMode}
                 user={user}
                 accountsEnabled={Boolean(authConfig)}
@@ -765,7 +789,7 @@ export default function App() {
                 onSettings={() => setSettingsOpen('params')}
                 onAbout={() => setAboutOpen(true)}
                 onHelp={() => setHelpOpen(true)}
-                onSignIn={() => setAuthOpen(true)}
+                onSignIn={() => askSignIn()}
                 onSignOut={signOut}
                 onDelete={deleteAccount}
               />
@@ -809,9 +833,11 @@ export default function App() {
                   key={id}
                   type="button"
                   onClick={() => changeMode(id)}
-                  className={`rounded-md px-3 py-1.5 transition ${mode === id ? 'bg-white font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                  title={guest && LOCKED_MODES.has(id) ? t('guest.modesTitle') : undefined}
+                  className={`flex items-center gap-1 rounded-md px-3 py-1.5 transition ${mode === id ? 'bg-white font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
                 >
                   {t(`mode.${id}`)}
+                  {guest && LOCKED_MODES.has(id) && <LockIcon />}
                 </button>
               ))}
             </div>
@@ -834,7 +860,7 @@ export default function App() {
             {authConfig && (
               <AccountMenu
                 user={user}
-                onSignIn={() => setAuthOpen(true)}
+                onSignIn={() => askSignIn()}
                 onCharts={() => setChartsOpen(true)}
                 onSignOut={signOut}
                 onDelete={deleteAccount}
@@ -879,7 +905,7 @@ export default function App() {
             </button>
             <div className="flex items-center gap-3">
               {/* Opens the second wheel; which chart it shows is chosen in its own title. */}
-              {wide && !secondView && (
+              {wide && !secondView && !guest && (
                 <button
                   type="button"
                   className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-200"
@@ -1162,7 +1188,7 @@ export default function App() {
           />
         </Suspense>
       )}
-      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} google={Boolean(authConfig?.google)} turnstile={authConfig?.turnstile ?? null} onSignedIn={setUser} />
+      <AuthModal open={authOpen} reason={authReason} onClose={() => setAuthOpen(false)} google={Boolean(authConfig?.google)} turnstile={authConfig?.turnstile ?? null} onSignedIn={setUser} />
       <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} user={user} turnstile={authConfig?.turnstile ?? null} />
       <ClientsModal
         open={chartsOpen}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useI18n, LANGUAGES } from '../i18n';
 import { APP_NAME, DONATE_URL } from '../appInfo';
+import { LockIcon } from './LockIcon';
 import { SparklesIcon } from './SparklesIcon';
 
 // Width from which the desktop header is shown instead of this menu (Tailwind `lg`).
@@ -28,7 +29,7 @@ function Section({ title, value, children }) {
  * Header controls on phones and tablets: a ☰ button that slides a menu in from the left.
  * `modes`, `onModeChange` etc. are the same as in the desktop header.
  */
-export function MobileMenu({ modes, mode, onModeChange, user, accountsEnabled, onData, onCharts, onSettings, onAbout, onHelp, onSignIn, onSignOut, onDelete }) {
+export function MobileMenu({ modes, mode, lockedModes, onModeChange, user, accountsEnabled, onData, onCharts, onSettings, onAbout, onHelp, onSignIn, onSignOut, onDelete }) {
   const { t, lang, setLang } = useI18n();
   const [open, setOpen] = useState(false);
   const triggerRef = useRef(null);
@@ -139,9 +140,10 @@ export function MobileMenu({ modes, mode, onModeChange, user, accountsEnabled, o
                     ref={mode === id ? activeModeRef : undefined}
                     type="button"
                     onClick={run(() => onModeChange(id))}
-                    className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 transition ${mode === id ? 'bg-white font-semibold shadow-sm' : 'text-slate-600'}`}
+                    className={`flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-3 py-1.5 transition ${mode === id ? 'bg-white font-semibold shadow-sm' : 'text-slate-600'}`}
                   >
                     {t(`mode.${id}`)}
+                    {lockedModes?.has(id) && <LockIcon />}
                   </button>
                 ))}
               </div>

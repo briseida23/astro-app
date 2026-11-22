@@ -151,10 +151,11 @@ function AuthForm({ google, turnstile, onSignedIn }) {
   );
 }
 
-export function AuthModal({ open, onClose, google, turnstile, onSignedIn }) {
+export function AuthModal({ open, reason = null, onClose, google, turnstile, onSignedIn }) {
   const { t } = useI18n();
   return (
     <Modal open={open} onClose={onClose} title={t('auth.title')} width="max-w-md">
+      {reason && <p className="mb-4 rounded-lg bg-indigo-50 px-3 py-2 text-sm text-indigo-900">{t(`guest.${reason}`)}</p>}
       {/* Remount on open so the form starts empty. */}
       {open && (
         <AuthForm
