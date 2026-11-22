@@ -78,6 +78,15 @@ function Chain({ chain, view, t }) {
 }
 
 function ChainGroup({ title, hint, example, chains, view, t }) {
+  if (!chains) {
+    return (
+      <div className="mt-4">
+        <h4 className="text-sm font-medium text-slate-700">{title}</h4>
+        <p className="text-xs text-amber-700">{t('chains.unavailable')}</p>
+      </div>
+    );
+  }
+  if (!chains.length) return null;
   return (
     <div className="mt-4">
       <h4 className="text-sm font-medium text-slate-700">{title}</h4>
@@ -116,7 +125,7 @@ export function DispositorChains({ dispositors, planets, elementColors }) {
   };
 
   // A house with the ruler of its cusp; as an arrow's target, the house alone.
-  const { rulers } = dispositors.houses;
+  const rulers = dispositors.houses?.rulers;
   const houseView = {
     node: (house) => (
       <span
@@ -146,7 +155,7 @@ export function DispositorChains({ dispositors, planets, elementColors }) {
         title={t('chains.houses')}
         hint={t('chains.housesHint')}
         example={t('chains.housesExample')}
-        chains={dispositors.houses.chains}
+        chains={dispositors.houses?.chains ?? null}
         view={houseView}
         t={t}
       />

@@ -47,7 +47,7 @@ function findChains(nodes, next, missingRuler) {
       const missing = missingRuler.get(center[0]);
       chain = {
         center,
-        type: missing ? 'missing' : center.length === 1 ? 'single' : center.length === 2 ? 'mutual' : 'cycle',
+        type: missingRuler.has(center[0]) ? 'missing' : center.length === 1 ? 'single' : center.length === 2 ? 'mutual' : 'cycle',
         ...(missing && { missing }),
         members: [],
         sources: new Map(),
@@ -73,9 +73,11 @@ export function planetaryChains(planets) {
 
 /**
  * House chain: each house (1–12) points at the house its cusp ruler stands in.
- * Returns { chains, rulers }, `rulers` mapping each house to the planet ruling its cusp.
+ * Returns { chains, rulers }, `rulers` mapping each house to the planet ruling its cusp, or null
+ * when the cusps could not be calculated (e.g. Placidus at a polar latitude).
  */
 export function houseChains(planets, cusps) {
+  if (cusps?.length !== 12 || !cusps.every(Number.isFinite)) return null;
   const houseOfPlanet = new Map(planets.map((p) => [p.id, p.house]));
   const nodes = cusps.map((_, i) => i + 1);
   const rulers = new Map(nodes.map((h) => [h, rulerOf(cusps[h - 1])]));
