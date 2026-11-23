@@ -20,16 +20,19 @@ async function request(path, { method = 'GET', body, headers = {} } = {}) {
   return data;
 }
 
-/** Sign-in methods offered by the server, or null when accounts are not available. */
-// A server that answered without accounts gives null; a request that never reached it (offline,
-// timeout) gives undefined, so the caller can try again instead of taking it for 'no accounts'.
-export const getConfig = () => request('/api/config').catch((error) => (error.status ? null : undefined));
+// Only a host without the Worker says 'no accounts': a 404, or the single-page fallback's HTML
+// (status 200, no JSON). Anything else that failed — offline, a timeout, a 429 or a 5xx — is
+// 'no answer yet', so the caller tries again instead of unlocking a guest or hiding sign-in.
+const noWorker = (error) => error.status === 404 || (error.status >= 200 && error.status < 300);
 
-/** The signed-in user, or null. */
+/** Sign-in methods offered by the server; null when accounts are not available, undefined when the server did not answer. */
+export const getConfig = () => request('/api/config').catch((error) => (noWorker(error) ? null : undefined));
+
+/** The signed-in user; null when signed out (or without the Worker), undefined when the server did not answer. */
 export const getSession = () =>
   request('/api/auth/get-session')
     .then((data) => data?.user ?? null)
-    .catch(() => null);
+    .catch((error) => (noWorker(error) ? null : undefined));
 
 // `captcha` is the Turnstile token when the server asks for one.
 const captchaHeaders = (captcha) => (captcha ? { 'x-captcha-response': captcha } : {});

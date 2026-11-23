@@ -274,12 +274,16 @@ export default function App() {
   const [authReason, setAuthReason] = useState(null);
   // Whether this browser was signed in last time: until the server answers, it decides whether the
   // chart opens locked, so a signed-in user's saved forecast does not flash to the natal chart.
+  // Before the hint was first written (a browser from an older version), a saved forecast or second
+  // wheel stands for it: only a signed-in user could have kept one.
   const [wasSignedIn] = useState(() => {
     try {
-      return localStorage.getItem(SIGNED_IN_KEY) === '1';
+      const hint = localStorage.getItem(SIGNED_IN_KEY);
+      if (hint !== null) return hint === '1';
     } catch {
-      return false;
+      // Storage blocked: fall back to the saved session.
     }
+    return (savedSession?.mode ?? 'natal') !== 'natal' || (savedSession?.second ?? 'none') !== 'none';
   });
   // A guest (accounts on, not signed in) gets only the natal chart; the other modes ask to sign in.
   const guest = !user && Boolean(authConfig);
@@ -287,6 +291,23 @@ export default function App() {
   const locked = guest || (authConfig === undefined && !wasSignedIn);
   // The chosen mode is kept and comes back after sign-in.
   const mode = locked ? 'natal' : chosenMode;
+  // A locked mode clicked before the server answered: the sign-in window opens once it is known to be a guest.
+  const [signInPending, setSignInPending] = useState(false);
+  if (signInPending && authConfig !== undefined) {
+    setSignInPending(false);
+    if (guest) {
+      setAuthReason('modes');
+      setAuthOpen(true);
+    }
+  }
+  // Whenever the shown chart changes — a click, or a mode kept while locked coming back after sign-in —
+  // a tab the new mode lacks gives way to its first (tools in KEPT_TABS stay), and the hover is cleared.
+  const [shownMode, setShownMode] = useState(mode);
+  if (shownMode !== mode) {
+    setShownMode(mode);
+    if (tabIdsOf(mode) !== tabIdsOf(shownMode) && !KEPT_TABS.has(activeTabOf(shownMode, tab))) setTab(tabIdsOf(mode)[0]);
+    setHover(null);
+  }
   const [chartsOpen, setChartsOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   // Id of the user whose account settings have been loaded: only then are changes saved back,
@@ -313,7 +334,8 @@ export default function App() {
     const load = (attempt) =>
       Promise.all([api.getConfig(), api.getSession()]).then(([config, session]) => {
         if (cancelled) return;
-        if (config === undefined) {
+        // Both answers are needed: a config without the session would show a signed-in user as a guest.
+        if (config === undefined || (config && session === undefined)) {
           timer = setTimeout(() => load(attempt + 1), Math.min(30000, 2000 * 2 ** attempt));
           return;
         }
@@ -412,14 +434,10 @@ export default function App() {
   /** Switches the chart; a guest gets the sign-in window instead of anything beyond the natal chart. */
   const changeMode = (id) => {
     // Locked: the pick is kept and shows after sign-in (or once the server confirms this browser's session).
-    if (locked && id !== 'natal') {
-      setMode(id);
-      if (guest) askSignIn('modes');
-      return;
-    }
-    if (tabIdsOf(id) !== tabIdsOf(mode) && !KEPT_TABS.has(activeTabOf(mode, tab))) setTab(tabIdsOf(id)[0]);
     setMode(id);
-    setHover(null);
+    if (!locked || id === 'natal') return;
+    if (guest) askSignIn('modes');
+    else setSignInPending(true);
   };
 
   const signOut = async () => {

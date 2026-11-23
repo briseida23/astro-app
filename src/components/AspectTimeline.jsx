@@ -107,7 +107,8 @@ export function AspectTimeline({ natal, points, moment, extras, presets, options
   const now = toUtcDate(moment.date, moment.time, moment.utcOffset);
   const showNow = now >= start && now <= end;
   const toggle = (id) => setTransits((list) => (list.includes(id) ? list.filter((p) => p !== id) : [...list, id]));
-  const transitChips = [...TRANSIT_PLANETS, ...(extras.has('chiron') ? [BY_ID.chiron] : [])];
+  // Transiting Chiron only when it is on the wheel and its aspects are switched on for transits.
+  const transitChips = [...TRANSIT_PLANETS, ...(extras.has('chiron') && presets.transit?.include?.chiron ? [BY_ID.chiron] : [])];
 
   const describe = (r, w) => {
     const name = `${t(`wheel.${r.method}Prefix`)}${t(`object.${r.mover}`)} ${t(`aspect.${r.aspect.id}`).toLowerCase()} ${t('wheel.natalPrefix')}${t(`object.${r.target.id}`)}`;
