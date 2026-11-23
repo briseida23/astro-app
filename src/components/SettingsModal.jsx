@@ -20,8 +20,8 @@ const TAB_KEYS = {
 };
 const TAB_OBJECTS = { objects: OBJECTS, extras: EXTRA_OBJECTS };
 
-// Point groups that can be switched on for aspects (planets and Chiron always count).
-const INCLUDE_GROUPS = ['angles', 'nodes', 'extras'];
+// Point groups that can be switched on for aspects (planets always count).
+const INCLUDE_GROUPS = ['angles', 'nodes', 'chiron', 'extras'];
 
 
 // Aspects that share one colour.

@@ -6,8 +6,7 @@ export const PLANET_IDS = new Set([
   'jupiter', 'saturn', 'uranus', 'neptune', 'pluto',
 ]);
 
-// Planets and Chiron always take part in aspects; the other groups are switched on per chart.
-const CORE_IDS = new Set([...PLANET_IDS, 'chiron']);
+// Planets always take part in aspects; Chiron and the other groups are switched on per chart.
 export const ANGLE_IDS = new Set(['ascendant', 'mc']);
 const NODE_IDS = new Set(['node', 'southNode', 'lilith']);
 
@@ -15,13 +14,14 @@ const NODE_IDS = new Set(['node', 'southNode', 'lilith']);
 export const FAST_IDS = ['sun', 'moon', 'mercury', 'venus', 'mars'];
 
 /**
- * Whether point `p` may form aspects under `include` ({ angles, nodes, extras, sun?, moon?, … }):
+ * Whether point `p` may form aspects under `include` ({ angles, nodes, chiron, extras, sun?, moon?, … }):
  * a forecast Sun, Moon, Mercury, Venus or Mars only unless its own flag is false.
  */
 function takesPart(p, include) {
   // The transiting Moon (~13°/day) sets the mood of the day, not events; the others can be dropped for long-range work.
   if (p.ring !== 'natal' && FAST_IDS.includes(p.id)) return include[p.id] !== false;
-  if (CORE_IDS.has(p.id)) return true;
+  if (PLANET_IDS.has(p.id)) return true;
+  if (p.id === 'chiron') return Boolean(include.chiron);
   if (ANGLE_IDS.has(p.id)) return include.angles;
   if (NODE_IDS.has(p.id)) return include.nodes;
   return include.extras;
@@ -85,7 +85,7 @@ export const DEFAULT_ASPECT_SETTINGS = {
   method: 'average',
   exactPercent: 30,
   // Natal: aspects to the angles count (they shape the personality), nodes and Lilith with narrow orbs.
-  include: { angles: true, nodes: true, extras: false },
+  include: { angles: true, nodes: true, chiron: false, extras: false },
   enabled: Object.fromEntries(ASPECTS.map((a) => [a.id, true])),
   orbs: DEFAULT_ORB_TABLE,
 };
@@ -97,9 +97,9 @@ export const DEFAULT_ASPECT_SETTINGS = {
 export const DEFAULT_TRANSIT_ORB_SETTINGS = {
   method: 'transit',
   orbs: DEFAULT_TRANSIT_ORB_TABLE,
-  // Transits: planets and Chiron only. Angles need a rectified birth time; nodes, Lilith
+  // Transits: planets only. Angles need a rectified birth time; nodes, Lilith
   // and the transiting Moon add background noise.
-  include: { angles: false, nodes: false, extras: false, moon: false },
+  include: { angles: false, nodes: false, chiron: false, extras: false, moon: false },
   separating: 'hide',
   separatingOrb: 0.5,
 };
@@ -111,7 +111,7 @@ export const DEFAULT_TRANSIT_ORB_SETTINGS = {
 export const DEFAULT_PROGRESSION_ORB_SETTINGS = {
   method: 'transit',
   orbs: Object.fromEntries(ALL_OBJECTS.map((o) => [o.id, Object.fromEntries(ASPECTS.map((a) => [a.id, 1]))])),
-  include: { angles: true, nodes: false, extras: false, moon: true },
+  include: { angles: true, nodes: false, chiron: false, extras: false, moon: true },
   separating: 'hide',
   separatingOrb: 0.2,
 };
@@ -130,14 +130,14 @@ export const DEFAULT_RETURN_ORB_SETTINGS = {
       return [o.id, Object.fromEntries(ASPECTS.map((a) => [a.id, orb]))];
     })
   ),
-  include: { angles: true, nodes: true, extras: false },
+  include: { angles: true, nodes: true, chiron: false, extras: false },
 };
 
 /** Directions: 1° for every point (major aspects only, as the aspect list holds). */
 export const DEFAULT_DIRECTION_ORB_SETTINGS = {
   method: 'transit',
   orbs: Object.fromEntries(ALL_OBJECTS.map((o) => [o.id, Object.fromEntries(ASPECTS.map((a) => [a.id, 1]))])),
-  include: { angles: true, nodes: false, extras: false, moon: true },
+  include: { angles: true, nodes: false, chiron: false, extras: false, moon: true },
   separating: 'show',
   separatingOrb: 0.2,
 };
